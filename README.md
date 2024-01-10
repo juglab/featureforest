@@ -7,7 +7,7 @@
 [![codecov](https://codecov.io/gh/juglab/napari-sam-labeling-tools/branch/main/graph/badge.svg)](https://codecov.io/gh/juglab/napari-sam-labeling-tools)
 [![napari hub](https://img.shields.io/endpoint?url=https://api.napari-hub.org/shields/napari-sam-labeling-tools)](https://napari-hub.org/plugins/napari-sam-labeling-tools)
 
-A few plugins for segmentation using SAM model and its feature space.
+A few napari plugins for segmentation using SAM model and its feature space.
 
 ----------------------------------
 
