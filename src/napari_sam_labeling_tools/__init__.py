@@ -1,9 +1,6 @@
 __version__ = "0.0.1"
-from ._widget import ExampleQWidget, ImageThreshold, threshold_autogenerate_widget, threshold_magic_widget
+from ._embedding_extractor_widget import EmbeddingExtractorWidget
 
 __all__ = (
-    "ExampleQWidget",
-    "ImageThreshold",
-    "threshold_autogenerate_widget",
-    "threshold_magic_widget",
+    "EmbeddingExtractorWidget",
 )
