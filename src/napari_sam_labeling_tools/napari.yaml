@@ -1,0 +1,27 @@
+name: napari-sam-labeling-tools
+display_name: napari SAM Labeling Tools
+# use 'hidden' to remove plugin from napari hub search results
+visibility: public
+# see https://napari.org/stable/plugins/manifest.html for valid categories
+categories: ["Annotation", "Segmentation", "Acquisition"]
+contributions:
+  commands:
+    - id: napari-sam-labeling-tools.make_container_widget
+      python_name: napari_sam_labeling_tools:ImageThreshold
+      title: Make threshold Container widget
+    - id: napari-sam-labeling-tools.make_magic_widget
+      python_name: napari_sam_labeling_tools:threshold_magic_widget
+      title: Make threshold magic widget
+    - id: napari-sam-labeling-tools.make_function_widget
+      python_name: napari_sam_labeling_tools:threshold_autogenerate_widget
+      title: Make threshold function widget
+  widgets:
+    - command: napari-sam-labeling-tools.make_container_widget
+      display_name: Container Threshold
+    - command: napari-sam-labeling-tools.make_magic_widget
+      display_name: Magic Threshold
+    - command: napari-sam-labeling-tools.make_function_widget
+      autogenerate: true
+      display_name: Autogenerate Threshold
+    - command: napari-sam-labeling-tools.make_qwidget
+      display_name: Example QWidget
