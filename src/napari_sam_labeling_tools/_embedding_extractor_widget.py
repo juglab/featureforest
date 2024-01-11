@@ -11,12 +11,10 @@ from qtpy.QtWidgets import (
     QFileDialog, QScrollArea, QProgressBar,
 )
 from qtpy.QtCore import Qt
-from qtpy.QtGui import QIntValidator, QDoubleValidator
 
 import h5py
 import numpy as np
 import torch
-from torchvision import transforms
 
 from .widgets import (
     ScrollWidgetWrapper,
@@ -26,10 +24,6 @@ from . import SAM
 from .utils import (
     config
 )
-from .utils.data import (
-    DATA_PATCH_SIZE, TARGET_PATCH_SIZE,
-    patchify, unpatchify
-)
 from .utils.extract import get_sam_embeddings_for_slice
 
 
@@ -37,8 +31,8 @@ class EmbeddingExtractorWidget(QWidget):
     def __init__(self, napari_viewer: napari.Viewer):
         super().__init__()
         self.viewer = napari_viewer
-        self.sam_model = None
-        self.device = None
+        self.extract_worker = None
+        self.storage = None
 
         self.prepare_widget()
 
@@ -64,6 +58,10 @@ class EmbeddingExtractorWidget(QWidget):
         self.extract_button = QPushButton("Extract Embeddings")
         self.extract_button.setEnabled(False)
         self.extract_button.clicked.connect(self.extract_embeddings)
+        # stop button
+        self.stop_button = QPushButton("Stop")
+        self.stop_button.setEnabled(False)
+        self.stop_button.clicked.connect(self.stop_extracting)
         # progress
         self.stack_progress = QProgressBar()
         # self.slice_progress = QProgressBar()
@@ -90,6 +88,7 @@ class EmbeddingExtractorWidget(QWidget):
         hbox.addWidget(storage_button)
         vbox.addLayout(hbox)
         vbox.addWidget(self.extract_button)
+        vbox.addWidget(self.stop_button)
         layout.addLayout(vbox)
 
         vbox = QVBoxLayout()
@@ -99,7 +98,7 @@ class EmbeddingExtractorWidget(QWidget):
         layout.addLayout(vbox)
 
         gbox = QGroupBox()
-        gbox.setTitle("Inputs")
+        gbox.setTitle("Extractor Widget")
         gbox.setMinimumWidth(100)
         gbox.setLayout(layout)
         self.base_layout.addWidget(gbox)
@@ -141,34 +140,46 @@ class EmbeddingExtractorWidget(QWidget):
             return
 
         self.extract_button.setEnabled(False)
-        worker = create_worker(self.get_stack_sam_embeddings, image_layer, storage_path)
-        worker.yielded.connect(self.update_extract_progress)
-        worker.finished.connect(self.extract_is_done)
-        worker.run()
+        self.stop_button.setEnabled(True)
+        self.extract_worker = create_worker(
+            self.get_stack_sam_embeddings, image_layer, storage_path
+        )
+        self.extract_worker.yielded.connect(self.update_extract_progress)
+        self.extract_worker.finished.connect(self.extract_is_done)
+        self.extract_worker.run()
 
     def get_stack_sam_embeddings(self, image_layer, storage_path):
         # initial sam model
-        self.sam_model, self.device = SAM.setup_lighthq_sam_model()
+        sam_model, device = SAM.setup_lighthq_sam_model()
         # initial storage hdf5 file
-        storage = h5py.File(storage_path, "w")
+        self.storage = h5py.File(storage_path, "w")
         # get sam embeddings slice by slice and save them into storage file
         num_slices, img_height, img_width = image_layer.data.shape
         for slice_index in np_progress(
             range(num_slices), desc="get embeddings for slices"
         ):
-            slice_grp = storage.create_group(str(slice_index))
+            slice_grp = self.storage.create_group(str(slice_index))
             dataset = slice_grp.create_dataset(
                 "sam",
                 shape=(img_height, img_width, SAM.EMBEDDING_SIZE + SAM.PATCH_CHANNELS)
             )
             dataset[...] = get_sam_embeddings_for_slice(
-                self.sam_model.image_encoder, self.device,
+                sam_model.image_encoder, device,
                 image_layer, slice_index
             )
 
             yield (slice_index, num_slices)
 
-        storage.close()
+        self.storage.close()
+
+    def stop_extracting(self):
+        if self.extract_worker is not None:
+            self.extract_worker.quit()
+            self.extract_worker = None
+        if isinstance(self.storage, h5py.File):
+            self.storage.close()
+            self.storage = None
+        self.stop_button.setEnabled(False)
 
     def update_extract_progress(self, values):
         curr, total = values
@@ -179,5 +190,6 @@ class EmbeddingExtractorWidget(QWidget):
 
     def extract_is_done(self):
         self.extract_button.setEnabled(True)
+        self.stop_button.setEnabled(False)
         print("Extracting is done!")
         notif.show_info("Extracting is done!")
