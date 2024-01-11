@@ -1,24 +1,15 @@
 import napari
 import napari.utils.notifications as notif
 from napari.utils.events import Event
-from napari.qt.threading import create_worker
-from napari.utils import progress as np_progress
 
-# from magicgui import magic_factory
-# from qtpy.QtGui import QIntValidator
 from qtpy.QtWidgets import (
     QHBoxLayout, QVBoxLayout, QWidget,
     QGroupBox, QCheckBox,
     QPushButton, QLabel, QComboBox, QLineEdit,
-    QFileDialog, QScrollArea, QProgressBar,
 )
 from qtpy.QtCore import Qt
-from qtpy.QtGui import QIntValidator, QDoubleValidator
 
 import numpy as np
-from sklearn.ensemble import RandomForestClassifier
-import torch
-from torchvision import transforms
 
 from .widgets import (
     ScrollWidgetWrapper,
@@ -210,11 +201,11 @@ class SAMPredictorWidget(QWidget):
             # sam prompt need to be as x,y coordinates (numpy is y,x).
             if is_box_prompt:
                 slice_index = prompt[0, 0].astype(np.int32)
-                sam_input = np.repeat(
+                input_img = np.repeat(
                     self.image_layer.data[slice_index, :, :, np.newaxis],
                     3, axis=-1
                 )
-                self.sam_predictor.set_image(sam_input)
+                self.sam_predictor.set_image(input_img)
                 # napari box: depends on direction of drawing :( (y, x)
                 # SAM box: top-left, bottom-right (x, y)
                 top_left = (prompt[:, 2].min(), prompt[:, 1].min())
@@ -229,11 +220,11 @@ class SAMPredictorWidget(QWidget):
                 )
             else:
                 slice_index = prompt[0].astype(np.int32)
-                sam_input = np.repeat(
+                input_img = np.repeat(
                     self.image_layer.data[slice_index, :, :, np.newaxis],
                     3, axis=-1
                 )
-                self.sam_predictor.set_image(sam_input)
+                self.sam_predictor.set_image(input_img)
                 point = prompt[1:][[1, 0]]
                 masks, scores, logits = self.sam_predictor.predict(
                     point_coords=point[np.newaxis, :],
