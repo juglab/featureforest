@@ -8,6 +8,11 @@ contributions:
     - id: napari-sam-labeling-tools.make_extractor_widget
       python_name: napari_sam_labeling_tools:EmbeddingExtractorWidget
       title: Make SAM embeddings extractor widget
+    - id: napari-sam-labeling-tools.make_predictor_widget
+      python_name: napari_sam_labeling_tools:SAMPredictorWidget
+      title: Make SAM predictor widget
   widgets:
     - command: napari-sam-labeling-tools.make_extractor_widget
       display_name: SAM Embedding Extractor
+    - command: napari-sam-labeling-tools.make_predictor_widget
+      display_name: SAM Predictor Widget
