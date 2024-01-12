@@ -6,15 +6,13 @@ from napari.utils import progress as np_progress
 
 from qtpy.QtWidgets import (
     QHBoxLayout, QVBoxLayout, QWidget,
-    QGroupBox, QCheckBox,
+    QGroupBox,
     QPushButton, QLabel, QComboBox, QLineEdit,
-    QFileDialog, QScrollArea, QProgressBar,
+    QFileDialog, QProgressBar,
 )
 from qtpy.QtCore import Qt
 
 import h5py
-import numpy as np
-import torch
 
 from .widgets import (
     ScrollWidgetWrapper,
