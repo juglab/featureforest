@@ -3,9 +3,9 @@ import napari.utils.notifications as notif
 from napari.utils.events import Event
 
 from qtpy.QtWidgets import (
-    QHBoxLayout, QVBoxLayout, QWidget,
-    QGroupBox, QCheckBox,
-    QPushButton, QLabel, QComboBox, QLineEdit,
+    QVBoxLayout, QWidget,
+    QGroupBox,
+    QPushButton, QLabel, QComboBox,
 )
 from qtpy.QtCore import Qt
 
@@ -97,7 +97,7 @@ class SAMPredictorWidget(QWidget):
 
     def create_prediction_ui(self):
         # predict button
-        predict_button = QPushButton("Prediction Prompts")
+        predict_button = QPushButton("Predict Prompts")
         predict_button.clicked.connect(self.predict_prompts)
 
         # layout
