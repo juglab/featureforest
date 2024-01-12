@@ -1,3 +1,5 @@
+import pickle
+
 import napari
 import napari.utils.notifications as notif
 from napari.utils.events import Event
@@ -33,9 +35,9 @@ from .utils.data import (
     patchify, unpatchify
 )
 from .utils.postprocess import (
-    process_similarity_matrix, postprocess_label,
-    generate_mask_prompts,
+    postprocess_segmentation,
 )
+from .utils.postprocess_with_sam import postprocess_segmentations_with_sam
 
 
 class SAMRFSegmentationWidget(QWidget):
@@ -49,13 +51,11 @@ class SAMRFSegmentationWidget(QWidget):
         self.rf_model = None
         self.device = None
         self.sam_model = None
-        self.sam_predictor = None
 
         self.prepare_widget()
 
         # init sam model & predictor
         self.sam_model, self.device = self.get_model_on_device()
-        self.sam_predictor = SAM.SamPredictor(self.sam_model)
 
     def prepare_widget(self):
         self.base_layout = QVBoxLayout()
@@ -170,21 +170,21 @@ class SAMRFSegmentationWidget(QWidget):
         train_button.setMinimumWidth(150)
         train_button.setMaximumWidth(150)
 
-        self.sam_progress = QProgressBar()
-        self.save_storage_button = QPushButton("Save SAM Embeddings")
+        # self.sam_progress = QProgressBar()
+        # self.save_storage_button = QPushButton("Save SAM Embeddings")
         # self.save_storage_button.clicked.connect(self.save_embeddings)
-        self.save_storage_button.setMinimumWidth(150)
-        self.save_storage_button.setMaximumWidth(150)
-        self.save_storage_button.setEnabled(False)
+        # self.save_storage_button.setMinimumWidth(150)
+        # self.save_storage_button.setMaximumWidth(150)
+        # self.save_storage_button.setEnabled(False)
 
         self.model_status_label = QLabel("Model status:")
 
         load_button = QPushButton("Load Model")
-        # load_button.clicked.connect(self.load_model)
+        load_button.clicked.connect(self.load_rf_model)
         load_button.setMaximumWidth(150)
 
         self.model_save_button = QPushButton("Save Model")
-        # self.model_save_button.clicked.connect(self.save_model)
+        self.model_save_button.clicked.connect(self.save_rf_model)
         self.model_save_button.setMaximumWidth(150)
         self.model_save_button.setEnabled(False)
 
@@ -197,8 +197,8 @@ class SAMRFSegmentationWidget(QWidget):
         vbox.addWidget(depth_label)
         vbox.addWidget(self.max_depth_textbox)
         vbox.addWidget(train_button, alignment=Qt.AlignLeft)
-        vbox.addWidget(self.sam_progress)
-        vbox.addWidget(self.save_storage_button, alignment=Qt.AlignLeft)
+        # vbox.addWidget(self.sam_progress)
+        # vbox.addWidget(self.save_storage_button, alignment=Qt.AlignLeft)
         vbox.addWidget(self.model_status_label)
         hbox = QHBoxLayout()
         hbox.setContentsMargins(0, 0, 0, 0)
@@ -222,9 +222,10 @@ class SAMRFSegmentationWidget(QWidget):
         self.seg_add_radiobutton = QRadioButton("Add Segmentations")
         self.seg_add_radiobutton.setChecked(True)
         self.seg_add_radiobutton.setEnabled(False)
-        self.seg_replace_radionbutton = QRadioButton("Replace Segmentations")
-        self.seg_replace_radionbutton.setEnabled(False)
+        self.seg_replace_radiobutton = QRadioButton("Replace Segmentations")
+        self.seg_replace_radiobutton.setEnabled(False)
 
+        # post-process ui
         area_label = QLabel("Area Threshold(%):")
         self.area_threshold_textbox = QLineEdit()
         self.area_threshold_textbox.setText("0.15")
@@ -236,15 +237,19 @@ class SAMRFSegmentationWidget(QWidget):
         )
         self.area_threshold_textbox.setEnabled(False)
 
-        self.postprocess_checkbox = QCheckBox("Postprocess segmentations")
-        self.postprocess_checkbox.stateChanged.connect(
-            lambda state: self.area_threshold_textbox.setEnabled(state == Qt.Checked)
-        )
+        self.sam_post_checkbox = QCheckBox("Use SAM Predictor")
 
-        predict_button = QPushButton("Predict")
-        # predict_button.clicked.connect(self.predict)
+        self.postprocess_checkbox = QCheckBox("Postprocess Segmentations")
+        self.postprocess_checkbox.stateChanged.connect(self.postprocess_checkbox_changed)
+
+        predict_button = QPushButton("Predict Slice")
         predict_button.setMinimumWidth(150)
         predict_button.setMaximumWidth(150)
+        predict_button.clicked.connect(self.predict)
+        predict_all_button = QPushButton("Predict Whole Stack")
+        predict_all_button.setMinimumWidth(150)
+        predict_all_button.setMaximumWidth(150)
+        predict_all_button.clicked.connect(self.predict)
 
         # layout
         layout = QVBoxLayout()
@@ -256,12 +261,17 @@ class SAMRFSegmentationWidget(QWidget):
         hbox = QHBoxLayout()
         hbox.setContentsMargins(0, 0, 0, 20)
         hbox.addWidget(self.seg_add_radiobutton)
-        hbox.addWidget(self.seg_replace_radionbutton)
+        hbox.addWidget(self.seg_replace_radiobutton)
         vbox.addLayout(hbox)
         vbox.addWidget(self.postprocess_checkbox)
         vbox.addWidget(area_label)
         vbox.addWidget(self.area_threshold_textbox)
-        vbox.addWidget(predict_button, alignment=Qt.AlignLeft)
+        vbox.addWidget(self.sam_post_checkbox)
+        hbox = QHBoxLayout()
+        hbox.setContentsMargins(0, 0, 0, 20)
+        hbox.addWidget(predict_button)
+        hbox.addWidget(predict_all_button)
+        vbox.addLayout(hbox)
         layout.addLayout(vbox)
         gbox = QGroupBox()
         gbox.setTitle("Prediction")
@@ -273,7 +283,12 @@ class SAMRFSegmentationWidget(QWidget):
         state = self.new_layer_checkbox.checkState()
         self.prediction_layer_combo.setEnabled(state == Qt.Unchecked)
         self.seg_add_radiobutton.setEnabled(state == Qt.Unchecked)
-        self.seg_replace_radionbutton.setEnabled(state == Qt.Unchecked)
+        self.seg_replace_radiobutton.setEnabled(state == Qt.Unchecked)
+
+    def postprocess_checkbox_changed(self):
+        state = self.postprocess_checkbox.checkState()
+        self.area_threshold_textbox.setEnabled(state == Qt.Checked)
+        self.sam_post_checkbox.setEnabled(state == Qt.Checked)
 
     def check_input_layers(self, event: Event):
         curr_text = self.image_combo.currentText()
@@ -297,7 +312,7 @@ class SAMRFSegmentationWidget(QWidget):
                 # to handle layer's name change by user
                 layer.events.name.disconnect()
                 layer.events.name.connect(self.check_label_layers)
-                if "Segmentations" in layer.name:
+                if "Segmentation" in layer.name:
                     self.prediction_layer_combo.addItem(layer.name)
                 else:
                     self.gt_combo.addItem(layer.name)
@@ -411,3 +426,100 @@ class SAMRFSegmentationWidget(QWidget):
         self.model_status_label.setText("Model status: Ready!")
         notif.show_info("Model status: Training is Done!")
         self.model_save_button.setEnabled(True)
+
+    def load_rf_model(self):
+        selected_file, _filter = QFileDialog.getOpenFileName(
+            self, "Jug Lab", ".", "model(*.bin)"
+        )
+        if len(selected_file) > 0:
+            with open(selected_file, mode="rb") as f:
+                self.rf_model = pickle.load(f)
+            notif.show_info("Model was loaded successfully.")
+            self.model_status_label.setText("Model status: Ready!")
+
+    def save_rf_model(self):
+        if self.rf_model is None:
+            notif.show_info("There is no trained model!")
+            return
+        selected_file, _filter = QFileDialog.getSaveFileName(
+            self, "Jug Lab", ".", "model(*.bin)"
+        )
+        if len(selected_file) > 0:
+            with open(selected_file, mode="wb") as f:
+                pickle.dump(self.rf_model, f)
+            notif.show_info("Model was saved successfully.")
+
+    def predict(self):
+        if self.rf_model is None:
+            notif.show_error("There is no trained RF model!")
+            return
+
+        self.image_layer = get_layer(
+            self.viewer,
+            self.image_combo.currentText(), config.NAPARI_IMAGE_LAYER
+        )
+        if self.image_layer is None:
+            notif.show_error("No Image layer is selected!")
+            return
+
+        curr_slice = self.viewer.dims.current_step[0]
+        img_depth, img_height, img_width = self.image_layer.data.shape
+        # get segmentation
+        segmentation_image = self.predict_slice(
+            self.rf_model,
+            self.storage[str(curr_slice)]["sam"], img_height, img_width
+        )
+
+        # check for postprocessing
+        if self.postprocess_checkbox.checkState() == Qt.Checked:
+            # apply postprocessing
+            area_threshold = None
+            if len(self.area_threshold_textbox.text()) > 0:
+                area_threshold = float(self.area_threshold_textbox.text())
+            if self.sam_post_checkbox.checkState() == Qt.Checked:
+                segmentation_image = postprocess_segmentations_with_sam(
+                    self.sam_model, segmentation_image, area_threshold
+                )
+            else:
+                segmentation_image = postprocess_segmentation(
+                    segmentation_image, area_threshold
+                )
+
+        # add/update segmentation result layer
+        if self.new_layer_checkbox.checkState() == Qt.Checked:
+            segmentation_data = np.zeros(self.image_layer.data.shape, dtype=np.uint8)
+            segmentation_data[curr_slice] = segmentation_image
+            self.segmentation_layer = self.viewer.add_labels(
+                segmentation_data, name="Segmentations"
+            )
+        else:
+            self.segmentation_layer = get_layer(
+                self.viewer,
+                self.prediction_layer_combo.currentText(), config.NAPARI_LABELS_LAYER
+            )
+            if self.segmentation_layer is None:
+                notif.show_error("No segmentation layer is selected!")
+                return
+            # add or replace results
+            if self.seg_replace_radiobutton.isChecked():
+                # replace the segmentation
+                self.segmentation_layer.data[curr_slice] = segmentation_image
+            else:
+                # add new result to the previous one
+                old_bg = self.segmentation_layer.data[curr_slice] == 0
+                new_no_bg = segmentation_image > 0
+                mask = np.logical_or(old_bg, new_no_bg)
+                self.segmentation_layer.data[curr_slice][mask] = segmentation_image[mask]
+
+        cm, _ = colormap.create_colormap(len(np.unique(segmentation_image)))
+        self.segmentation_layer.colormap = cm
+        self.segmentation_layer.refresh()
+
+    def predict_slice(self, model, dataset, img_h, img_w):
+        features = dataset[:].reshape(
+            -1, SAM.PATCH_CHANNELS + SAM.EMBEDDING_SIZE
+        )
+        predictions = model.predict(features).astype(np.uint8)
+        segment_img = predictions.reshape(img_h, img_w)
+
+        return segment_img

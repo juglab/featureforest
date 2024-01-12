@@ -1,21 +1,5 @@
 import numpy as np
 import cv2
-import scipy
-
-
-# def calc_similarity(vec_a, vec_b):
-#     return np.dot(vec_a, vec_b) / (np.linalg.norm(vec_a) * np.linalg.norm(vec_b))
-
-
-def get_furthest_point_from_edge(mask):
-    dists = cv2.distanceTransform(
-        mask, distanceType=cv2.DIST_L1, maskSize=3
-    ).astype(np.float32)
-    cy, cx = np.where(dists == dists.max())
-    # in sometimes cases multiple values returned for the visual center
-    cx, cy = cx.mean(), cy.mean()
-
-    return cx, cy
 
 
 def process_similarity_matrix(sim_mat):
@@ -53,6 +37,31 @@ def postprocess_label(bin_image, area_threshold: float = None):
     morphed_img[np.isin(labels, small_parts)] = 0
 
     return morphed_img
+
+
+def postprocess_segmentation(segmentation_image, area_threshold: float = None):
+    final_image = np.zeros_like(segmentation_image, dtype=np.uint8)
+    # postprocessing gets done for each label's segments.
+    class_labels = [c for c in np.unique(segmentation_image) if c > 0]
+    for label in class_labels:
+        # make a binary image for the label
+        bin_image = (segmentation_image == label).astype(np.uint8) * 255
+        processed_image = postprocess_label(bin_image, area_threshold)
+        # put the processed image into final result image
+        final_image[processed_image == 255] = label
+
+    return final_image
+
+
+def get_furthest_point_from_edge(mask):
+    dists = cv2.distanceTransform(
+        mask, distanceType=cv2.DIST_L1, maskSize=3
+    ).astype(np.float32)
+    cy, cx = np.where(dists == dists.max())
+    # in sometimes cases multiple values returned for the visual center
+    cx, cy = cx.mean(), cy.mean()
+
+    return cx, cy
 
 
 def generate_mask_prompts(mask):
