@@ -55,14 +55,14 @@ def get_colormap1():
     return cm
 
 
-def create_colormap(num_colors, bright=True, black_first=True, seed=7654):
+def create_colormap(num_colors, bright=True, black_first=True, seed=4567):
     if num_colors < 10:
         num_colors = 10
 
     low = [0.0, 0.45, 0.55]
     high = 0.9
     if bright:
-        low = [0.0, 0.5, 0.87]
+        low = [0.0, 0.55, 0.9]
         high = 1.0
 
     hsv_colors = np.stack([

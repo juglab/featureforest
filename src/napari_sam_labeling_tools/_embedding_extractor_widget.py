@@ -56,10 +56,12 @@ class EmbeddingExtractorWidget(QWidget):
         self.extract_button = QPushButton("Extract Embeddings")
         self.extract_button.setEnabled(False)
         self.extract_button.clicked.connect(self.extract_embeddings)
+        self.extract_button.setMinimumWidth(150)
         # stop button
         self.stop_button = QPushButton("Stop")
         self.stop_button.setEnabled(False)
         self.stop_button.clicked.connect(self.stop_extracting)
+        self.stop_button.setMinimumWidth(150)
         # progress
         self.stack_progress = QProgressBar()
         # self.slice_progress = QProgressBar()
@@ -85,8 +87,11 @@ class EmbeddingExtractorWidget(QWidget):
         hbox.addWidget(self.storage_textbox)
         hbox.addWidget(storage_button)
         vbox.addLayout(hbox)
-        vbox.addWidget(self.extract_button)
-        vbox.addWidget(self.stop_button)
+        hbox = QHBoxLayout()
+        hbox.setContentsMargins(0, 0, 0, 0)
+        hbox.addWidget(self.extract_button, alignment=Qt.AlignLeft)
+        hbox.addWidget(self.stop_button, alignment=Qt.AlignLeft)
+        vbox.addLayout(hbox)
         layout.addLayout(vbox)
 
         vbox = QVBoxLayout()

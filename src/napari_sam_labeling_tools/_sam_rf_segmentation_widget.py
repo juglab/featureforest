@@ -25,7 +25,7 @@ from .widgets import (
     get_layer, add_labels_layer
 )
 from .utils import (
-    config, colormap
+    colormaps, config
 )
 from .utils.postprocess import (
     postprocess_segmentation,
@@ -345,7 +345,7 @@ class SAMRFSegmentationWidget(QWidget):
             return labels_dict
 
         class_indices = np.unique(layer.data).tolist()
-        # class zero is the napari background class that we should ignore.
+        # class zero is the napari background class.
         class_indices = [i for i in class_indices if i > 0]
         for class_idx in class_indices:
             positions = np.argwhere(layer.data == class_idx)
@@ -382,7 +382,7 @@ class SAMRFSegmentationWidget(QWidget):
             for slice_index, y, x in labels_dict[class_index]:
                 # slice_features = self.storage[str(slice_index)]["sam"][y, x]
                 train_data[count] = self.storage[str(slice_index)]["sam"][y, x]
-                labels[count] = class_index
+                labels[count] = class_index - 1  # to have bg class as zero
                 count += 1
         assert (labels > -1).all()
 
@@ -482,16 +482,17 @@ class SAMRFSegmentationWidget(QWidget):
         else:
             slice_indices = range(num_slices)
 
+        if whole_stack:
+            self.predict_stop_button.setEnabled(True)
         # run prediction in another thread
-        self.predict_stop_button.setEnabled(True)
         self.prediction_worker = create_worker(
-            self.do_predict, slice_indices, img_height, img_width
+            self.run_prediction, slice_indices, img_height, img_width
         )
         self.prediction_worker.yielded.connect(self.update_prediction_progress)
         self.prediction_worker.finished.connect(self.prediction_is_done)
         self.prediction_worker.run()
 
-    def do_predict(self, slice_indices, img_height, img_width):
+    def run_prediction(self, slice_indices, img_height, img_width):
         for slice_index in np_progress(slice_indices):
             segmentation_image = self.predict_slice(
                 self.rf_model, slice_index, img_height, img_width
@@ -511,8 +512,9 @@ class SAMRFSegmentationWidget(QWidget):
 
             yield (slice_index, len(slice_indices))
 
-        cm, _ = colormap.create_colormap(len(np.unique(segmentation_image)))
-        self.segmentation_layer.colormap = cm
+        if self.new_layer_checkbox.checkState() == Qt.Checked:
+            cm, _ = colormaps.create_colormap(len(np.unique(segmentation_image)))
+            self.segmentation_layer.colormap = cm
         self.segmentation_layer.refresh()
 
     def predict_slice(self, rf_model, slice_index, img_h, img_w):
