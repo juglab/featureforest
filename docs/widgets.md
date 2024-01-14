@@ -1,10 +1,10 @@
 # Plugin Widgets
 
-This plugin provides four widgets, one for extracting the SAM embeddings, and three widgets for segmentations using different methods.
+This plugin provides four widgets: one for extracting the SAM embeddings and three for segmentation using different methods.  
 
 ## SAM Embeddings Extractor Widgets
 SAM embeddings will be used for running prediction in two other widgets: **SAM-RF Widget**, and **SAM Prompt Segmentation Widget**.  
-Therefore, we provided a widget to extract embeddings of the loaded input stack, and to save them on disk in the *HDF5* format.  
+Therefore, we provided a widget to extract embeddings of the loaded input stack and save them on disk in the *HDF5* format.  
 
 ![extractor widget](images/extractor_widget.png)
 
@@ -16,7 +16,7 @@ Therefore, we provided a widget to extract embeddings of the loaded input stack,
 <br><br>
 
 ## SAM Predictor Widget
-This widget just simply uses the user prompts, and give them to SAM predictor model to get the segmentations. Prompts can be in form of points (only positive), or boxes.  
+This widget simply uses the user prompts and gives them to the SAM predictor model to get the segmentations. Prompts can be in the form of points (only positive) or boxes.  
 This widget works nicely for objects having more clear boundaries. It also can be used as a complementary method over the **SAM-RF Widget**.
 
 ![sam predictor widget](images/sam_predictor_widget.png)
@@ -34,9 +34,9 @@ This widget works nicely for objects having more clear boundaries. It also can b
 <br><br>
 
 ## SAM-RF Widget
-This widget is designed to do segmentation while using the SAM embeddings features instead of the image features, along with the user-provided sparse labels using a *Random Forest* model.  
-The amount of required labels for having a almost nice-looking segmentations compared to the number of pixels are super low.  
-The provided *postprocessing* methods can create an even more accurate and cleaner annotations.
+This widget is designed to do segmentation while using the SAM embedding features instead of the image features, along with the user-provided sparse labels using a *Random Forest* model.  
+The number of required labels for having almost nice-looking segmentations compared to the number of pixels is super low.  
+The provided *postprocessing* methods can create even more accurate and cleaner annotations.
 
 ![sam-rf widget 1](images/sam_rf_widget_1.png)
 
