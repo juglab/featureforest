@@ -3,8 +3,8 @@ import napari.utils.notifications as notif
 from napari.utils.events import Event
 
 from qtpy.QtWidgets import (
-    QVBoxLayout, QWidget,
-    QGroupBox,
+    QVBoxLayout, QWidget, QHBoxLayout,
+    QGroupBox, QRadioButton, QCheckBox,
     QPushButton, QLabel, QComboBox,
 )
 from qtpy.QtCore import Qt
@@ -17,7 +17,7 @@ from .widgets import (
 )
 from . import SAM
 from .utils import (
-    config, colormap
+    colormaps, config
 )
 
 
@@ -26,6 +26,7 @@ class SAMPredictorWidget(QWidget):
         super().__init__()
         self.viewer = napari_viewer
         self.image_layer = None
+        self.segmentation_layer = None
         self.sam_model = None
         self.device = None
         self.sam_predictor = None
@@ -59,6 +60,10 @@ class SAMPredictorWidget(QWidget):
         self.viewer.layers.events.removed.connect(self.check_prompt_layers)
         self.check_prompt_layers(None)
 
+        self.viewer.layers.events.inserted.connect(self.check_label_layers)
+        self.viewer.layers.events.removed.connect(self.check_label_layers)
+        self.check_label_layers(None)
+
     def create_input_ui(self):
         # input layer
         input_label = QLabel("Input Layer:")
@@ -70,8 +75,10 @@ class SAMPredictorWidget(QWidget):
         self.prompt_combo.currentTextChanged.connect(self.prompt_changed)
         add_point_prompt_button = QPushButton("Add Point Layer")
         add_point_prompt_button.clicked.connect(lambda: self.add_prompt_layer("point"))
+        add_point_prompt_button.setMinimumWidth(150)
         add_box_prompt_button = QPushButton("Add Box Layer")
         add_box_prompt_button.clicked.connect(lambda: self.add_prompt_layer("box"))
+        add_box_prompt_button.setMinimumWidth(150)
 
         # layout
         layout = QVBoxLayout()
@@ -85,8 +92,10 @@ class SAMPredictorWidget(QWidget):
         vbox.setContentsMargins(0, 0, 0, 0)
         vbox.addWidget(_label)
         vbox.addWidget(self.prompt_combo)
-        vbox.addWidget(add_point_prompt_button)
-        vbox.addWidget(add_box_prompt_button)
+        hbox = QHBoxLayout()
+        hbox.addWidget(add_point_prompt_button, alignment=Qt.AlignLeft)
+        hbox.addWidget(add_box_prompt_button, alignment=Qt.AlignLeft)
+        vbox.addLayout(hbox)
         layout.addLayout(vbox)
 
         gbox = QGroupBox()
@@ -96,15 +105,35 @@ class SAMPredictorWidget(QWidget):
         self.base_layout.addWidget(gbox)
 
     def create_prediction_ui(self):
+        seg_label = QLabel("Segmentation Layer:")
+        self.new_layer_checkbox = QCheckBox("New Layer")
+        self.new_layer_checkbox.setChecked(True)
+        self.new_layer_checkbox.stateChanged.connect(self.new_layer_checkbox_changed)
+        self.prediction_layer_combo = QComboBox()
+        self.prediction_layer_combo.setEnabled(False)
+        self.seg_add_radiobutton = QRadioButton("Add Segmentations")
+        self.seg_add_radiobutton.setChecked(True)
+        self.seg_add_radiobutton.setEnabled(False)
+        self.seg_replace_radiobutton = QRadioButton("Replace Segmentations")
+        self.seg_replace_radiobutton.setEnabled(False)
         # predict button
         predict_button = QPushButton("Predict Prompts")
         predict_button.clicked.connect(self.predict_prompts)
+        predict_button.setMinimumWidth(150)
 
         # layout
         layout = QVBoxLayout()
         vbox = QVBoxLayout()
         vbox.setContentsMargins(0, 0, 0, 0)
-        vbox.addWidget(predict_button)
+        vbox.addWidget(seg_label)
+        vbox.addWidget(self.new_layer_checkbox)
+        vbox.addWidget(self.prediction_layer_combo)
+        hbox = QHBoxLayout()
+        hbox.setContentsMargins(0, 0, 0, 20)
+        hbox.addWidget(self.seg_add_radiobutton)
+        hbox.addWidget(self.seg_replace_radiobutton)
+        vbox.addLayout(hbox)
+        vbox.addWidget(predict_button, alignment=Qt.AlignLeft)
         layout.addLayout(vbox)
 
         gbox = QGroupBox()
@@ -112,6 +141,12 @@ class SAMPredictorWidget(QWidget):
         gbox.setMinimumWidth(100)
         gbox.setLayout(layout)
         self.base_layout.addWidget(gbox)
+
+    def new_layer_checkbox_changed(self):
+        state = self.new_layer_checkbox.checkState()
+        self.prediction_layer_combo.setEnabled(state == Qt.Unchecked)
+        self.seg_add_radiobutton.setEnabled(state == Qt.Unchecked)
+        self.seg_replace_radiobutton.setEnabled(state == Qt.Unchecked)
 
     def check_input_layers(self, event: Event = None):
         curr_text = self.image_combo.currentText()
@@ -124,6 +159,24 @@ class SAMPredictorWidget(QWidget):
             index = self.image_combo.findText(curr_text, Qt.MatchExactly)
             if index > -1:
                 self.image_combo.setCurrentIndex(index)
+
+    def check_label_layers(self, event: Event):
+        pred_curr_text = self.prediction_layer_combo.currentText()
+        self.prediction_layer_combo.clear()
+        for layer in self.viewer.layers:
+            if isinstance(layer, config.NAPARI_LABELS_LAYER):
+                # to handle layer's name change by user
+                layer.events.name.disconnect()
+                layer.events.name.connect(self.check_label_layers)
+                if "Segmentation" in layer.name:
+                    self.prediction_layer_combo.addItem(layer.name)
+        # put back the selected layers, if not removed
+        if len(pred_curr_text) > 0:
+            index = self.prediction_layer_combo.findText(
+                pred_curr_text, Qt.MatchExactly
+            )
+            if index > -1:
+                self.prediction_layer_combo.setCurrentIndex(index)
 
     def add_prompt_layer(self, prompt_type: str = "point"):
         layer = None
@@ -245,12 +298,28 @@ class SAMPredictorWidget(QWidget):
             self.image_combo.currentText(), config.NAPARI_IMAGE_LAYER
         )
         if self.image_layer is None:
-            notif.show_error("No Image layer is selected.")
+            notif.show_error("No Image layer is selected!")
             return None
 
         user_prompts = self.get_user_prompts()
         if user_prompts is None:
+            notif.show_warning("No prompts was given!")
             return
+
+        if self.new_layer_checkbox.checkState() == Qt.Checked:
+            segmentation_data = np.zeros(self.image_layer.data.shape, dtype=np.uint8)
+            self.segmentation_layer = self.viewer.add_labels(
+                segmentation_data, name="Prompt Segmentations"
+            )
+        else:
+            # using selected layer for the segmentation
+            self.segmentation_layer = get_layer(
+                self.viewer,
+                self.prediction_layer_combo.currentText(), config.NAPARI_LABELS_LAYER
+            )
+            if self.segmentation_layer is None:
+                notif.show_error("No segmentation layer is selected!")
+                return
 
         num_slices, img_height, img_width = self.image_layer.data.shape
         prompts_mask = self.get_prompt_labels(
@@ -262,9 +331,20 @@ class SAMPredictorWidget(QWidget):
                 "SAM model couldn't generate any mask for the given prompts!"
             )
             return
-        # add sam segmentation result as a labels layer
-        layer = self.viewer.add_labels(
-            data=prompts_mask, name="Prompt Labels",
-            opacity=0.6
-        )
-        layer.colormap = colormap.get_colormap1()
+        # add/update segmentation result layer
+        if (
+            self.new_layer_checkbox.checkState() == Qt.Checked or
+            self.seg_replace_radiobutton.isChecked()
+        ):
+            self.segmentation_layer.data = prompts_mask
+        else:
+            # add new result to the previous one (logical OR)
+            old_bg = self.segmentation_layer.data == 0
+            new_no_bg = prompts_mask > 0
+            mask = np.logical_or(old_bg, new_no_bg)
+            if mask.sum() > 0:
+                self.segmentation_layer.data[mask] = prompts_mask[mask]
+
+        if self.new_layer_checkbox.checkState() == Qt.Checked:
+            self.segmentation_layer.colormap = colormaps.get_colormap1()
+        self.segmentation_layer.refresh()

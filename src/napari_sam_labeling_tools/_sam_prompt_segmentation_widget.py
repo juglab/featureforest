@@ -24,7 +24,7 @@ from .widgets import (
     get_layer,
 )
 from .utils import (
-    config, colormap
+    colormaps, config
 )
 from .utils.data import (
     DATA_PATCH_SIZE, TARGET_PATCH_SIZE,
@@ -36,7 +36,7 @@ from .utils.postprocess import (
 )
 
 
-class SAMRFSegmentationWidget(QWidget):
+class SAMPromptSegmentationWidget(QWidget):
     def __init__(self, napari_viewer: napari.Viewer):
         super().__init__()
         self.viewer = napari_viewer
@@ -59,13 +59,13 @@ class SAMRFSegmentationWidget(QWidget):
         self.create_input_ui()
         self.create_prediction_ui()
 
-        self.base_layout.addStretch(1)
         scroll_content = QWidget()
         scroll_content.setLayout(self.base_layout)
         scroll = ScrollWidgetWrapper(scroll_content)
         vbox = QVBoxLayout()
         vbox.addWidget(scroll)
         self.setLayout(vbox)
+        self.base_layout.addStretch(1)
 
         self.viewer.layers.events.inserted.connect(self.check_input_layers)
         self.viewer.layers.events.removed.connect(self.check_input_layers)
