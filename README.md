@@ -7,33 +7,52 @@
 [![codecov](https://codecov.io/gh/juglab/napari-sam-labeling-tools/branch/main/graph/badge.svg)](https://codecov.io/gh/juglab/napari-sam-labeling-tools)
 [![napari hub](https://img.shields.io/endpoint?url=https://api.napari-hub.org/shields/napari-sam-labeling-tools)](https://napari-hub.org/plugins/napari-sam-labeling-tools)
 
-A few napari plugins for segmentation using SAM model and its feature space.
+A plugin for segmentation using SAM model and its feature space.
 
 ----------------------------------
 
-This [napari] plugin was generated with [Cookiecutter] using [@napari]'s [cookiecutter-napari-plugin] template.
-
-<!--
-Don't miss the full getting started guide to set up your new package:
-https://github.com/napari/cookiecutter-napari-plugin#getting-started
-
-and review the napari docs for plugin developers:
-https://napari.org/stable/plugins/index.html
--->
+## Documentation
+See [Plugin Widgets](docs/widgets.md)
 
 ## Installation
+It is highly recommended to use a python environment manager like [conda] to create a clean environment for installation.  
+You can install all the requirements using provided environment config file ([`env.yml`](env.yml)):  
+```bash
+conda env create -f ./env.yml
+```
 
-You can install `napari-sam-labeling-tools` via [pip]:
+### Requirements
+- `python >= 3.9`
+- `numpy`
+- `opencv-python`
+- `scikit-learn`
+- `scikit-image`
+- `matplotlib`
+- `pyqt`
+- `magicgui`
+- `qtpy`
+- `napari`
+- `h5py`
+- `pytorch`
+- `tochvision`
+- `timm`
 
-    pip install napari-sam-labeling-tools
+### Installing The Plugin
+To install the plugin, open the command prompt in the plugin directory, and run the following command:
+```bash
+pip install -e .
+```
+<!-- You can install `napari-sam-labeling-tools` via [pip]:
+
+    pip install napari-sam-labeling-tools -->
 
 
 
 
-## Contributing
+<!-- ## Contributing
 
 Contributions are very welcome. Tests can be run with [tox], please ensure
-the coverage at least stays the same before you submit a pull request.
+the coverage at least stays the same before you submit a pull request. -->
 
 ## License
 
@@ -59,3 +78,4 @@ If you encounter any problems, please [file an issue] along with a detailed desc
 [tox]: https://tox.readthedocs.io/en/latest/
 [pip]: https://pypi.org/project/pip/
 [PyPI]: https://pypi.org/
+[conda]: https://conda.io/projects/conda/en/latest/index.html
