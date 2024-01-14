@@ -14,6 +14,9 @@ contributions:
     - id: napari-sam-labeling-tools.make_segmentation_widget
       python_name: napari_sam_labeling_tools:SAMRFSegmentationWidget
       title: Make SAM-RF segmentation widget
+    - id: napari-sam-labeling-tools.make_prompt_segmentation_widget
+      python_name: napari_sam_labeling_tools:SAMPromptSegmentationWidget
+      title: Make SAM Prompt segmentation widget
   widgets:
     - command: napari-sam-labeling-tools.make_extractor_widget
       display_name: SAM Embedding Extractor
@@ -21,3 +24,5 @@ contributions:
       display_name: SAM Predictor Widget
     - command: napari-sam-labeling-tools.make_segmentation_widget
       display_name: SAM-RF Segmentation Widget
+    - command: napari-sam-labeling-tools.make_prompt_segmentation_widget
+      display_name: SAM Prompt Segmentation Widget
