@@ -669,63 +669,63 @@ def register_tiny_vit_model(fn):
     return register_model(fn_wrapper)
 
 
-@register_tiny_vit_model
-def tiny_vit_5m_224(pretrained=False, num_classes=1000, drop_path_rate=0.0):
-    return TinyViT(
-        num_classes=num_classes,
-        embed_dims=[64, 128, 160, 320],
-        depths=[2, 2, 6, 2],
-        num_heads=[2, 4, 5, 10],
-        window_sizes=[7, 7, 14, 7],
-        drop_path_rate=drop_path_rate,
-    )
+# @register_tiny_vit_model
+# def tiny_vit_5m_224(pretrained=False, num_classes=1000, drop_path_rate=0.0):
+#     return TinyViT(
+#         num_classes=num_classes,
+#         embed_dims=[64, 128, 160, 320],
+#         depths=[2, 2, 6, 2],
+#         num_heads=[2, 4, 5, 10],
+#         window_sizes=[7, 7, 14, 7],
+#         drop_path_rate=drop_path_rate,
+#     )
 
 
-@register_tiny_vit_model
-def tiny_vit_11m_224(pretrained=False, num_classes=1000, drop_path_rate=0.1):
-    return TinyViT(
-        num_classes=num_classes,
-        embed_dims=[64, 128, 256, 448],
-        depths=[2, 2, 6, 2],
-        num_heads=[2, 4, 8, 14],
-        window_sizes=[7, 7, 14, 7],
-        drop_path_rate=drop_path_rate,
-    )
+# @register_tiny_vit_model
+# def tiny_vit_11m_224(pretrained=False, num_classes=1000, drop_path_rate=0.1):
+#     return TinyViT(
+#         num_classes=num_classes,
+#         embed_dims=[64, 128, 256, 448],
+#         depths=[2, 2, 6, 2],
+#         num_heads=[2, 4, 8, 14],
+#         window_sizes=[7, 7, 14, 7],
+#         drop_path_rate=drop_path_rate,
+#     )
 
 
-@register_tiny_vit_model
-def tiny_vit_21m_224(pretrained=False, num_classes=1000, drop_path_rate=0.2):
-    return TinyViT(
-        num_classes=num_classes,
-        embed_dims=[96, 192, 384, 576],
-        depths=[2, 2, 6, 2],
-        num_heads=[3, 6, 12, 18],
-        window_sizes=[7, 7, 14, 7],
-        drop_path_rate=drop_path_rate,
-    )
+# @register_tiny_vit_model
+# def tiny_vit_21m_224(pretrained=False, num_classes=1000, drop_path_rate=0.2):
+#     return TinyViT(
+#         num_classes=num_classes,
+#         embed_dims=[96, 192, 384, 576],
+#         depths=[2, 2, 6, 2],
+#         num_heads=[3, 6, 12, 18],
+#         window_sizes=[7, 7, 14, 7],
+#         drop_path_rate=drop_path_rate,
+#     )
 
 
-@register_tiny_vit_model
-def tiny_vit_21m_384(pretrained=False, num_classes=1000, drop_path_rate=0.1):
-    return TinyViT(
-        img_size=384,
-        num_classes=num_classes,
-        embed_dims=[96, 192, 384, 576],
-        depths=[2, 2, 6, 2],
-        num_heads=[3, 6, 12, 18],
-        window_sizes=[12, 12, 24, 12],
-        drop_path_rate=drop_path_rate,
-    )
+# @register_tiny_vit_model
+# def tiny_vit_21m_384(pretrained=False, num_classes=1000, drop_path_rate=0.1):
+#     return TinyViT(
+#         img_size=384,
+#         num_classes=num_classes,
+#         embed_dims=[96, 192, 384, 576],
+#         depths=[2, 2, 6, 2],
+#         num_heads=[3, 6, 12, 18],
+#         window_sizes=[12, 12, 24, 12],
+#         drop_path_rate=drop_path_rate,
+#     )
 
 
-@register_tiny_vit_model
-def tiny_vit_21m_512(pretrained=False, num_classes=1000, drop_path_rate=0.1):
-    return TinyViT(
-        img_size=512,
-        num_classes=num_classes,
-        embed_dims=[96, 192, 384, 576],
-        depths=[2, 2, 6, 2],
-        num_heads=[3, 6, 12, 18],
-        window_sizes=[16, 16, 32, 16],
-        drop_path_rate=drop_path_rate,
-    )
+# @register_tiny_vit_model
+# def tiny_vit_21m_512(pretrained=False, num_classes=1000, drop_path_rate=0.1):
+#     return TinyViT(
+#         img_size=512,
+#         num_classes=num_classes,
+#         embed_dims=[96, 192, 384, 576],
+#         depths=[2, 2, 6, 2],
+#         num_heads=[3, 6, 12, 18],
+#         window_sizes=[16, 16, 32, 16],
+#         drop_path_rate=drop_path_rate,
+#     )
