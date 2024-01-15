@@ -157,7 +157,7 @@ class SAMPromptSegmentationWidget(QWidget):
         )
 
         self.show_intermediate_checkbox = QCheckBox("Show Intermediate Results")
-        self.show_intermediate_checkbox.setChecked(True)
+        # self.show_intermediate_checkbox.setChecked(True)
 
         predict_button = QPushButton("Predict Slice")
         predict_button.setMinimumWidth(150)
