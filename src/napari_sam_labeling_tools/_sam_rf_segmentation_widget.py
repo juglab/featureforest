@@ -459,6 +459,10 @@ class SAMRFSegmentationWidget(QWidget):
             notif.show_error("No Image layer is selected!")
             return
 
+        if self.storage is None:
+            notif.show_error("No storage is selected!")
+            return
+
         if self.new_layer_checkbox.checkState() == Qt.Checked:
             segmentation_data = np.zeros(self.image_layer.data.shape, dtype=np.uint8)
             self.segmentation_layer = self.viewer.add_labels(
