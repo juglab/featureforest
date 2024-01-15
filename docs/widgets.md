@@ -15,24 +15,6 @@ Therefore, we provided a widget to extract embeddings of the loaded input stack 
 5. **Process progress bar:** showing extraction progress.
 <br><br>
 
-## SAM Predictor Widget
-This widget simply uses the user prompts and gives them to the SAM predictor model to get the segmentations. Prompts can be in the form of points (only positive) or boxes.  
-This widget works nicely for objects having more clear boundaries. It also can be used as a complementary method over the **SAM-RF Widget**.
-
-![sam predictor widget](images/sam_predictor_widget.png)
-
-1. **Input layer combo box:** to select input image (stack).
-2. **Prompt layer combo box:** to select the input prompt layer.
-3. **Add Point Layer button:** to add a new point prompt layer.
-4. **Add Box Layer button:** to add a new box prompt layer (basically it's a napari shapes layer).
-5. **New Layer checkbox:** if checked, the segmentations result will be added into a new layer.
-6. **Segmentation layer combo box:** if *New Layer* is unchecked, then user must select the segmentations layer.
-7. **Segmentation layer options:**
-    - **Add Segmentations:** the result will be added to the selected layer. In other words, pixels which segmented as non-background will be added to the selected layer.
-    - **Replace Segmentations:** the selected layer content will be replaced with the result.
-8. **Predict Prompts button:** to do the prediction using SAM's predictor.
-<br><br>
-
 ## SAM-RF Widget
 This widget is designed to do segmentation while using the SAM embedding features instead of the image features, along with the user-provided sparse labels using a *Random Forest* model.  
 The number of required labels for having almost nice-looking segmentations compared to the number of pixels is super low.  
@@ -59,9 +41,52 @@ The provided *postprocessing* methods can create even more accurate and cleaner 
     - **Add Segmentations:** the result will be added to the selected layer. In other words, pixels which segmented as non-background will be added to the selected layer.
     - **Replace Segmentations:** the selected layer content will be replaced with the result.
 13. **Postprocess Segmentation checkbox:** if checked, the segmentations result will be postprocessed.
-14. **Area Threshold textbox:** if postprocess checked, then the area threshold will be used to eliminate small segmented objects with area below the set threshold. The higher the area threshold, the more segmented objects will be eliminated.
+14. **Area Threshold inputbox:** if postprocess checked, then the area threshold will be used to eliminate small segmented objects with area below the set threshold. The higher the area threshold, the more segmented objects will be eliminated.
 15. **Use SAM Predictor checkbox:** to use *SAM predictor* model to predict final segmentations using the RF model prediction as input prompts (prompts will be bounding boxes around RF segmented objects).
 16. **Predict Slice button:** to run the prediction for the current image slice.
 17. **Predict Whole Stack button:** to run prediction for the whole loaded stack.
 18. **Stop button:** to stop the prediction process (whole stack prediction migth take a long time).
 19. **Prediction Progressbar:** to show the prediction progress.
+<br><br>
+
+## SAM Prompt Segmentation Widget
+
+![sam prompt segmentation](images/sam_prompt_widget.png)
+
+1. **Input layer combo box:** to select input image (stack).
+2. **Embedding Storage Select button:** to select the embedding storage file.
+3. **Prompt layer combo box:** to select the input prompt layer.
+4. **Add Point Layer button:** to add a new point prompt layer.
+5. **Add Box Layer button:** to add a new box prompt layer (basically it's a napari shapes layer).
+6. **New Layer checkbox:** if checked, the segmentations result will be added into a new layer.
+7. **Segmentation layer combo box:** if *New Layer* is unchecked, then user must select the segmentations layer.
+8. **Segmentation layer options:**
+    - **Add Segmentations:** the result will be added to the selected layer. In other words, pixels which segmented as non-background will be added to the selected layer.
+    - **Replace Segmentations:** the selected layer content will be replaced with the result.
+9. **Similarity Threshold inputbox:** pixels with cosine similarity above this threshold will be added to the segmentation mask for the next step.
+10. **Show Intermediate Results checkbox:** if checked, the intermediate calculations including user prompt mask, similarity matrix, selected areas, and generated prompts will be shown as layers.
+11. **Predict Slice button:** to run the prediction for the current image slice.
+12. **Predict Whole Stack button:** to run prediction for the whole loaded stack.
+13. **Stop button:** to stop the prediction process (whole stack prediction migth take a long time).
+14. **Prediction Progressbar:** to show the prediction progress.
+
+<br><br>
+
+## SAM Predictor Widget
+This widget simply uses the user prompts and gives them to the SAM predictor model to get the segmentations. Prompts can be in the form of points (only positive) or boxes.  
+This widget works nicely for objects having more clear boundaries. It also can be used as a complementary method over the **SAM-RF Widget**.
+
+![sam predictor widget](images/sam_predictor_widget.png)
+
+1. **Input layer combo box:** to select input image (stack).
+2. **Prompt layer combo box:** to select the input prompt layer.
+3. **Add Point Layer button:** to add a new point prompt layer.
+4. **Add Box Layer button:** to add a new box prompt layer (basically it's a napari shapes layer).
+5. **New Layer checkbox:** if checked, the segmentations result will be added into a new layer.
+6. **Segmentation layer combo box:** if *New Layer* is unchecked, then user must select the segmentations layer.
+7. **Segmentation layer options:**
+    - **Add Segmentations:** the result will be added to the selected layer. In other words, pixels which segmented as non-background will be added to the selected layer.
+    - **Replace Segmentations:** the selected layer content will be replaced with the result.
+8. **Predict Prompts button:** to do the prediction using SAM's predictor.
+<br><br>
+
