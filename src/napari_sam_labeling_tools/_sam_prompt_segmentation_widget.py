@@ -36,8 +36,8 @@ class SAMPromptSegmentationWidget(QWidget):
         self.viewer = napari_viewer
         self.image_layer = None
         self.segmentation_layer = None
-        self.is_prompt_changed = True
-        self.sim_mat = None            # similarity matrix
+        self.prompts_mask = None
+        self.is_prompt_changed = True           # similarity matrix
         self.storage = None
         self.device = None
         self.sam_model = None
@@ -322,11 +322,11 @@ class SAMPromptSegmentationWidget(QWidget):
             # sam prompt need to be as x,y coordinates (numpy is y,x).
             if is_box_prompt:
                 slice_index = prompt[0, 0].astype(np.int32)
-                sam_input = np.repeat(
+                input_image = np.repeat(
                     self.image_layer.data[slice_index, :, :, np.newaxis],
                     3, axis=-1
                 )
-                self.sam_predictor.set_image(sam_input)
+                self.sam_predictor.set_image(input_image)
                 # napari box: depends on direction of drawing :( (y, x)
                 # SAM box: top-left, bottom-right (x, y)
                 top_left = (prompt[:, 2].min(), prompt[:, 1].min())
@@ -341,11 +341,11 @@ class SAMPromptSegmentationWidget(QWidget):
                 )
             else:
                 slice_index = prompt[0].astype(np.int32)
-                sam_input = np.repeat(
+                input_image = np.repeat(
                     self.image_layer.data[slice_index, :, :, np.newaxis],
                     3, axis=-1
                 )
-                self.sam_predictor.set_image(sam_input)
+                self.sam_predictor.set_image(input_image)
                 point = prompt[1:][[1, 0]]
                 masks, scores, logits = self.sam_predictor.predict(
                     point_coords=point[np.newaxis, :],
@@ -360,17 +360,23 @@ class SAMPromptSegmentationWidget(QWidget):
 
         return prompts_merged_mask
 
-    def get_similarity_matrix(self, prompts_mask, slice_index):
+    def get_similarity_matrix(self, prompts_mask, curr_slice):
         """
         Calculate Cosine similarity for all pixels with prompts' mask average vector
         (in sam's embedding space).
         """
+        prompt_avg_vector = np.zeros(SAM.EMBEDDING_SIZE + SAM.PATCH_CHANNELS)
         prompt_mask_positions = np.argwhere(prompts_mask == 1)
-        features = self.storage[str(slice_index)]["sam"][:]
-        ys = prompt_mask_positions[:, 1]
-        xs = prompt_mask_positions[:, 2]
-        prompt_avg_vector = np.mean(features[ys, xs], axis=0)
+        for index in np.unique(prompt_mask_positions[:, 0]):
+            data = self.storage[str(index)]["sam"]
+            slice_positions = prompt_mask_positions[:, 0] == index
+            for pos in prompt_mask_positions[slice_positions]:
+                y = pos[1]
+                x = pos[2]
+                prompt_avg_vector += data[y, x]
+        prompt_avg_vector /= len(prompt_mask_positions)
 
+        features = self.storage[str(curr_slice)]["sam"][:]
         sim_mat = np.dot(features, prompt_avg_vector)
         sim_mat /= (
             np.linalg.norm(features, axis=2) *
@@ -392,6 +398,10 @@ class SAMPromptSegmentationWidget(QWidget):
             notif.show_error("No Image layer is selected!")
             return
 
+        if self.storage is None:
+            notif.show_error("No storage is selected!")
+            return
+
         if self.new_layer_checkbox.checkState() == Qt.Checked:
             segmentation_data = np.zeros(self.image_layer.data.shape, dtype=np.uint8)
             self.segmentation_layer = self.viewer.add_labels(
@@ -408,68 +418,28 @@ class SAMPromptSegmentationWidget(QWidget):
                 return
 
         num_slices, img_height, img_width = self.image_layer.data.shape
-        curr_slice = self.viewer.dims.current_step[0]
 
         # get user prompt mask and calculate similarity matrix
         if self.is_prompt_changed:
-            prompts_mask = self.get_prompt_labels(
+            self.prompts_mask = self.get_prompt_labels(
                 num_slices, img_height, img_width
             )
-            if prompts_mask is None:
+            if self.prompts_mask is None:
                 return
-            if prompts_mask.sum() == 0:
+            if self.prompts_mask.sum() == 0:
                 print("SAM model couldn't generate any mask for the given prompts!")
                 notif.show_warning(
                     "SAM model couldn't generate any mask for the given prompts!"
                 )
                 return
 
-            self.sim_mat = self.get_similarity_matrix(prompts_mask, curr_slice)
             self.is_prompt_changed = False
             if self.show_intermediate_checkbox.checkState() == Qt.Checked:
                 # add sam predictor result's layer
                 self.viewer.add_labels(
-                    data=prompts_mask, name="Prompt Labels",
+                    data=self.prompts_mask, name="Prompt Labels",
                     color={1: [0.73, 0.48, 0.75]}, opacity=0.55
                 )
-
-        high_sim_mask = np.zeros_like(self.sim_mat, dtype=np.uint8)
-        high_sim_mask[
-            self.sim_mat >= float(self.similarity_threshold_textbox.text())
-        ] = 255
-        post_high_sim_mask = postprocess_label(high_sim_mask, 0.15)
-        positive_prompts = generate_mask_prompts(post_high_sim_mask)
-
-        if len(positive_prompts) == 0:
-            print("No prompt was generated!")
-            notif.show_warning(
-                "No prompt was generated! Try a lower 'Similarity Threshold'."
-            )
-            self.is_prompt_changed = True
-            return
-
-        # add user point prompts to the generated ones (y,x -> x,y).
-        user_prompts = self.get_user_prompts()
-        if len(user_prompts[0]) < 4:
-            positive_prompts.extend([
-                tuple(p[1:][[1, 0]]) for p in self.get_user_prompts()
-            ])
-        positive_prompts = np.array(positive_prompts)
-
-        if self.show_intermediate_checkbox.checkState() == Qt.Checked:
-            self.viewer.add_image(
-                data=self.sim_mat, name="Similiraty Matrix",
-                colormap="viridis", opacity=0.7, visible=False
-            )
-            self.viewer.add_image(
-                data=post_high_sim_mask, name="High Similiraty Mask",
-                colormap="gray", opacity=0.7, blending="additive", visible=False
-            )
-            self.viewer.add_points(
-                data=positive_prompts[:, [1, 0]], name="Generated Prompts",
-                face_color="lightseagreen", edge_color="white", edge_width=0,
-                opacity=0.7, size=8, visible=False
-            )
 
         slice_indices = []
         if not whole_stack:
@@ -482,15 +452,60 @@ class SAMPromptSegmentationWidget(QWidget):
             self.predict_stop_button.setEnabled(True)
         # run prediction in another thread
         self.prediction_worker = create_worker(
-            self.run_prediction, slice_indices, positive_prompts
+            self.run_prediction, slice_indices, self.prompts_mask
         )
         self.prediction_worker.yielded.connect(self.update_prediction_progress)
         self.prediction_worker.finished.connect(self.prediction_is_done)
         self.prediction_worker.run()
 
-    def run_prediction(self, slice_indices, positive_prompts):
+    def run_prediction(self, slice_indices, prompts_mask):
         for slice_index in np_progress(slice_indices):
-            segmentation_image = self.predict_slice(positive_prompts)
+            sim_mat = self.get_similarity_matrix(prompts_mask, slice_index)
+            high_sim_mask = np.zeros_like(sim_mat, dtype=np.uint8)
+            high_sim_mask[
+                sim_mat >= float(self.similarity_threshold_textbox.text())
+            ] = 255
+            post_high_sim_mask = postprocess_label(high_sim_mask, 0.15)
+            positive_prompts = generate_mask_prompts(post_high_sim_mask)
+
+            if len(positive_prompts) == 0:
+                print("No prompt was generated!")
+                notif.show_warning(
+                    f"No prompt was generated for slice {slice_index}!"
+                    "Try a lower 'Similarity Threshold'."
+                )
+                self.is_prompt_changed = True
+                continue
+
+            # add user point prompts to the generated ones (y,x -> x,y).
+            user_prompts = self.get_user_prompts()
+            if len(user_prompts[0]) < 4:
+                positive_prompts.extend([
+                    tuple(p[1:][[1, 0]]) for p in self.get_user_prompts()
+                    if p[0] == slice_index
+                ])
+            positive_prompts = np.array(positive_prompts)
+
+            # add intermediate results only for one slice prediction
+            if (
+                len(slice_indices) == 1 and
+                self.show_intermediate_checkbox.checkState() == Qt.Checked
+            ):
+                self.viewer.add_image(
+                    data=sim_mat, name="Similiraty Matrix",
+                    colormap="viridis", opacity=0.7, visible=False
+                )
+                self.viewer.add_image(
+                    data=post_high_sim_mask, name="High Similiraty Mask",
+                    colormap="gray", opacity=0.7, blending="additive", visible=False
+                )
+                self.viewer.add_points(
+                    data=positive_prompts[:, [1, 0]], name="Generated Prompts",
+                    face_color="lightseagreen", edge_color="white", edge_width=0,
+                    opacity=0.7, size=8, visible=False
+                )
+
+            segmentation_image = self.predict_slice(slice_index, positive_prompts)
             # add/update segmentation result layer
             if (
                 self.new_layer_checkbox.checkState() == Qt.Checked or
@@ -510,12 +525,18 @@ class SAMPromptSegmentationWidget(QWidget):
             cm, _ = colormaps.create_colormap(len(np.unique(segmentation_image)))
             self.segmentation_layer.colormap = cm
         self.segmentation_layer.refresh()
+        # move the segmentation layer to the top
         old_idx = self.viewer.layers.index(self.segmentation_layer)
         if old_idx:
             self.viewer.layers.move(old_idx, len(self.viewer.layers))
 
-    def predict_slice(self, point_prompts):
+    def predict_slice(self, slice_index, point_prompts):
         sam_masks = []
+        input_image = np.repeat(
+            self.image_layer.data[slice_index, :, :, np.newaxis],
+            3, axis=-1
+        )
+        self.sam_predictor.set_image(input_image)
         for i, point in enumerate(point_prompts):
             point_labels = np.array([1])
             point_coords = point[np.newaxis, :]
