@@ -156,7 +156,7 @@ class SAMPromptSegmentationWidget(QWidget):
             "Keeps regions having cosine similarity above the threshold with the prompt."
         )
 
-        self.show_intermediate_checkbox = QCheckBox("Show intermediate results")
+        self.show_intermediate_checkbox = QCheckBox("Show Intermediate Results")
         self.show_intermediate_checkbox.setChecked(True)
 
         predict_button = QPushButton("Predict Slice")
