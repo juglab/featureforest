@@ -108,7 +108,7 @@ def postprocess_segmentations_with_sam(
     predictor = SamPredictor(sam_model)
     final_image = np.zeros_like(segmentations_image, dtype=np.uint8)
     # postprocessing gets done for each label's segmentation.
-    bg_label = 1
+    bg_label = 0
     class_labels = [c for c in np.unique(segmentations_image) if c > bg_label]
     for label in class_labels:
         # make a binary image for the label
