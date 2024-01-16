@@ -319,6 +319,7 @@ class SAMRFSegmentationWidget(QWidget):
                 # to handle layer's name change by user
                 layer.events.name.disconnect()
                 layer.events.name.connect(self.check_label_layers)
+                layer.colormap = colormaps.create_colormap(10)[0]
                 if "Segmentation" in layer.name:
                     self.prediction_layer_combo.addItem(layer.name)
                 else:
@@ -536,6 +537,8 @@ class SAMRFSegmentationWidget(QWidget):
             -1, SAM.PATCH_CHANNELS + SAM.EMBEDDING_SIZE
         )
         predictions = rf_model.predict(features).astype(np.uint8)
+        # to match the segmentation colormap with the labels
+        predictions[predictions > 0] += 1
         segmentation_image = predictions.reshape(img_h, img_w)
 
         # check for postprocessing

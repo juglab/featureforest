@@ -55,7 +55,7 @@ def get_colormap1():
     return cm
 
 
-def create_colormap(num_colors, bright=True, black_first=True, seed=4567):
+def create_colormap(num_colors, bright=True, black_first=True, seed=777):
     if num_colors < 10:
         num_colors = 10
 
@@ -65,13 +65,14 @@ def create_colormap(num_colors, bright=True, black_first=True, seed=4567):
         low = [0.0, 0.55, 0.9]
         high = 1.0
 
+    rng = np.random.default_rng(seed)
+    hues = np.linspace(start=low[0], stop=high, num=num_colors)
+    rng.shuffle(hues)
     hsv_colors = np.stack([
-        np.linspace(start=low[0], stop=high, num=num_colors),
+        hues,
         np.linspace(start=low[1], stop=high, num=num_colors),
         np.linspace(start=low[2], stop=high, num=num_colors)
     ], axis=1)
-    rng = np.random.default_rng(seed)
-    rng.shuffle(hsv_colors)
 
     rgba_colors = np.zeros((num_colors, 4))
     for i in range(num_colors):
