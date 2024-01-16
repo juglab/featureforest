@@ -1,6 +1,8 @@
 import napari
 import numpy as np
 
+from napari_sam_labeling_tools.utils import colormaps
+
 
 def get_layer(napari_viewer, name, layer_types):
     for layer in napari_viewer.layers:
@@ -21,6 +23,7 @@ def add_labels_layer(napari_viewer: napari.Viewer):
         for s, sc in zip(scene_size, scale)
     ]
     empty_labels = np.zeros(shape, dtype=np.uint8)
-    napari_viewer.add_labels(
+    layer = napari_viewer.add_labels(
         empty_labels, name="Labels", translate=np.array(corner), scale=scale
     )
+    layer.colormap = colormaps.create_colormap(10)[0]
