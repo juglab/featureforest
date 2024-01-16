@@ -14,6 +14,7 @@ from qtpy.QtCore import Qt
 from qtpy.QtGui import QDoubleValidator
 
 import h5py
+import nrrd
 import numpy as np
 
 from . import SAM
@@ -170,6 +171,11 @@ class SAMPromptSegmentationWidget(QWidget):
         self.predict_stop_button.setMinimumWidth(150)
         self.predict_stop_button.setEnabled(False)
         self.prediction_progress = QProgressBar()
+
+        export_nrrd_button = QPushButton("Export To nrrd")
+        export_nrrd_button.setMinimumWidth(150)
+        export_nrrd_button.clicked.connect(lambda: self.export_segmentation("nrrd"))
+
         # layout
         layout = QVBoxLayout()
         vbox = QVBoxLayout()
@@ -193,6 +199,10 @@ class SAMPromptSegmentationWidget(QWidget):
         hbox.addWidget(self.predict_stop_button, alignment=Qt.AlignLeft)
         vbox.addLayout(hbox)
         vbox.addWidget(self.prediction_progress)
+        hbox = QHBoxLayout()
+        hbox.setContentsMargins(0, 15, 0, 0)
+        hbox.addWidget(export_nrrd_button, alignment=Qt.AlignLeft)
+        vbox.addLayout(hbox)
         layout.addLayout(vbox)
 
         gbox = QGroupBox()
@@ -573,3 +583,15 @@ class SAMPromptSegmentationWidget(QWidget):
         self.predict_stop_button.setEnabled(False)
         print("Prediction is done!")
         notif.show_info("Prediction is done!")
+
+    def export_segmentation(self, out_format="nrrd"):
+        if self.segmentation_layer is None:
+            notif.show_error("No segmentation layer is selected!")
+            return
+
+        selected_file, _filter = QFileDialog.getSaveFileName(
+            self, "Jug Lab", ".", "Segmentation(*.nrrd)"
+        )
+        if selected_file is not None and len(selected_file) > 0:
+            nrrd.write(selected_file, self.segmentation_layer.data)
+            notif.show_info("Selected segmentation was saved successfully.")
