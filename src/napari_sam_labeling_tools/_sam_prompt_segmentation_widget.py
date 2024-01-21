@@ -3,6 +3,7 @@ import napari.utils.notifications as notif
 from napari.utils.events import Event
 from napari.qt.threading import create_worker
 from napari.utils import progress as np_progress
+from napari.utils import Colormap
 
 from qtpy.QtWidgets import (
     QHBoxLayout, QVBoxLayout, QWidget,
@@ -22,6 +23,7 @@ from .widgets import (
     ScrollWidgetWrapper,
     get_layer,
 )
+from .utils.data import TARGET_PATCH_SIZE, get_patch_position
 from .utils import (
     colormaps, config
 )
@@ -95,10 +97,10 @@ class SAMPromptSegmentationWidget(QWidget):
         self.prompt_combo.currentIndexChanged.connect(self.prompt_changed)
         self.prompt_combo.currentTextChanged.connect(self.prompt_changed)
         add_point_prompt_button = QPushButton("Add Point Layer")
-        add_point_prompt_button.clicked.connect(lambda: self.add_prompt_layer("point"))
+        add_point_prompt_button.clicked.connect(lambda: self.add_prompts_layer("point"))
         add_point_prompt_button.setMinimumWidth(150)
         add_box_prompt_button = QPushButton("Add Box Layer")
-        add_box_prompt_button.clicked.connect(lambda: self.add_prompt_layer("box"))
+        add_box_prompt_button.clicked.connect(lambda: self.add_prompts_layer("box"))
         add_box_prompt_button.setMinimumWidth(150)
         # layout
         layout = QVBoxLayout()
@@ -154,7 +156,8 @@ class SAMPromptSegmentationWidget(QWidget):
             QDoubleValidator(0.000, 1.000, 3, notation=QDoubleValidator.StandardNotation)
         )
         self.similarity_threshold_textbox.setToolTip(
-            "Keeps regions having cosine similarity above the threshold with the prompt."
+            "Keeps regions having cosine similarity with the prompt above the threshold"
+            " (min=0.0, max=1.0)"
         )
 
         self.show_intermediate_checkbox = QCheckBox("Show Intermediate Results")
@@ -268,7 +271,7 @@ class SAMPromptSegmentationWidget(QWidget):
             if index > -1:
                 self.prediction_layer_combo.setCurrentIndex(index)
 
-    def add_prompt_layer(self, prompt_type: str = "point"):
+    def add_prompts_layer(self, prompt_type: str = "point"):
         layer = None
         if prompt_type == "point":
             layer = self.viewer.add_points(
@@ -378,18 +381,36 @@ class SAMPromptSegmentationWidget(QWidget):
         prompt_avg_vector = np.zeros(SAM.EMBEDDING_SIZE + SAM.PATCH_CHANNELS)
         prompt_mask_positions = np.argwhere(prompts_mask == 1)
         for index in np.unique(prompt_mask_positions[:, 0]):
-            data = self.storage[str(index)]["sam"]
-            slice_positions = prompt_mask_positions[:, 0] == index
-            for pos in prompt_mask_positions[slice_positions]:
+            slice_dataset = self.storage[str(index)]["sam"]
+            coords_in_slice = prompt_mask_positions[:, 0] == index
+            for pos in prompt_mask_positions[coords_in_slice]:
                 y = pos[1]
                 x = pos[2]
-                prompt_avg_vector += data[y, x]
+                # get patch including pixel position
+                patch_row, patch_col = get_patch_position(y, x)
+                patch_features = slice_dataset[patch_row, patch_col]
+                # sum pixel embeddings
+                prompt_avg_vector += patch_features[
+                    y % TARGET_PATCH_SIZE, x % TARGET_PATCH_SIZE
+                ]
         prompt_avg_vector /= len(prompt_mask_positions)
 
-        features = self.storage[str(curr_slice)]["sam"][:]
-        sim_mat = np.dot(features, prompt_avg_vector)
+        # shape: patch_rows x patch_cols x target_size x target_size x C
+        curr_slice_features = self.storage[str(curr_slice)]["sam"][:]
+        patch_rows, patch_cols = curr_slice_features.shape[:2]
+        # reshape it to the image size + padding
+        curr_slice_features = curr_slice_features.transpose([0, 2, 1, 3, 4]).reshape(
+            patch_rows * TARGET_PATCH_SIZE,
+            patch_cols * TARGET_PATCH_SIZE,
+            -1
+        )
+        # skip paddings
+        _, img_height, img_width = self.image_layer.data.shape
+        curr_slice_features = curr_slice_features[:img_height, :img_width]
+        # calc. cosine similarity
+        sim_mat = np.dot(curr_slice_features, prompt_avg_vector)
         sim_mat /= (
-            np.linalg.norm(features, axis=2) *
+            np.linalg.norm(curr_slice_features, axis=2) *
             np.linalg.norm(prompt_avg_vector)
         )
         # scale similarity to the range of [0, 1]
@@ -413,9 +434,9 @@ class SAMPromptSegmentationWidget(QWidget):
             return
 
         if self.new_layer_checkbox.checkState() == Qt.Checked:
-            segmentation_data = np.zeros(self.image_layer.data.shape, dtype=np.uint8)
             self.segmentation_layer = self.viewer.add_labels(
-                segmentation_data, name="Segmentations"
+                np.zeros(self.image_layer.data.shape, dtype=np.uint8),
+                name="Segmentations"
             )
         else:
             # using selected layer for the segmentation
@@ -446,9 +467,11 @@ class SAMPromptSegmentationWidget(QWidget):
             self.is_prompt_changed = False
             if self.show_intermediate_checkbox.checkState() == Qt.Checked:
                 # add sam predictor result's layer
-                self.viewer.add_labels(
-                    data=self.prompts_mask, name="Prompt Labels",
-                    color={1: [0.73, 0.48, 0.75]}, opacity=0.55
+                layer = self.viewer.add_labels(
+                    data=self.prompts_mask, name="Prompt Labels", opacity=0.55
+                )
+                layer.colormap = Colormap(
+                    np.array([[0.73, 0.48, 0.75, 1.0]])
                 )
 
         slice_indices = []
@@ -547,7 +570,7 @@ class SAMPromptSegmentationWidget(QWidget):
             3, axis=-1
         )
         self.sam_predictor.set_image(input_image)
-        for i, point in enumerate(point_prompts):
+        for _, point in enumerate(point_prompts):
             point_labels = np.array([1])
             point_coords = point[np.newaxis, :]
             masks, scores, logits = self.sam_predictor.predict(
