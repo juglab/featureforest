@@ -25,6 +25,9 @@ from .widgets import (
     ScrollWidgetWrapper,
     get_layer, add_labels_layer
 )
+from .utils.data import (
+    TARGET_PATCH_SIZE, get_patch_position
+)
 from .utils import (
     colormaps, config
 )
@@ -391,8 +394,13 @@ class SAMRFSegmentationWidget(QWidget):
         count = 0
         for class_index in labels_dict:
             for slice_index, y, x in labels_dict[class_index]:
-                # slice_features = self.storage[str(slice_index)]["sam"][y, x]
-                train_data[count] = self.storage[str(slice_index)]["sam"][y, x]
+                grp_key = str(slice_index)
+                patch_row, patch_col = get_patch_position(y, x)
+                patch_features = self.storage[grp_key]["sam"][patch_row, patch_col]
+                # get pixel's embeddings with position inside the patch
+                train_data[count] = patch_features[
+                    y % TARGET_PATCH_SIZE, x % TARGET_PATCH_SIZE
+                ]
                 labels[count] = class_index - 1  # to have bg class as zero
                 count += 1
         assert (labels > -1).all()
@@ -532,14 +540,27 @@ class SAMRFSegmentationWidget(QWidget):
             self.segmentation_layer.colormap = cm
         self.segmentation_layer.refresh()
 
-    def predict_slice(self, rf_model, slice_index, img_h, img_w):
-        features = self.storage[str(slice_index)]["sam"][:].reshape(
-            -1, SAM.PATCH_CHANNELS + SAM.EMBEDDING_SIZE
+    def predict_slice(self, rf_model, slice_index, img_height, img_width):
+        features = self.storage[str(slice_index)]["sam"][:]
+        # shape: patch_rows x patch_cols x target_size x target_size x C
+        features_shape = features.shape
+        patch_rows, patch_cols = features.shape[:2]
+        # make features 2D for RF prediction
+        features = features.transpose([0, 2, 1, 3, 4]).reshape(
+            features_shape[0] * features_shape[2] *
+            features_shape[1] * features_shape[3],
+            -1
         )
         predictions = rf_model.predict(features).astype(np.uint8)
-        # to match the segmentation colormap with the labels
+        # to match segmentation colormap with the labels' colormap
         predictions[predictions > 0] += 1
-        segmentation_image = predictions.reshape(img_h, img_w)
+        # reshape into the image size + padding
+        segmentation_image = predictions.reshape(
+            patch_rows * TARGET_PATCH_SIZE,
+            patch_cols * TARGET_PATCH_SIZE
+        )
+        # skip paddings
+        segmentation_image = segmentation_image[:img_height, :img_width]
 
         # check for postprocessing
         if self.postprocess_checkbox.checkState() == Qt.Checked:
