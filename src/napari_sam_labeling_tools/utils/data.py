@@ -48,9 +48,6 @@ def unpatchify(
     batch_patches = embed_patches.reshape(
         batch_size, num_patches_h, num_patches_w, c, patch_size, patch_size
     ).contiguous()
-    padded_images = torch.zeros((
-        batch_size, c, img_h + pad_bottom, img_w + pad_right
-    ))
     # print(padded_images.shape)
     target_patches = batch_patches[
         :, :, :, :, margin: margin + target_size, margin: margin + target_size
@@ -60,6 +57,9 @@ def unpatchify(
         batch_size, c, num_patches_h * target_size, num_patches_w * target_size
     )
     # print(target_patches.shape)
+    padded_images = torch.zeros((
+        batch_size, c, img_h + pad_bottom, img_w + pad_right
+    ))
     padded_images[
         :, :, : num_patches_h * target_size, : num_patches_w * target_size
     ] = target_patches

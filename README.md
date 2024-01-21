@@ -36,6 +36,7 @@ conda env create -f ./env.yml
 - `pytorch`
 - `tochvision`
 - `timm`
+- `pynrrd`
 
 ### Installing The Plugin
 To install the plugin, open the command prompt in the plugin directory, and run the following command:
