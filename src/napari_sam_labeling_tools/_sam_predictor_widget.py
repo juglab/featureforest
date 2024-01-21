@@ -74,10 +74,10 @@ class SAMPredictorWidget(QWidget):
         self.prompt_combo.currentIndexChanged.connect(self.prompt_changed)
         self.prompt_combo.currentTextChanged.connect(self.prompt_changed)
         add_point_prompt_button = QPushButton("Add Point Layer")
-        add_point_prompt_button.clicked.connect(lambda: self.add_prompt_layer("point"))
+        add_point_prompt_button.clicked.connect(lambda: self.add_prompts_layer("point"))
         add_point_prompt_button.setMinimumWidth(150)
         add_box_prompt_button = QPushButton("Add Box Layer")
-        add_box_prompt_button.clicked.connect(lambda: self.add_prompt_layer("box"))
+        add_box_prompt_button.clicked.connect(lambda: self.add_prompts_layer("box"))
         add_box_prompt_button.setMinimumWidth(150)
 
         # layout
@@ -178,7 +178,7 @@ class SAMPredictorWidget(QWidget):
             if index > -1:
                 self.prediction_layer_combo.setCurrentIndex(index)
 
-    def add_prompt_layer(self, prompt_type: str = "point"):
+    def add_prompts_layer(self, prompt_type: str = "point"):
         layer = None
         if prompt_type == "point":
             layer = self.viewer.add_points(
