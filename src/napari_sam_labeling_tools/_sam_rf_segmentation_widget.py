@@ -23,7 +23,7 @@ from sklearn.ensemble import RandomForestClassifier
 from . import SAM
 from .widgets import (
     ScrollWidgetWrapper,
-    get_layer, add_labels_layer
+    get_layer,
 )
 from .utils.data import (
     TARGET_PATCH_SIZE, get_patch_position
@@ -92,9 +92,7 @@ class SAMRFSegmentationWidget(QWidget):
         gt_label = QLabel("Ground Truth Layer:")
         self.gt_combo = QComboBox()
         add_labels_button = QPushButton("Add Layer")
-        add_labels_button.clicked.connect(
-            lambda: add_labels_layer(self.viewer)
-        )
+        add_labels_button.clicked.connect(self.add_labels_layer)
         # layout
         layout = QVBoxLayout()
         vbox = QVBoxLayout()
@@ -348,6 +346,21 @@ class SAMRFSegmentationWidget(QWidget):
             # load the storage
             self.storage = h5py.File(selected_file, "r")
 
+    def add_labels_layer(self):
+        image_layer = get_layer(
+            self.viewer,
+            self.image_combo.currentText(), config.NAPARI_IMAGE_LAYER
+        )
+        if image_layer is None:
+            notif.show_error("No Image layer is added or selected!")
+            return
+
+        layer = self.viewer.add_labels(
+            np.zeros(image_layer.data.shape, dtype=np.uint8),
+            name="Labels"
+        )
+        layer.colormap = colormaps.create_colormap(10)[0]
+
     def get_class_labels(self):
         labels_dict = {}
         layer = get_layer(
@@ -483,9 +496,10 @@ class SAMRFSegmentationWidget(QWidget):
             return
 
         if self.new_layer_checkbox.checkState() == Qt.Checked:
-            segmentation_data = np.zeros(self.image_layer.data.shape, dtype=np.uint8)
+            # segmentation_data = np.zeros(self.image_layer.data.shape, dtype=np.uint8)
             self.segmentation_layer = self.viewer.add_labels(
-                segmentation_data, name="Segmentations"
+                np.zeros(self.image_layer.data.shape, dtype=np.uint8),
+                name="Segmentations"
             )
         else:
             # using selected layer for the segmentation

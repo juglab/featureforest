@@ -11,8 +11,9 @@ def get_layer(napari_viewer, name, layer_types):
     return None
 
 
-def add_labels_layer(napari_viewer: napari.Viewer):
+def add_labels_layer_(napari_viewer: napari.Viewer):
     """Create new labels layer filling full world coordinates space."""
+    # BUGGY
     layers_extent = napari_viewer.layers.extent
     extent = layers_extent.world
     scale = layers_extent.step
