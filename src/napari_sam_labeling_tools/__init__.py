@@ -1,4 +1,4 @@
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 
 from ._embedding_extractor_widget import EmbeddingExtractorWidget
 from ._sam_predictor_widget import SAMPredictorWidget

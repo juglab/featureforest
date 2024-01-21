@@ -161,15 +161,16 @@ class EmbeddingExtractorWidget(QWidget):
         for slice_index in np_progress(
             range(num_slices), desc="get embeddings for slices"
         ):
+            sam_embeddings = get_sam_embeddings_for_slice(
+                sam_model.image_encoder, device,
+                image_layer.data[slice_index]
+            )
             slice_grp = self.storage.create_group(str(slice_index))
             dataset = slice_grp.create_dataset(
-                "sam",
-                shape=(img_height, img_width, SAM.EMBEDDING_SIZE + SAM.PATCH_CHANNELS)
+                "sam", shape=sam_embeddings.shape
             )
-            dataset[...] = get_sam_embeddings_for_slice(
-                sam_model.image_encoder, device,
-                image_layer, slice_index
-            )
+            # shape: patch_rows x patch_cols x target_size x target_size x C
+            dataset[...] = sam_embeddings
 
             yield (slice_index, num_slices)
 
