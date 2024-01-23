@@ -26,7 +26,8 @@ from .widgets import (
     get_layer,
 )
 from .utils.data import (
-    TARGET_PATCH_SIZE, get_patch_position
+    TARGET_PATCH_SIZE,
+    get_stack_sizes, get_patch_position
 )
 from .utils import (
     colormaps, config
@@ -495,10 +496,11 @@ class SAMRFSegmentationWidget(QWidget):
             notif.show_error("No storage is selected!")
             return
 
+        num_slices, img_height, img_width = get_stack_sizes(self.image_layer)
         if self.new_layer_checkbox.checkState() == Qt.Checked:
             # segmentation_data = np.zeros(self.image_layer.data.shape, dtype=np.uint8)
             self.segmentation_layer = self.viewer.add_labels(
-                np.zeros(self.image_layer.data.shape, dtype=np.uint8),
+                np.zeros((img_height, img_width), dtype=np.uint8),
                 name="Segmentations"
             )
         else:
@@ -511,10 +513,10 @@ class SAMRFSegmentationWidget(QWidget):
                 notif.show_error("No segmentation layer is selected!")
                 return
 
-        num_slices, img_height, img_width = self.image_layer.data.shape
         slice_indices = []
         if not whole_stack:
             # only predict the current slice
+            print(self.viewer.dims.current_step)
             slice_indices.append(self.viewer.dims.current_step[0])
         else:
             slice_indices = range(num_slices)

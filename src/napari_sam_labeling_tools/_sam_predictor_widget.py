@@ -19,6 +19,7 @@ from . import SAM
 from .utils import (
     colormaps, config
 )
+from .utils.data import get_stack_sizes
 
 
 class SAMPredictorWidget(QWidget):
@@ -306,8 +307,9 @@ class SAMPredictorWidget(QWidget):
             notif.show_warning("No prompts was given!")
             return
 
+        num_slices, img_height, img_width = get_stack_sizes(self.image_layer)
         if self.new_layer_checkbox.checkState() == Qt.Checked:
-            segmentation_data = np.zeros(self.image_layer.data.shape, dtype=np.uint8)
+            segmentation_data = np.zeros((img_height, img_width), dtype=np.uint8)
             self.segmentation_layer = self.viewer.add_labels(
                 segmentation_data, name="Prompt Segmentations"
             )
@@ -321,7 +323,6 @@ class SAMPredictorWidget(QWidget):
                 notif.show_error("No segmentation layer is selected!")
                 return
 
-        num_slices, img_height, img_width = self.image_layer.data.shape
         prompts_mask = self.get_prompt_labels(
             user_prompts, num_slices, img_height, img_width
         )

@@ -145,3 +145,26 @@ def get_patch_position(pix_y, pix_x):
     patch_col = pix_x // TARGET_PATCH_SIZE
 
     return patch_row, patch_col
+
+
+def is_image_rgb(image_data):
+    return image_data.shape[-1] == 3
+
+
+def is_stacked(image_data):
+    dims = len(image_data.shape)
+    if is_image_rgb(image_data):
+        return dims == 4
+    return dims == 3
+
+
+def get_stack_sizes(image_data):
+    num_slices = 1
+    img_height = image_data.shape[0]
+    img_width = image_data.shape[1]
+    if is_stacked(image_data):
+        num_slices = image_data.shape[0]
+        img_height = image_data.shape[1]
+        img_width = image_data.shape[2]
+
+    return num_slices, img_height, img_width

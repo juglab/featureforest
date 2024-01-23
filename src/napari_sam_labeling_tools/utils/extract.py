@@ -6,18 +6,23 @@ from torchvision import transforms
 
 from .data import (
     DATA_PATCH_SIZE, TARGET_PATCH_SIZE,
-    patchify, get_target_patches
+    patchify, get_target_patches,
+    is_image_rgb,
 )
 from napari_sam_labeling_tools.SAM import sam_transform
 
 
 def get_sam_embeddings_for_slice(sam_encoder, device, image):
     """get sam encoder features for one slice."""
-    img_height, img_width = image.shape
+    img_height, img_width = image.shape[:2]
     # image to torch tensor
     img_data = torch.from_numpy(image).to(torch.float32) / 255.0
-    # for sam it should be 4D: BxCxHxW ; an RGB image.
-    img_data = img_data.unsqueeze(0).unsqueeze(0).expand(-1, 3, -1, -1)
+    # for sam the input image should be 4D: BxCxHxW ; an RGB image.
+    if is_image_rgb(image):
+        # it's already RGB, put channels first and add batch dim.
+        img_data = img_data.permute([2, 0, 1]).unsqueeze(0)
+    else:
+        img_data = img_data.unsqueeze(0).unsqueeze(0).expand(-1, 3, -1, -1)
     # get data patches
     data_patches = patchify(img_data, DATA_PATCH_SIZE, TARGET_PATCH_SIZE)
     num_patches = len(data_patches)
