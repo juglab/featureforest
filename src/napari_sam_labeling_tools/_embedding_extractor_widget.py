@@ -22,6 +22,9 @@ from . import SAM
 from .utils import (
     config
 )
+from .utils.data import (
+    get_stack_sizes
+)
 from .utils.extract import get_sam_embeddings_for_slice
 
 
@@ -157,13 +160,13 @@ class EmbeddingExtractorWidget(QWidget):
         # initial storage hdf5 file
         self.storage = h5py.File(storage_path, "w")
         # get sam embeddings slice by slice and save them into storage file
-        num_slices, img_height, img_width = image_layer.data.shape
+        num_slices, img_height, img_width = get_stack_sizes(image_layer.data)
         for slice_index in np_progress(
             range(num_slices), desc="get embeddings for slices"
         ):
+            image = image_layer.data[slice_index] if num_slices > 1 else image_layer.data
             sam_embeddings = get_sam_embeddings_for_slice(
-                sam_model.image_encoder, device,
-                image_layer.data[slice_index]
+                sam_model.image_encoder, device, image
             )
             slice_grp = self.storage.create_group(str(slice_index))
             dataset = slice_grp.create_dataset(

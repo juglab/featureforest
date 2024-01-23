@@ -23,7 +23,10 @@ from .widgets import (
     ScrollWidgetWrapper,
     get_layer,
 )
-from .utils.data import TARGET_PATCH_SIZE, get_patch_position
+from .utils.data import (
+    TARGET_PATCH_SIZE,
+    get_stack_sizes, get_patch_position
+)
 from .utils import (
     colormaps, config
 )
@@ -433,9 +436,10 @@ class SAMPromptSegmentationWidget(QWidget):
             notif.show_error("No storage is selected!")
             return
 
+        num_slices, img_height, img_width = get_stack_sizes(self.image_layer)
         if self.new_layer_checkbox.checkState() == Qt.Checked:
             self.segmentation_layer = self.viewer.add_labels(
-                np.zeros(self.image_layer.data.shape, dtype=np.uint8),
+                np.zeros((img_height, img_width), dtype=np.uint8),
                 name="Segmentations"
             )
         else:
@@ -447,8 +451,6 @@ class SAMPromptSegmentationWidget(QWidget):
             if self.segmentation_layer is None:
                 notif.show_error("No segmentation layer is selected!")
                 return
-
-        num_slices, img_height, img_width = self.image_layer.data.shape
 
         # get user prompt mask and calculate similarity matrix
         if self.is_prompt_changed:
