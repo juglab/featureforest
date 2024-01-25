@@ -1,6 +1,7 @@
 import napari
 import napari.utils.notifications as notif
 from napari.utils.events import Event
+from napari.utils import progress as np_progress
 
 from qtpy.QtWidgets import (
     QVBoxLayout, QWidget, QHBoxLayout,
@@ -19,7 +20,7 @@ from . import SAM
 from .utils import (
     colormaps, config
 )
-from .utils.data import get_stack_sizes
+from .utils.data import get_stack_sizes, is_image_rgb
 
 
 class SAMPredictorWidget(QWidget):
@@ -250,16 +251,23 @@ class SAMPredictorWidget(QWidget):
         prompts_merged_mask = np.zeros(
             (num_slices, img_height, img_width), dtype=np.uint8
         )
-        for prompt in user_prompts:
+        for prompt in np_progress(user_prompts, desc="getting prompts mask"):
+            # prepare the image for sam
+            slice_index = int(prompt[0, 0]) if is_box_prompt else int(prompt[0])
+            if num_slices > 1:
+                input_img = self.image_layer.data[slice_index]
+            else:
+                input_img = self.image_layer.data
+            if not is_image_rgb(input_img):
+                input_img = np.repeat(
+                    self.image_layer.data[slice_index, :, :, np.newaxis], 3,
+                    axis=-1
+                )
+            self.sam_predictor.set_image(input_img)
+
             # first dim of prompt is the slice index.
             # sam prompt need to be as x,y coordinates (numpy is y,x).
             if is_box_prompt:
-                slice_index = prompt[0, 0].astype(np.int32)
-                input_img = np.repeat(
-                    self.image_layer.data[slice_index, :, :, np.newaxis],
-                    3, axis=-1
-                )
-                self.sam_predictor.set_image(input_img)
                 # napari box: depends on direction of drawing :( (y, x)
                 # SAM box: top-left, bottom-right (x, y)
                 top_left = (prompt[:, 2].min(), prompt[:, 1].min())
@@ -273,12 +281,6 @@ class SAMPredictorWidget(QWidget):
                     hq_token_only=False,
                 )
             else:
-                slice_index = prompt[0].astype(np.int32)
-                input_img = np.repeat(
-                    self.image_layer.data[slice_index, :, :, np.newaxis],
-                    3, axis=-1
-                )
-                self.sam_predictor.set_image(input_img)
                 point = prompt[1:][[1, 0]]
                 masks, scores, logits = self.sam_predictor.predict(
                     point_coords=point[np.newaxis, :],
@@ -307,9 +309,11 @@ class SAMPredictorWidget(QWidget):
             notif.show_warning("No prompts was given!")
             return
 
-        num_slices, img_height, img_width = get_stack_sizes(self.image_layer)
+        num_slices, img_height, img_width = get_stack_sizes(self.image_layer.data)
         if self.new_layer_checkbox.checkState() == Qt.Checked:
-            segmentation_data = np.zeros((img_height, img_width), dtype=np.uint8)
+            segmentation_data = np.zeros(
+                (num_slices, img_height, img_width), dtype=np.uint8
+            )
             self.segmentation_layer = self.viewer.add_labels(
                 segmentation_data, name="Prompt Segmentations"
             )

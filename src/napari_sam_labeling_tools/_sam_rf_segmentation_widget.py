@@ -26,8 +26,9 @@ from .widgets import (
     get_layer,
 )
 from .utils.data import (
-    TARGET_PATCH_SIZE,
-    get_stack_sizes, get_patch_position
+    IMAGE_PATCH_SIZE, TARGET_PATCH_SIZE,
+    get_stack_sizes, get_patch_index,
+    get_num_target_patches
 )
 from .utils import (
     colormaps, config
@@ -348,17 +349,17 @@ class SAMRFSegmentationWidget(QWidget):
             self.storage = h5py.File(selected_file, "r")
 
     def add_labels_layer(self):
-        image_layer = get_layer(
+        self.image_layer = get_layer(
             self.viewer,
             self.image_combo.currentText(), config.NAPARI_IMAGE_LAYER
         )
-        if image_layer is None:
+        if self.image_layer is None:
             notif.show_error("No Image layer is added or selected!")
             return
 
         layer = self.viewer.add_labels(
-            np.zeros(image_layer.data.shape, dtype=np.uint8),
-            name="Labels"
+            np.zeros(get_stack_sizes(self.image_layer.data), dtype=np.uint8),
+            name="Labels", opacity=1.0
         )
         layer.colormap = colormaps.create_colormap(10)[0]
 
@@ -402,15 +403,19 @@ class SAMRFSegmentationWidget(QWidget):
             notif.show_error("No embeddings storage file is selected!")
             return None
 
+        num_slices, img_height, img_width = get_stack_sizes(self.image_layer.data)
         num_labels = sum([len(v) for v in labels_dict.values()])
-        train_data = np.zeros((num_labels, SAM.PATCH_CHANNELS + SAM.EMBEDDING_SIZE))
+        total_channels = SAM.ENCODER_OUT_CHANNELS + SAM.EMBED_PATCH_CHANNELS
+        train_data = np.zeros((num_labels, total_channels))
         labels = np.zeros(num_labels, dtype="int32") - 1
         count = 0
         for class_index in labels_dict:
             for slice_index, y, x in labels_dict[class_index]:
                 grp_key = str(slice_index)
-                patch_row, patch_col = get_patch_position(y, x)
-                patch_features = self.storage[grp_key]["sam"][patch_row, patch_col]
+                patch_index = get_patch_index(
+                    y, x, img_height, img_width, IMAGE_PATCH_SIZE, TARGET_PATCH_SIZE
+                )
+                patch_features = self.storage[grp_key]["sam"][patch_index]
                 # get pixel's embeddings with position inside the patch
                 train_data[count] = patch_features[
                     y % TARGET_PATCH_SIZE, x % TARGET_PATCH_SIZE
@@ -496,11 +501,11 @@ class SAMRFSegmentationWidget(QWidget):
             notif.show_error("No storage is selected!")
             return
 
-        num_slices, img_height, img_width = get_stack_sizes(self.image_layer)
+        num_slices, img_height, img_width = get_stack_sizes(self.image_layer.data)
         if self.new_layer_checkbox.checkState() == Qt.Checked:
             # segmentation_data = np.zeros(self.image_layer.data.shape, dtype=np.uint8)
             self.segmentation_layer = self.viewer.add_labels(
-                np.zeros((img_height, img_width), dtype=np.uint8),
+                np.zeros((num_slices, img_height, img_width), dtype=np.uint8),
                 name="Segmentations"
             )
         else:
@@ -516,7 +521,6 @@ class SAMRFSegmentationWidget(QWidget):
         slice_indices = []
         if not whole_stack:
             # only predict the current slice
-            print(self.viewer.dims.current_step)
             slice_indices.append(self.viewer.dims.current_step[0])
         else:
             slice_indices = range(num_slices)
@@ -557,21 +561,28 @@ class SAMRFSegmentationWidget(QWidget):
         self.segmentation_layer.refresh()
 
     def predict_slice(self, rf_model, slice_index, img_height, img_width):
-        features = self.storage[str(slice_index)]["sam"][:]
-        # shape: patch_rows x patch_cols x target_size x target_size x C
-        features_shape = features.shape
-        patch_rows, patch_cols = features.shape[:2]
-        # make features 2D for RF prediction
-        features = features.transpose([0, 2, 1, 3, 4]).reshape(
-            features_shape[0] * features_shape[2] *
-            features_shape[1] * features_shape[3],
-            -1
-        )
-        predictions = rf_model.predict(features).astype(np.uint8)
-        # to match segmentation colormap with the labels' colormap
-        predictions[predictions > 0] += 1
+        """Predict a slice patch by patch"""
+        segmentation_image = []
+        # shape: N x target_size x target_size x C
+        feature_patches = self.storage[str(slice_index)]["sam"][:]
+        num_patches = feature_patches.shape[0]
+        total_channels = SAM.ENCODER_OUT_CHANNELS + SAM.EMBED_PATCH_CHANNELS
+        for i in np_progress(range(num_patches), desc="Predicting slice patches"):
+            input_data = feature_patches[i].reshape(-1, total_channels)
+            predictions = rf_model.predict(input_data).astype(np.uint8)
+            # to match segmentation colormap with the labels' colormap
+            predictions[predictions > 0] += 1
+            segmentation_image.append(predictions)
+
+        segmentation_image = np.vstack(segmentation_image)
         # reshape into the image size + padding
-        segmentation_image = predictions.reshape(
+        patch_rows, patch_cols = get_num_target_patches(
+            img_height, img_width, IMAGE_PATCH_SIZE, TARGET_PATCH_SIZE
+        )
+        segmentation_image = segmentation_image.reshape(
+            patch_rows, patch_cols, TARGET_PATCH_SIZE, TARGET_PATCH_SIZE
+        )
+        segmentation_image = np.moveaxis(segmentation_image, 1, 2).reshape(
             patch_rows * TARGET_PATCH_SIZE,
             patch_cols * TARGET_PATCH_SIZE
         )
