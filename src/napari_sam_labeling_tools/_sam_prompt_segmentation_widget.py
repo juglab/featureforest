@@ -378,7 +378,7 @@ class SAMPromptSegmentationWidget(QWidget):
 
         return prompts_merged_mask
 
-    def get_similarity_matrix(self, prompts_mask, curr_slice):
+    def calc_similarity_matrix(self, prompts_mask, curr_slice):
         """
         Calculate Cosine similarity for all pixels with prompts' mask average vector
         (in sam's embedding space).
@@ -507,7 +507,7 @@ class SAMPromptSegmentationWidget(QWidget):
 
     def run_prediction(self, slice_indices, prompts_mask):
         for slice_index in np_progress(slice_indices, desc="Predicting slices"):
-            sim_mat = self.get_similarity_matrix(prompts_mask, slice_index)
+            sim_mat = self.calc_similarity_matrix(prompts_mask, slice_index)
             high_sim_mask = np.zeros_like(sim_mat, dtype=np.uint8)
             high_sim_mask[
                 sim_mat >= float(self.similarity_threshold_textbox.text())

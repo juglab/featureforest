@@ -4,8 +4,8 @@ import torch.nn.functional as F
 
 
 # PATCH_EMBEDDING_PATCH_SIZE = 256
-IMAGE_PATCH_SIZE = 512
-TARGET_PATCH_SIZE = 128
+IMAGE_PATCH_SIZE = 128
+TARGET_PATCH_SIZE = 64
 
 
 def patchify(imgs, patch_size, target_size):
@@ -132,7 +132,7 @@ def get_target_patches(patches, patch_size, target_size):
 
 
 def get_patch_index(pixels_y, pixels_x, img_height, img_width, patch_size, target_size):
-    """Gets patch index that contains the given pixel coordinates."""
+    """Gets patch index that contains the given one pixel coordinate."""
     total_rows, total_cols = get_num_target_patches(
         img_height, img_width, patch_size, target_size
     )
@@ -143,7 +143,7 @@ def get_patch_index(pixels_y, pixels_x, img_height, img_width, patch_size, targe
 
 
 def get_patch_indices(pixel_coords, img_height, img_width, patch_size, target_size):
-    """Gets patch index that contains the given pixel coordinates."""
+    """Gets patch indices that contains the given pixel coordinates."""
     total_rows, total_cols = get_num_target_patches(
         img_height, img_width, patch_size, target_size
     )
