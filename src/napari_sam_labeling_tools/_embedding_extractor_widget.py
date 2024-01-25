@@ -165,15 +165,10 @@ class EmbeddingExtractorWidget(QWidget):
             range(num_slices), desc="get embeddings for slices"
         ):
             image = image_layer.data[slice_index] if num_slices > 1 else image_layer.data
-            sam_embeddings = get_sam_embeddings_for_slice(
-                sam_model.image_encoder, device, image
-            )
             slice_grp = self.storage.create_group(str(slice_index))
-            dataset = slice_grp.create_dataset(
-                "sam", shape=sam_embeddings.shape
+            get_sam_embeddings_for_slice(
+                sam_model.image_encoder, device, image, slice_grp
             )
-            # shape: patch_rows x patch_cols x target_size x target_size x C
-            dataset[...] = sam_embeddings
 
             yield (slice_index, num_slices)
 
