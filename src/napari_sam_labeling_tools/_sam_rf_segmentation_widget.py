@@ -27,7 +27,7 @@ from .widgets import (
 )
 from .utils.data import (
     IMAGE_PATCH_SIZE, TARGET_PATCH_SIZE,
-    get_stack_sizes, get_patch_index,
+    get_stack_sizes, get_patch_indices,
     get_num_target_patches
 )
 from .utils import (
@@ -222,9 +222,11 @@ class SAMRFSegmentationWidget(QWidget):
         # post-process ui
         area_label = QLabel("Area Threshold(%):")
         self.area_threshold_textbox = QLineEdit()
-        self.area_threshold_textbox.setText("0.15")
+        self.area_threshold_textbox.setText("15")
         self.area_threshold_textbox.setValidator(
-            QDoubleValidator(0.0, 1.0, 3, notation=QDoubleValidator.StandardNotation)
+            QDoubleValidator(
+                1.000, 100.000, 3, notation=QDoubleValidator.StandardNotation
+            )
         )
         self.area_threshold_textbox.setToolTip(
             "Keeps regions with area above the threshold percentage."
@@ -409,19 +411,35 @@ class SAMRFSegmentationWidget(QWidget):
         train_data = np.zeros((num_labels, total_channels))
         labels = np.zeros(num_labels, dtype="int32") - 1
         count = 0
-        for class_index in labels_dict:
-            for slice_index, y, x in labels_dict[class_index]:
-                grp_key = str(slice_index)
-                patch_index = get_patch_index(
-                    y, x, img_height, img_width, IMAGE_PATCH_SIZE, TARGET_PATCH_SIZE
+        for class_index in np_progress(
+            labels_dict, desc="getting training data", total=len(labels_dict.keys())
+        ):
+            class_label_coords = labels_dict[class_index]
+            uniq_slices = np.unique(class_label_coords[:, 0]).tolist()
+            # for each unique slice, load unique patches from the storage,
+            # then get the pixel features within loaded patch.
+            for slice_index in np_progress(uniq_slices, desc="reading slices"):
+                slice_coords = class_label_coords[
+                    class_label_coords[:, 0] == slice_index
+                ][:, 1:]  # omit the slice dim
+                patch_indices = get_patch_indices(
+                    slice_coords, img_height, img_width,
+                    IMAGE_PATCH_SIZE, TARGET_PATCH_SIZE
                 )
-                patch_features = self.storage[grp_key]["sam"][patch_index]
-                # get pixel's embeddings with position inside the patch
-                train_data[count] = patch_features[
-                    y % TARGET_PATCH_SIZE, x % TARGET_PATCH_SIZE
-                ]
-                labels[count] = class_index - 1  # to have bg class as zero
-                count += 1
+                grp_key = str(slice_index)
+                slice_dataset = self.storage[grp_key]["sam"]
+                for p_i in np.unique(patch_indices):
+                    patch_coords = slice_coords[patch_indices == p_i]
+                    patch_features = slice_dataset[p_i]
+                    train_data[count: count + len(patch_coords)] = patch_features[
+                        patch_coords[:, 0] % TARGET_PATCH_SIZE,
+                        patch_coords[:, 1] % TARGET_PATCH_SIZE
+                    ]
+                    labels[
+                        count: count + len(patch_coords)
+                    ] = class_index - 1  # to have bg class as zero
+                    count += len(patch_coords)
+
         assert (labels > -1).all()
 
         return train_data, labels
@@ -503,7 +521,6 @@ class SAMRFSegmentationWidget(QWidget):
 
         num_slices, img_height, img_width = get_stack_sizes(self.image_layer.data)
         if self.new_layer_checkbox.checkState() == Qt.Checked:
-            # segmentation_data = np.zeros(self.image_layer.data.shape, dtype=np.uint8)
             self.segmentation_layer = self.viewer.add_labels(
                 np.zeros((num_slices, img_height, img_width), dtype=np.uint8),
                 name="Segmentations"
@@ -594,7 +611,7 @@ class SAMRFSegmentationWidget(QWidget):
             # apply postprocessing
             area_threshold = None
             if len(self.area_threshold_textbox.text()) > 0:
-                area_threshold = float(self.area_threshold_textbox.text())
+                area_threshold = float(self.area_threshold_textbox.text()) / 100
             if self.sam_post_checkbox.checkState() == Qt.Checked:
                 segmentation_image = postprocess_segmentations_with_sam(
                     self.sam_model, segmentation_image, area_threshold
