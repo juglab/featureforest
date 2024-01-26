@@ -24,7 +24,6 @@ from .widgets import (
     get_layer,
 )
 from .utils.data import (
-    IMAGE_PATCH_SIZE, TARGET_PATCH_SIZE,
     get_stack_sizes, get_patch_indices,
     get_num_target_patches, is_image_rgb,
 )
@@ -49,6 +48,8 @@ class SAMPromptSegmentationWidget(QWidget):
         self.device = None
         self.sam_model = None
         self.sam_predictor = None
+        self.patch_size = 512
+        self.target_patch_size = 128
 
         self.prepare_widget()
 
@@ -306,6 +307,9 @@ class SAMPromptSegmentationWidget(QWidget):
             self.storage_textbox.setText(selected_file)
             # load the storage
             self.storage = h5py.File(selected_file, "r")
+            self.patch_size = self.storage.attrs.get("patch_size", self.patch_size)
+            self.target_patch_size = self.storage.attrs.get(
+                "target_patch_size", self.target_patch_size)
 
     def get_user_prompts(self):
         user_prompts = None
@@ -395,29 +399,29 @@ class SAMPromptSegmentationWidget(QWidget):
             all_coords = prompt_mask_positions[slice_mask]  # n x 3 (slice, y, x)
             patch_indices = get_patch_indices(
                 all_coords[:, 1:], img_height, img_width,
-                IMAGE_PATCH_SIZE, TARGET_PATCH_SIZE
+                self.patch_size, self.target_patch_size
             )
             for p_i in np_progress(np.unique(patch_indices), desc="reading patches"):
                 patch_features = slice_dataset[p_i]
                 patch_coords = all_coords[patch_indices == p_i]
                 prompt_avg_vector += patch_features[
-                    patch_coords[:, 1] % TARGET_PATCH_SIZE,
-                    patch_coords[:, 2] % TARGET_PATCH_SIZE
+                    patch_coords[:, 1] % self.target_patch_size,
+                    patch_coords[:, 2] % self.target_patch_size
                 ].sum(axis=0)
         prompt_avg_vector /= len(prompt_mask_positions)
 
         # shape: N x target_size x target_size x C
         curr_slice_features = self.storage[str(curr_slice)]["sam"][:]
         patch_rows, patch_cols = get_num_target_patches(
-            img_height, img_width, IMAGE_PATCH_SIZE, TARGET_PATCH_SIZE
+            img_height, img_width, self.patch_size, self.target_patch_size
         )
         # reshape it to the image size + padding
         curr_slice_features = curr_slice_features.reshape(
-            patch_rows, patch_cols, TARGET_PATCH_SIZE, TARGET_PATCH_SIZE, -1
+            patch_rows, patch_cols, self.target_patch_size, self.target_patch_size, -1
         )
         curr_slice_features = np.moveaxis(curr_slice_features, 1, 2).reshape(
-            patch_rows * TARGET_PATCH_SIZE,
-            patch_cols * TARGET_PATCH_SIZE,
+            patch_rows * self.target_patch_size,
+            patch_cols * self.target_patch_size,
             -1
         )
         # skip paddings

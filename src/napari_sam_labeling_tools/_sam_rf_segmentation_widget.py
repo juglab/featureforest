@@ -26,7 +26,6 @@ from .widgets import (
     get_layer,
 )
 from .utils.data import (
-    IMAGE_PATCH_SIZE, TARGET_PATCH_SIZE,
     get_stack_sizes, get_patch_indices,
     get_num_target_patches
 )
@@ -50,6 +49,8 @@ class SAMRFSegmentationWidget(QWidget):
         self.rf_model = None
         self.device = None
         self.sam_model = None
+        self.patch_size = 512
+        self.target_patch_size = 128
 
         self.prepare_widget()
 
@@ -349,6 +350,9 @@ class SAMRFSegmentationWidget(QWidget):
             self.storage_textbox.setText(selected_file)
             # load the storage
             self.storage = h5py.File(selected_file, "r")
+            self.patch_size = self.storage.attrs.get("patch_size", self.patch_size)
+            self.target_patch_size = self.storage.attrs.get(
+                "target_patch_size", self.target_patch_size)
 
     def add_labels_layer(self):
         self.image_layer = get_layer(
@@ -424,7 +428,7 @@ class SAMRFSegmentationWidget(QWidget):
                 ][:, 1:]  # omit the slice dim
                 patch_indices = get_patch_indices(
                     slice_coords, img_height, img_width,
-                    IMAGE_PATCH_SIZE, TARGET_PATCH_SIZE
+                    self.patch_size, self.target_patch_size
                 )
                 grp_key = str(slice_index)
                 slice_dataset = self.storage[grp_key]["sam"]
@@ -432,8 +436,8 @@ class SAMRFSegmentationWidget(QWidget):
                     patch_coords = slice_coords[patch_indices == p_i]
                     patch_features = slice_dataset[p_i]
                     train_data[count: count + len(patch_coords)] = patch_features[
-                        patch_coords[:, 0] % TARGET_PATCH_SIZE,
-                        patch_coords[:, 1] % TARGET_PATCH_SIZE
+                        patch_coords[:, 0] % self.target_patch_size,
+                        patch_coords[:, 1] % self.target_patch_size
                     ]
                     labels[
                         count: count + len(patch_coords)
@@ -594,14 +598,14 @@ class SAMRFSegmentationWidget(QWidget):
         segmentation_image = np.vstack(segmentation_image)
         # reshape into the image size + padding
         patch_rows, patch_cols = get_num_target_patches(
-            img_height, img_width, IMAGE_PATCH_SIZE, TARGET_PATCH_SIZE
+            img_height, img_width, self.patch_size, self.target_patch_size
         )
         segmentation_image = segmentation_image.reshape(
-            patch_rows, patch_cols, TARGET_PATCH_SIZE, TARGET_PATCH_SIZE
+            patch_rows, patch_cols, self.target_patch_size, self.target_patch_size
         )
         segmentation_image = np.moveaxis(segmentation_image, 1, 2).reshape(
-            patch_rows * TARGET_PATCH_SIZE,
-            patch_cols * TARGET_PATCH_SIZE
+            patch_rows * self.target_patch_size,
+            patch_cols * self.target_patch_size
         )
         # skip paddings
         segmentation_image = segmentation_image[:img_height, :img_width]
