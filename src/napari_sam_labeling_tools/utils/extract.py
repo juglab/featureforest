@@ -6,8 +6,6 @@ import torch
 from torchvision import transforms
 
 from .data import (
-    IMAGE_PATCH_SIZE,
-    TARGET_PATCH_SIZE,
     patchify, get_target_patches, get_num_target_patches,
     is_image_rgb,
 )
@@ -17,7 +15,22 @@ from napari_sam_labeling_tools.SAM import (
 )
 
 
-def get_sam_embeddings_for_slice(sam_encoder, device, image, storage_group: h5py.Group):
+def get_patch_sizes(img_height, img_width):
+    patch_size = 512
+    target_patch_size = 128
+    img_min_dim = min(img_height, img_width)
+    while img_min_dim - patch_size < 100:
+        patch_size = patch_size // 2
+    if patch_size < 256:
+        target_patch_size = patch_size // 2
+
+    return patch_size, target_patch_size
+
+
+def get_sam_embeddings_for_slice(
+        image, patch_size, target_patch_size,
+        sam_encoder, device, storage_group: h5py.Group
+):
     """get sam features for one slice."""
     img_height, img_width = image.shape[:2]
     # image to torch tensor
@@ -32,7 +45,7 @@ def get_sam_embeddings_for_slice(sam_encoder, device, image, storage_group: h5py
     # to resize encoder output back to the input patch size
     embedding_transform = transforms.Compose([
         transforms.Resize(
-            (IMAGE_PATCH_SIZE, IMAGE_PATCH_SIZE),
+            (patch_size, patch_size),
             interpolation=transforms.InterpolationMode.BICUBIC,
             antialias=True
         ),
@@ -40,18 +53,18 @@ def get_sam_embeddings_for_slice(sam_encoder, device, image, storage_group: h5py
     ])
 
     # get sam encoder output for image patches
-    data_patches = patchify(img_data, IMAGE_PATCH_SIZE, TARGET_PATCH_SIZE)
+    data_patches = patchify(img_data, patch_size, target_patch_size)
     num_patches = len(data_patches)
     batch_size = 10
     num_batches = int(np.ceil(num_patches / batch_size))
     # prepare storage for the slice embeddings
     target_patch_rows, target_patch_cols = get_num_target_patches(
-        img_height, img_width, IMAGE_PATCH_SIZE, TARGET_PATCH_SIZE
+        img_height, img_width, patch_size, target_patch_size
     )
     total_channels = ENCODER_OUT_CHANNELS + EMBED_PATCH_CHANNELS
     dataset = storage_group.create_dataset(
         "sam", shape=(
-            num_patches, TARGET_PATCH_SIZE, TARGET_PATCH_SIZE, total_channels
+            num_patches, target_patch_size, target_patch_size, total_channels
         )
     )
 
@@ -74,11 +87,11 @@ def get_sam_embeddings_for_slice(sam_encoder, device, image, storage_group: h5py
                 start: start + num_out, :, :, :ENCODER_OUT_CHANNELS
             ] = get_target_patches(
                 embedding_transform(output.cpu()),
-                IMAGE_PATCH_SIZE, TARGET_PATCH_SIZE
+                patch_size, target_patch_size
             )
             dataset[
                 start: start + num_out, :, :, ENCODER_OUT_CHANNELS:
             ] = get_target_patches(
                 embedding_transform(embed_output.cpu()),
-                IMAGE_PATCH_SIZE, TARGET_PATCH_SIZE
+                patch_size, target_patch_size
             )
