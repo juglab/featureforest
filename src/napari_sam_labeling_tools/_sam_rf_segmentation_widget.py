@@ -502,6 +502,8 @@ class SAMRFSegmentationWidget(QWidget):
             self, "Jug Lab", ".", "model(*.bin)"
         )
         if len(selected_file) > 0:
+            if not selected_file.endswith(".bin"):
+                selected_file += ".bin"
             with open(selected_file, mode="wb") as f:
                 pickle.dump(self.rf_model, f)
             notif.show_info("Model was saved successfully.")
@@ -655,5 +657,7 @@ class SAMRFSegmentationWidget(QWidget):
             self, "Jug Lab", ".", "Segmentation(*.nrrd)"
         )
         if selected_file is not None and len(selected_file) > 0:
+            if not selected_file.endswith(".nrrd"):
+                selected_file += ".nrrd"
             nrrd.write(selected_file, self.segmentation_layer.data)
             notif.show_info("Selected segmentation was saved successfully.")

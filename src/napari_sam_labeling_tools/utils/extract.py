@@ -6,7 +6,7 @@ import torch
 from torchvision import transforms
 
 from .data import (
-    patchify, get_target_patches, get_num_target_patches,
+    patchify, get_target_patches,
     is_image_rgb,
 )
 from napari_sam_labeling_tools.SAM import (
@@ -58,9 +58,6 @@ def get_sam_embeddings_for_slice(
     batch_size = 10
     num_batches = int(np.ceil(num_patches / batch_size))
     # prepare storage for the slice embeddings
-    target_patch_rows, target_patch_cols = get_num_target_patches(
-        img_height, img_width, patch_size, target_patch_size
-    )
     total_channels = ENCODER_OUT_CHANNELS + EMBED_PATCH_CHANNELS
     dataset = storage_group.create_dataset(
         "sam", shape=(
