@@ -7,12 +7,13 @@
 [![codecov](https://codecov.io/gh/juglab/napari-sam-labeling-tools/branch/main/graph/badge.svg)](https://codecov.io/gh/juglab/napari-sam-labeling-tools)
 [![napari hub](https://img.shields.io/endpoint?url=https://api.napari-hub.org/shields/napari-sam-labeling-tools)](https://napari-hub.org/plugins/napari-sam-labeling-tools)
 
-A plugin for segmentation using SAM model and its feature space.
+A plugin for segmentation using SAM model and its feature space.  
+We developed a *napari* plugin to train a *Random Forest* model using extracted embeddings of the *SAM* model for input and just a few scribble labels provided by the user. This approach can do the segmentation of desired objects almost as well as manual segmentations but in a much shorter time with less manual effort.
 
 ----------------------------------
 
 ## Documentation
-See [Plugin Widgets](docs/widgets.md)
+The plugin documentation is [here](docs/index.md).
 
 ## Installation
 It is highly recommended to use a python environment manager like [conda] to create a clean environment for installation.  
@@ -38,11 +39,20 @@ conda env create -f ./env.yml
 - `timm`
 - `pynrrd`
 
+If you want to use GPU, please follow the pytorch installation instruction [here](https://pytorch.org/get-started/locally/).  
+For detailed napari installation see [here](https://napari.org/stable/tutorials/fundamentals/installation).  
+
 ### Installing The Plugin
-To install the plugin, open the command prompt in the plugin directory, and run the following command:
+To install the plugin, first clone the repository:
 ```bash
+git clone https://github.com/juglab/napari-sam-labeling-tools
+```
+Then run the following commands:
+```bash
+cd ./napari-sam-labeling-tools
 pip install -e .
 ```
+
 <!-- You can install `napari-sam-labeling-tools` via [pip]:
 
     pip install napari-sam-labeling-tools -->
