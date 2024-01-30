@@ -131,6 +131,8 @@ class EmbeddingExtractorWidget(QWidget):
             self, "Jug Lab", ".", "Embeddings Storage(*.hdf5)"
         )
         if selected_file is not None and len(selected_file) > 0:
+            if not selected_file.endswith(".hdf5"):
+                selected_file += ".hdf5"
             self.storage_textbox.setText(selected_file)
             self.extract_button.setEnabled(True)
 

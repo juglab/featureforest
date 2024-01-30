@@ -48,7 +48,7 @@ The number of required labels for having almost nice-looking segmentations compa
 
 #### Notes
 - If your stack is large, extracting embeddings can take a long time and creates a huge storage file. Therefore, it is recommended to use a sub-stack of the original stack by selecting a few slices from the beginning of the stack, a few in the middle, and a few slices from the end. Then use this sub-stack to train the RF model, save it, and then use it for prediction over the whole stack.  
-To do so, we provided a jupyter notebook that you can use with just setting the input and saved RF model path.  
+<!-- To do so, we provided a jupyter notebook that you can use with just setting the input and saved RF model path.   -->
 
 - Making a good segmentation using this SAM-RF widget needs a iterative process; meaning that first you add some labels, train the model, and then predict. Then to improve the results, iterate over and add more labels, train and predict, and so forth... .
 
