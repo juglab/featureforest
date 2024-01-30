@@ -68,7 +68,7 @@ def get_sam_embeddings_for_slice(
     with torch.no_grad():
         print("\ngetting SAM encoder & patch_embed output:")
         for b_idx in np_progress(
-            range(num_batches), desc="getting SAM encoder & patch_embed output"
+            range(num_batches), desc="getting SAM encoder & patch_embed outputs"
         ):
             print(f"batch #{b_idx + 1} of {num_batches}")
             start = b_idx * batch_size
