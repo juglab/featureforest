@@ -35,7 +35,7 @@ conda env create -f ./env.yml
 - `napari`
 - `h5py`
 - `pytorch`
-- `tochvision`
+- `torchvision`
 - `timm`
 - `pynrrd`
 
