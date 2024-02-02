@@ -659,5 +659,5 @@ class SAMRFSegmentationWidget(QWidget):
         if selected_file is not None and len(selected_file) > 0:
             if not selected_file.endswith(".nrrd"):
                 selected_file += ".nrrd"
-            nrrd.write(selected_file, self.segmentation_layer.data)
-            notif.show_info("Selected segmentation was saved successfully.")
+            nrrd.write(selected_file, np.transpose(self.segmentation_layer.data))
+            notif.show_info("Selected segmentation was exported successfully.")

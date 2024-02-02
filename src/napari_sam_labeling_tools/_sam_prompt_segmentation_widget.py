@@ -642,5 +642,5 @@ class SAMPromptSegmentationWidget(QWidget):
             self, "Jug Lab", ".", "Segmentation(*.nrrd)"
         )
         if selected_file is not None and len(selected_file) > 0:
-            nrrd.write(selected_file, self.segmentation_layer.data)
-            notif.show_info("Selected segmentation was saved successfully.")
+            nrrd.write(selected_file, np.transpose(self.segmentation_layer.data))
+            notif.show_info("Selected segmentation was exported successfully.")
