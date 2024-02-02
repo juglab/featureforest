@@ -21,7 +21,6 @@ def patchify(imgs, patch_size, target_size):
     pad_right = patch_size - (new_width % patch_size)
     pad_bottom = patch_size - (new_height % patch_size)
     pad = (margin, pad_right + margin, margin, pad_bottom + margin)
-    pad = (margin, pad_right - margin, margin, pad_bottom - margin)
     padded_imgs = F.pad(imgs, pad=pad, mode="reflect")
     patches = padded_imgs.unfold(
         2, patch_size, step=target_size).unfold(
