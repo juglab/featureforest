@@ -14,8 +14,6 @@ def patchify(imgs, patch_size, target_size):
     """
     b, c, img_height, img_width = imgs.shape
     margin = (patch_size - target_size) // 2
-    # pad_right = patch_size - (img_w % patch_size) + patch_size - margin
-    # pad_bottom = patch_size - (img_h % patch_size) + patch_size - margin
     new_width = img_width + (2 * margin)
     new_height = img_height + (2 * margin)
     pad_right = patch_size - (new_width % patch_size)
@@ -34,10 +32,6 @@ def patchify(imgs, patch_size, target_size):
 
 def get_num_target_patches(img_height, img_width, patch_size, target_size):
     margin = (patch_size - target_size) // 2
-    # pad_right = patch_size - (img_width % patch_size) + patch_size - margin
-    # pad_bottom = patch_size - (img_height % patch_size) + patch_size - margin
-    # num_patches_w = int((img_width + pad_right - patch_size) / target_size) + 1
-    # num_patches_h = int((img_height + pad_bottom - patch_size) / target_size) + 1
     new_width = img_width + (2 * margin)
     new_height = img_height + (2 * margin)
     pad_right = patch_size - (new_width % patch_size)

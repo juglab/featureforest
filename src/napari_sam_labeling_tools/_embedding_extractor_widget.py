@@ -137,6 +137,7 @@ class EmbeddingExtractorWidget(QWidget):
             self.extract_button.setEnabled(True)
 
     def extract_embeddings(self):
+        self.stack_progress.setValue(0)
         # check image layer
         image_layer_name = self.image_combo.currentText()
         image_layer = get_layer(

@@ -509,6 +509,7 @@ class SAMRFSegmentationWidget(QWidget):
             notif.show_info("Model was saved successfully.")
 
     def predict(self, whole_stack=False):
+        self.prediction_progress.setValue(0)
         if self.rf_model is None:
             notif.show_error("There is no trained RF model!")
             return
