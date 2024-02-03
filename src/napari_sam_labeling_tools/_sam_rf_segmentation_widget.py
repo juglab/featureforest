@@ -368,6 +368,7 @@ class SAMRFSegmentationWidget(QWidget):
             name="Labels", opacity=1.0
         )
         layer.colormap = colormaps.create_colormap(10)[0]
+        layer.brush_size = 1
 
     def get_class_labels(self):
         labels_dict = {}
