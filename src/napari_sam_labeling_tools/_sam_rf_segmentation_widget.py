@@ -57,6 +57,15 @@ class SAMRFSegmentationWidget(QWidget):
         # init sam model & predictor
         self.sam_model, self.device = self.get_model_on_device()
 
+    def closeEvent(self, event):
+        print("closing")
+        self.viewer.layers.events.inserted.disconnect(self.check_input_layers)
+        self.viewer.layers.events.removed.disconnect(self.check_input_layers)
+        self.viewer.layers.events.changed.disconnect(self.check_input_layers)
+
+        self.viewer.layers.events.inserted.disconnect(self.check_label_layers)
+        self.viewer.layers.events.removed.disconnect(self.check_label_layers)
+
     def prepare_widget(self):
         self.base_layout = QVBoxLayout()
         self.create_input_ui()
@@ -307,7 +316,7 @@ class SAMRFSegmentationWidget(QWidget):
         curr_text = self.image_combo.currentText()
         self.image_combo.clear()
         for layer in self.viewer.layers:
-            if isinstance(layer, napari.layers.Image):
+            if isinstance(layer, config.NAPARI_IMAGE_LAYER):
                 self.image_combo.addItem(layer.name)
         # put back the selected layer, if not removed
         if len(curr_text) > 0:

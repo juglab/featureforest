@@ -43,7 +43,8 @@ If you want to use GPU, please follow the pytorch installation instruction [here
 For detailed napari installation see [here](https://napari.org/stable/tutorials/fundamentals/installation).  
 
 ### Installing The Plugin
-To install the plugin, first clone the repository:
+If you use the conda `env.yml` file, the plugin will be installed automatically. But in case you already have the environment setup, 
+you can just install the plugin. First clone the repository:
 ```bash
 git clone https://github.com/juglab/napari-sam-labeling-tools
 ```
