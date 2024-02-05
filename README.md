@@ -50,7 +50,7 @@ git clone https://github.com/juglab/napari-sam-labeling-tools
 Then run the following commands:
 ```bash
 cd ./napari-sam-labeling-tools
-pip install -e .
+pip install .
 ```
 
 <!-- You can install `napari-sam-labeling-tools` via [pip]:
