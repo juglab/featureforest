@@ -2,6 +2,7 @@ include LICENSE
 include README.md
 
 graft src
+recursive-include src/napari_sam_labeling_tools/SAM
 
-global-exclude * __pycache__
-global-exclude * *.py[co]
+recursive-exclude * __pycache__
+recursive-exclude * *.py[co]
