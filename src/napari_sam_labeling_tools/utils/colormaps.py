@@ -4,6 +4,11 @@ import numpy as np
 import matplotlib as mpl
 
 
+def is_new_napari():
+    version = napari.__version__.split(".")
+    return int(version[-1]) > 18
+
+
 def bit_get(val, idx):
     """Gets the bit value.
     Args:
@@ -37,7 +42,10 @@ def create_colormap2(num_colors=100):
     colors = colors / 255.
     assert colors.max() == 1
 
-    cm = napari.utils.Colormap(colors, "happy2")
+    if is_new_napari():
+        cm = napari.utils.CyclicLabelColormap(colors, "happy2")
+    else:
+        cm = napari.utils.Colormap(colors, "happy2")
 
     return cm, colors
 
@@ -50,7 +58,10 @@ def get_colormap1():
         colors, np.full((colors.shape[0], 1), 1.0)
     ))
     colors = np.vstack((np.array([[0, 0, 0, 0.]]), colors))
-    cm = napari.utils.Colormap(colors, "MySet3")
+    if is_new_napari():
+        cm = napari.utils.CyclicLabelColormap(colors, "MySet3")
+    else:
+        cm = napari.utils.Colormap(colors, "MySet3")
 
     return cm
 
@@ -86,6 +97,9 @@ def create_colormap(num_colors, bright=True, black_first=True, seed=777):
             np.array([[0, 0, 0, 0]]), rgba_colors
         ))
 
-    cm = napari.utils.Colormap(rgba_colors, "happy")
+    if is_new_napari():
+        cm = napari.utils.CyclicLabelColormap(rgba_colors, "happy")
+    else:
+        cm = napari.utils.Colormap(rgba_colors, "happy")
 
     return cm, rgba_colors
