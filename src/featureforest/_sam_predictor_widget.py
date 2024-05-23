@@ -20,7 +20,7 @@ from . import SAM
 from .utils import (
     colormaps, config
 )
-from .utils.data import get_stack_sizes, is_image_rgb
+from .utils.data import get_stack_dims, is_image_rgb
 
 
 class SAMPredictorWidget(QWidget):
@@ -309,7 +309,7 @@ class SAMPredictorWidget(QWidget):
             notif.show_warning("No prompts was given!")
             return
 
-        num_slices, img_height, img_width = get_stack_sizes(self.image_layer.data)
+        num_slices, img_height, img_width = get_stack_dims(self.image_layer.data)
         if self.new_layer_checkbox.checkState() == Qt.Checked:
             segmentation_data = np.zeros(
                 (num_slices, img_height, img_width), dtype=np.uint8
