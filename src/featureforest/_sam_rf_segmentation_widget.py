@@ -26,8 +26,8 @@ from .widgets import (
     get_layer,
 )
 from .utils.data import (
-    get_stack_sizes, get_patch_indices,
-    get_num_target_patches
+    get_stack_dims, get_patch_indices,
+    get_num_patches, get_stride_margin
 )
 from .utils import (
     colormaps, config
@@ -50,7 +50,8 @@ class SAMRFSegmentationWidget(QWidget):
         self.device = None
         self.sam_model = None
         self.patch_size = 512
-        self.target_patch_size = 128
+        self.overlap = 384
+        self.stride = self.patch_size - self.overlap
 
         self.prepare_widget()
 
@@ -360,8 +361,9 @@ class SAMRFSegmentationWidget(QWidget):
             # load the storage
             self.storage = h5py.File(selected_file, "r")
             self.patch_size = self.storage.attrs.get("patch_size", self.patch_size)
-            self.target_patch_size = self.storage.attrs.get(
-                "target_patch_size", self.target_patch_size)
+            self.overlap = self.storage.attrs.get(
+                "overlap", self.overlap)
+            self.stride, _ = get_stride_margin(self.patch_size, self.overlap)
 
     def add_labels_layer(self):
         self.image_layer = get_layer(
@@ -373,7 +375,7 @@ class SAMRFSegmentationWidget(QWidget):
             return
 
         layer = self.viewer.add_labels(
-            np.zeros(get_stack_sizes(self.image_layer.data), dtype=np.uint8),
+            np.zeros(get_stack_dims(self.image_layer.data), dtype=np.uint8),
             name="Labels", opacity=1.0
         )
         layer.colormap = colormaps.create_colormap(10)[0]
@@ -419,7 +421,7 @@ class SAMRFSegmentationWidget(QWidget):
             notif.show_error("No embeddings storage file is selected!")
             return None
 
-        num_slices, img_height, img_width = get_stack_sizes(self.image_layer.data)
+        num_slices, img_height, img_width = get_stack_dims(self.image_layer.data)
         num_labels = sum([len(v) for v in labels_dict.values()])
         total_channels = SAM.ENCODER_OUT_CHANNELS + SAM.EMBED_PATCH_CHANNELS
         train_data = np.zeros((num_labels, total_channels))
@@ -438,7 +440,7 @@ class SAMRFSegmentationWidget(QWidget):
                 ][:, 1:]  # omit the slice dim
                 patch_indices = get_patch_indices(
                     slice_coords, img_height, img_width,
-                    self.patch_size, self.target_patch_size
+                    self.patch_size, self.overlap
                 )
                 grp_key = str(slice_index)
                 slice_dataset = self.storage[grp_key]["sam"]
@@ -446,8 +448,8 @@ class SAMRFSegmentationWidget(QWidget):
                     patch_coords = slice_coords[patch_indices == p_i]
                     patch_features = slice_dataset[p_i]
                     train_data[count: count + len(patch_coords)] = patch_features[
-                        patch_coords[:, 0] % self.target_patch_size,
-                        patch_coords[:, 1] % self.target_patch_size
+                        patch_coords[:, 0] % self.stride,
+                        patch_coords[:, 1] % self.stride
                     ]
                     labels[
                         count: count + len(patch_coords)
@@ -536,7 +538,7 @@ class SAMRFSegmentationWidget(QWidget):
             notif.show_error("No storage is selected!")
             return
 
-        num_slices, img_height, img_width = get_stack_sizes(self.image_layer.data)
+        num_slices, img_height, img_width = get_stack_dims(self.image_layer.data)
         if self.new_layer_checkbox.checkState() == Qt.Checked:
             self.segmentation_layer = self.viewer.add_labels(
                 np.zeros((num_slices, img_height, img_width), dtype=np.uint8),
@@ -610,15 +612,15 @@ class SAMRFSegmentationWidget(QWidget):
 
         segmentation_image = np.vstack(segmentation_image)
         # reshape into the image size + padding
-        patch_rows, patch_cols = get_num_target_patches(
-            img_height, img_width, self.patch_size, self.target_patch_size
+        patch_rows, patch_cols = get_num_patches(
+            img_height, img_width, self.patch_size, self.overlap
         )
         segmentation_image = segmentation_image.reshape(
-            patch_rows, patch_cols, self.target_patch_size, self.target_patch_size
+            patch_rows, patch_cols, self.stride, self.stride
         )
         segmentation_image = np.moveaxis(segmentation_image, 1, 2).reshape(
-            patch_rows * self.target_patch_size,
-            patch_cols * self.target_patch_size
+            patch_rows * self.stride,
+            patch_cols * self.stride
         )
         # skip paddings
         segmentation_image = segmentation_image[:img_height, :img_width]
