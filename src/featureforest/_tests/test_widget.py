@@ -1,6 +1,6 @@
 import numpy as np
 
-from napari_sam_labeling_tools._widget import (
+from featureforest._widget import (
     ExampleQWidget,
     ImageThreshold,
     threshold_autogenerate_widget,

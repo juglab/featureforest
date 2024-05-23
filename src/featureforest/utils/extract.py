@@ -9,7 +9,7 @@ from .data import (
     patchify, get_target_patches,
     is_image_rgb,
 )
-from napari_sam_labeling_tools.SAM import (
+from featureforest.SAM import (
     ENCODER_OUT_CHANNELS, EMBED_PATCH_CHANNELS,
     sam_transform
 )

@@ -1,7 +1,7 @@
 from torchvision import transforms
 
-from napari_sam_labeling_tools.SAM.setup_model import setup_lighthq_sam_model
-from napari_sam_labeling_tools.SAM.models.segment_anything import SamPredictor
+from featureforest.SAM.setup_model import setup_lighthq_sam_model
+from featureforest.SAM.models.segment_anything import SamPredictor
 
 
 INPUT_SIZE = 1024
