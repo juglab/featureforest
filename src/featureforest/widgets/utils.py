@@ -1,7 +1,7 @@
 import napari
 import numpy as np
 
-from napari_sam_labeling_tools.utils import colormaps
+from featureforest.utils import colormaps
 
 
 def get_layer(napari_viewer, name, layer_types):
