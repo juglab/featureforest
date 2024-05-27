@@ -410,7 +410,7 @@ class SAMRFSegmentationWidget(QWidget):
         self.each_class_label.setText("Labels per class:\n" + each_class)
 
     def get_model_on_device(self):
-        return SAM.setup_lighthq_sam_model()
+        return SAM.setup_mobile_sam_model()
 
     def get_train_data(self):
         # get ground truth class labels

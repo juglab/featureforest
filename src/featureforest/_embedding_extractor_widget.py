@@ -167,7 +167,7 @@ class EmbeddingExtractorWidget(QWidget):
         self, image_layer, storage_path, patch_size, overlap
     ):
         # initial sam model
-        sam_model, device = SAM.setup_lighthq_sam_model()
+        sam_model, device = SAM.setup_mobile_sam_model()
         # initial storage hdf5 file
         self.storage = h5py.File(storage_path, "w")
         # get sam embeddings slice by slice and save them into storage file

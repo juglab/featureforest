@@ -1,7 +1,7 @@
 from torchvision import transforms
 
-from featureforest.SAM.setup_model import setup_lighthq_sam_model
-from featureforest.SAM.models.segment_anything import SamPredictor
+from featureforest.SAM.setup_model import setup_mobile_sam_model
+from segment_anything import SamPredictor
 
 
 INPUT_SIZE = 1024
