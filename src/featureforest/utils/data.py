@@ -19,7 +19,13 @@ def get_patch_size(img_height: float, img_width: float) -> int:
     """
     patch_size = 512
     img_min_dim = min(img_height, img_width)
-    while img_min_dim - patch_size < 128:
+    # if image dim(s) is too small
+    if img_min_dim <= patch_size:
+        # get a power of two smaller than image dim
+        patch_size = 2 ** int(np.log2(img_min_dim))
+        return patch_size
+
+    while img_min_dim / patch_size < 2:
         patch_size = patch_size // 2
 
     return patch_size
@@ -118,10 +124,14 @@ def get_num_patches(
     """
     stride, margin = get_stride_margin(patch_size, overlap)
     pad_right, pad_bottom = get_paddings(patch_size, margin, img_height, img_width)
-    num_patches_w = int((img_width + pad_right) / stride)
-    num_patches_h = int((img_height + pad_bottom) / stride)
+    num_patches_w = (img_width + pad_right) / stride
+    assert int(num_patches_w) == num_patches_w, \
+        f"number of width patches {num_patches_w} is not integer!"
+    num_patches_h = (img_height + pad_bottom) / stride
+    assert int(num_patches_h) == num_patches_h, \
+        f"number of height patches {num_patches_h} is not integer!"
 
-    return num_patches_h, num_patches_w
+    return int(num_patches_h), int(num_patches_w)
 
 
 def get_nonoverlap_patches(patches: Tensor, patch_size: int, overlap: int) -> Tensor:

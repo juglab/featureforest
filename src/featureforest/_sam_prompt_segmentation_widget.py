@@ -50,7 +50,6 @@ class SAMPromptSegmentationWidget(QWidget):
         self.sam_model = None
         self.sam_predictor = None
         self.patch_size = 512
-        self.patch_size = 512
         self.overlap = 384
         self.stride = self.patch_size - self.overlap
 
