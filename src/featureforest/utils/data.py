@@ -41,7 +41,7 @@ def get_stride_margin(patch_size: int, overlap: int) -> Tuple[int, int]:
     return stride, margin
 
 
-def get_pads(
+def get_paddings(
     patch_size: int, margin: int, img_height: float, img_width: float
 ) -> Tuple[int, int]:
     """Calculate the image paddings.
@@ -88,7 +88,7 @@ def patchify(
         overlap = 3 * patch_size // 4
 
     stride, margin = get_stride_margin(patch_size, overlap)
-    pad_right, pad_bottom = get_pads(patch_size, margin, img_height, img_width)
+    pad_right, pad_bottom = get_paddings(patch_size, margin, img_height, img_width)
     pad = (margin, pad_right + margin, margin, pad_bottom + margin)
     padded_imgs = F.pad(images, pad=pad, mode="reflect")
     # making patches using torch unfold method
@@ -117,7 +117,7 @@ def get_num_patches(
         Tuple[int, int]: number of patches for height and width of image
     """
     stride, margin = get_stride_margin(patch_size, overlap)
-    pad_right, pad_bottom = get_pads(patch_size, margin, img_height, img_width)
+    pad_right, pad_bottom = get_paddings(patch_size, margin, img_height, img_width)
     num_patches_w = int((img_width + pad_right) / stride)
     num_patches_h = int((img_height + pad_bottom) / stride)
 
