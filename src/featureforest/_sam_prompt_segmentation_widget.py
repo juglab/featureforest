@@ -86,7 +86,7 @@ class SAMPromptSegmentationWidget(QWidget):
         self.check_label_layers(None)
 
     def get_model_on_device(self):
-        return SAM.setup_lighthq_sam_model()
+        return SAM.setup_mobile_sam_model()
 
     def create_input_ui(self):
         # input layer

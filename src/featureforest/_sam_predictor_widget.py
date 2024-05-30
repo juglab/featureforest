@@ -225,7 +225,7 @@ class SAMPredictorWidget(QWidget):
             self.is_prompt_changed = True
 
     def get_model_on_device(self):
-        return SAM.setup_lighthq_sam_model()
+        return SAM.setup_mobile_sam_model()
 
     def get_user_prompts(self):
         user_prompts = None
