@@ -24,8 +24,9 @@ from .widgets import (
     get_layer,
 )
 from .utils.data import (
-    get_stack_sizes, get_patch_indices,
-    get_num_target_patches, is_image_rgb,
+    get_stack_dims, get_patch_indices,
+    get_num_patches, is_image_rgb,
+    get_stride_margin
 )
 from .utils import (
     colormaps, config
@@ -49,7 +50,8 @@ class SAMPromptSegmentationWidget(QWidget):
         self.sam_model = None
         self.sam_predictor = None
         self.patch_size = 512
-        self.target_patch_size = 128
+        self.overlap = 384
+        self.stride = self.patch_size - self.overlap
 
         self.prepare_widget()
 
@@ -308,8 +310,9 @@ class SAMPromptSegmentationWidget(QWidget):
             # load the storage
             self.storage = h5py.File(selected_file, "r")
             self.patch_size = self.storage.attrs.get("patch_size", self.patch_size)
-            self.target_patch_size = self.storage.attrs.get(
-                "target_patch_size", self.target_patch_size)
+            self.overlap = self.storage.attrs.get(
+                "overlap", self.overlap)
+            self.stride, _ = get_stride_margin(self.patch_size, self.overlap)
 
     def get_user_prompts(self):
         user_prompts = None
@@ -387,7 +390,7 @@ class SAMPromptSegmentationWidget(QWidget):
         Calculate Cosine similarity for all pixels with prompts' mask average vector
         (in sam's embedding space).
         """
-        _, img_height, img_width = get_stack_sizes(self.image_layer.data)
+        _, img_height, img_width = get_stack_dims(self.image_layer.data)
         total_channels = SAM.ENCODER_OUT_CHANNELS + SAM.EMBED_PATCH_CHANNELS
         prompt_avg_vector = np.zeros(total_channels)
         prompt_mask_positions = np.argwhere(prompts_mask == 1)
@@ -399,29 +402,29 @@ class SAMPromptSegmentationWidget(QWidget):
             all_coords = prompt_mask_positions[slice_mask]  # n x 3 (slice, y, x)
             patch_indices = get_patch_indices(
                 all_coords[:, 1:], img_height, img_width,
-                self.patch_size, self.target_patch_size
+                self.patch_size, self.overlap
             )
             for p_i in np_progress(np.unique(patch_indices), desc="reading patches"):
                 patch_features = slice_dataset[p_i]
                 patch_coords = all_coords[patch_indices == p_i]
                 prompt_avg_vector += patch_features[
-                    patch_coords[:, 1] % self.target_patch_size,
-                    patch_coords[:, 2] % self.target_patch_size
+                    patch_coords[:, 1] % self.stride,
+                    patch_coords[:, 2] % self.stride
                 ].sum(axis=0)
         prompt_avg_vector /= len(prompt_mask_positions)
 
         # shape: N x target_size x target_size x C
         curr_slice_features = self.storage[str(curr_slice)]["sam"][:]
-        patch_rows, patch_cols = get_num_target_patches(
-            img_height, img_width, self.patch_size, self.target_patch_size
+        patch_rows, patch_cols = get_num_patches(
+            img_height, img_width, self.patch_size, self.overlap
         )
         # reshape it to the image size + padding
         curr_slice_features = curr_slice_features.reshape(
-            patch_rows, patch_cols, self.target_patch_size, self.target_patch_size, -1
+            patch_rows, patch_cols, self.stride, self.stride, -1
         )
         curr_slice_features = np.moveaxis(curr_slice_features, 1, 2).reshape(
-            patch_rows * self.target_patch_size,
-            patch_cols * self.target_patch_size,
+            patch_rows * self.stride,
+            patch_cols * self.stride,
             -1
         )
         # skip paddings
@@ -452,7 +455,7 @@ class SAMPromptSegmentationWidget(QWidget):
             notif.show_error("No storage is selected!")
             return
 
-        num_slices, img_height, img_width = get_stack_sizes(self.image_layer.data)
+        num_slices, img_height, img_width = get_stack_dims(self.image_layer.data)
         if self.new_layer_checkbox.checkState() == Qt.Checked:
             self.segmentation_layer = self.viewer.add_labels(
                 np.zeros((num_slices, img_height, img_width), dtype=np.uint8),
@@ -584,7 +587,7 @@ class SAMPromptSegmentationWidget(QWidget):
     def predict_slice(self, slice_index, point_prompts):
         sam_masks = []
         # prepare the image for sam
-        num_slices, img_height, img_width = get_stack_sizes(self.image_layer.data)
+        num_slices, img_height, img_width = get_stack_dims(self.image_layer.data)
         if num_slices > 1:
             input_img = self.image_layer.data[slice_index]
         else:
