@@ -6,7 +6,8 @@ import torch
 from torchvision import transforms
 
 from .data import (
-    patchify, get_target_patches,
+    patchify, get_stride_margin,
+    get_nonoverlap_patches,
     is_image_rgb,
 )
 from featureforest.SAM import (
@@ -15,20 +16,8 @@ from featureforest.SAM import (
 )
 
 
-def get_patch_sizes(img_height, img_width):
-    patch_size = 512
-    target_patch_size = 128
-    img_min_dim = min(img_height, img_width)
-    while img_min_dim - patch_size < 100:
-        patch_size = patch_size // 2
-    if patch_size < 256:
-        target_patch_size = patch_size // 2
-
-    return patch_size, target_patch_size
-
-
 def get_sam_embeddings_for_slice(
-        image, patch_size, target_patch_size,
+        image, patch_size, overlap,
         sam_encoder, device, storage_group: h5py.Group
 ):
     """get sam features for one slice."""
@@ -52,19 +41,21 @@ def get_sam_embeddings_for_slice(
         # transforms.GaussianBlur(kernel_size=3, sigma=1.0)
     ])
 
-    # get sam encoder output for image patches
-    data_patches = patchify(img_data, patch_size, target_patch_size)
+    # get input patches
+    data_patches = patchify(img_data, patch_size, overlap)
     num_patches = len(data_patches)
     batch_size = 10
     num_batches = int(np.ceil(num_patches / batch_size))
     # prepare storage for the slice embeddings
     total_channels = ENCODER_OUT_CHANNELS + EMBED_PATCH_CHANNELS
+    stride, _ = get_stride_margin(patch_size, overlap)
     dataset = storage_group.create_dataset(
         "sam", shape=(
-            num_patches, target_patch_size, target_patch_size, total_channels
+            num_patches, stride, stride, total_channels
         )
     )
 
+    # get sam encoder output for image patches
     with torch.no_grad():
         print("\ngetting SAM encoder & patch_embed output:")
         for b_idx in np_progress(
@@ -82,13 +73,13 @@ def get_sam_embeddings_for_slice(
             num_out = output.shape[0]
             dataset[
                 start: start + num_out, :, :, :ENCODER_OUT_CHANNELS
-            ] = get_target_patches(
+            ] = get_nonoverlap_patches(
                 embedding_transform(output.cpu()),
-                patch_size, target_patch_size
+                patch_size, overlap
             )
             dataset[
                 start: start + num_out, :, :, ENCODER_OUT_CHANNELS:
-            ] = get_target_patches(
+            ] = get_nonoverlap_patches(
                 embedding_transform(embed_output.cpu()),
-                patch_size, target_patch_size
+                patch_size, overlap
             )

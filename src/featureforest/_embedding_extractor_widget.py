@@ -23,10 +23,10 @@ from .utils import (
     config
 )
 from .utils.data import (
-    get_stack_sizes
+    get_stack_dims,
+    get_patch_size
 )
 from .utils.extract import (
-    get_patch_sizes,
     get_sam_embeddings_for_slice
 )
 
@@ -70,8 +70,6 @@ class EmbeddingExtractorWidget(QWidget):
         self.stop_button.setMinimumWidth(150)
         # progress
         self.stack_progress = QProgressBar()
-        # patch info
-        self.patch_label = QLabel("Patch Sizes:")
 
         self.viewer.layers.events.inserted.connect(self.check_input_layers)
         self.viewer.layers.events.removed.connect(self.check_input_layers)
@@ -104,7 +102,6 @@ class EmbeddingExtractorWidget(QWidget):
         vbox = QVBoxLayout()
         vbox.setContentsMargins(0, 5, 0, 0)
         vbox.addWidget(self.stack_progress)
-        vbox.addWidget(self.patch_label)
         layout.addLayout(vbox)
 
         gbox = QGroupBox()
@@ -152,35 +149,34 @@ class EmbeddingExtractorWidget(QWidget):
             notif.show_error("No storage path was set.")
             return
         # get proper patch sizes
-        _, img_height, img_width = get_stack_sizes(image_layer.data)
-        patch_size, target_patch_size = get_patch_sizes(img_height, img_width)
-        self.patch_label.setText(f"Patch Sizes: ({patch_size}, {target_patch_size})")
-        self.update()
+        _, img_height, img_width = get_stack_dims(image_layer.data)
+        patch_size = get_patch_size(img_height, img_width)
+        overlap = 3 * patch_size // 4
 
         self.extract_button.setEnabled(False)
         self.stop_button.setEnabled(True)
         self.extract_worker = create_worker(
             self.get_stack_sam_embeddings,
-            image_layer, storage_path, patch_size, target_patch_size
+            image_layer, storage_path, patch_size, overlap
         )
         self.extract_worker.yielded.connect(self.update_extract_progress)
         self.extract_worker.finished.connect(self.extract_is_done)
         self.extract_worker.run()
 
     def get_stack_sam_embeddings(
-        self, image_layer, storage_path, patch_size, target_patch_size
+        self, image_layer, storage_path, patch_size, overlap
     ):
         # initial sam model
         sam_model, device = SAM.setup_lighthq_sam_model()
         # initial storage hdf5 file
         self.storage = h5py.File(storage_path, "w")
         # get sam embeddings slice by slice and save them into storage file
-        num_slices, img_height, img_width = get_stack_sizes(image_layer.data)
+        num_slices, img_height, img_width = get_stack_dims(image_layer.data)
         self.storage.attrs["num_slices"] = num_slices
         self.storage.attrs["img_height"] = img_height
         self.storage.attrs["img_width"] = img_width
         self.storage.attrs["patch_size"] = patch_size
-        self.storage.attrs["target_patch_size"] = target_patch_size
+        self.storage.attrs["overlap"] = overlap
 
         for slice_index in np_progress(
             range(num_slices), desc="get embeddings for slices"
@@ -188,7 +184,7 @@ class EmbeddingExtractorWidget(QWidget):
             image = image_layer.data[slice_index] if num_slices > 1 else image_layer.data
             slice_grp = self.storage.create_group(str(slice_index))
             get_sam_embeddings_for_slice(
-                image, patch_size, target_patch_size,
+                image, patch_size, overlap,
                 sam_model.image_encoder, device, slice_grp
             )
 
