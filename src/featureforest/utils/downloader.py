@@ -43,11 +43,3 @@ def download_model(
     except Exception as err:
         print(f"\nError while downloading the model:\n{err}")
         return None
-
-
-if __name__ == "__main__":
-    model_file = download_model(
-        model_url="https://github.com/ChaoningZhang/MobileSAM/raw/master/weights/mobile_sam.pt",
-        model_name="mobile_sam.pt"
-    )
-    print(model_file)
