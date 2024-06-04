@@ -7,7 +7,7 @@ from torchvision import transforms
 
 from .data import (
     patchify, get_stride_margin,
-    get_nonoverlap_patches,
+    get_nonoverlapped_patches,
     is_image_rgb,
 )
 from featureforest.SAM import (
@@ -73,13 +73,13 @@ def get_sam_embeddings_for_slice(
             num_out = output.shape[0]
             dataset[
                 start: start + num_out, :, :, :ENCODER_OUT_CHANNELS
-            ] = get_nonoverlap_patches(
+            ] = get_nonoverlapped_patches(
                 embedding_transform(output.cpu()),
                 patch_size, overlap
             )
             dataset[
                 start: start + num_out, :, :, ENCODER_OUT_CHANNELS:
-            ] = get_nonoverlap_patches(
+            ] = get_nonoverlapped_patches(
                 embedding_transform(embed_output.cpu()),
                 patch_size, overlap
             )

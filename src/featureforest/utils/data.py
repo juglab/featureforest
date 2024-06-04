@@ -134,7 +134,7 @@ def get_num_patches(
     return int(num_patches_h), int(num_patches_w)
 
 
-def get_nonoverlap_patches(patches: Tensor, patch_size: int, overlap: int) -> Tensor:
+def get_nonoverlapped_patches(patches: Tensor, patch_size: int, overlap: int) -> Tensor:
     """Extracts and returns non-overlap patches from patches with overlap.
 
     Args:
