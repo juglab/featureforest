@@ -11,18 +11,18 @@ contributions:
     - id: featureforest.make_rf_segmentation_widget
       python_name: featureforest:SAMRFSegmentationWidget
       title: Make SAM-RF segmentation widget
-    - id: featureforest.make_prompt_segmentation_widget
-      python_name: featureforest:SAMPromptSegmentationWidget
-      title: Make SAM Prompt segmentation widget
-    - id: featureforest.make_predictor_widget
-      python_name: featureforest:SAMPredictorWidget
-      title: Make SAM predictor widget
+    # - id: featureforest.make_prompt_segmentation_widget
+    #   python_name: featureforest:SAMPromptSegmentationWidget
+    #   title: Make SAM Prompt segmentation widget
+    # - id: featureforest.make_predictor_widget
+    #   python_name: featureforest:SAMPredictorWidget
+    #   title: Make SAM predictor widget
   widgets:
     - command: featureforest.make_extractor_widget
       display_name: SAM Embedding Extractor
     - command: featureforest.make_rf_segmentation_widget
       display_name: SAM-RF Segmentation Widget
-    - command: featureforest.make_prompt_segmentation_widget
-      display_name: SAM Prompt Segmentation Widget
-    - command: featureforest.make_predictor_widget
-      display_name: SAM Predictor Widget
+    # - command: featureforest.make_prompt_segmentation_widget
+    #   display_name: SAM Prompt Segmentation Widget
+    # - command: featureforest.make_predictor_widget
+    #   display_name: SAM Predictor Widget

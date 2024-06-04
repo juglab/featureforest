@@ -63,3 +63,11 @@ class BaseModelAdapter:
         )
 
         return feature_patches
+
+    def get_total_output_channels(self) -> int:
+        """Returns total number of model output channels (a.k.a. number of feature maps).
+
+        Returns:
+            int: total number of output channels
+        """
+        return 256
