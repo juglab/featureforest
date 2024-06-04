@@ -18,7 +18,7 @@ from .widgets import (
     ScrollWidgetWrapper,
     get_layer,
 )
-from . import SAM
+from .models import MobileSAM
 from .utils import (
     config
 )
@@ -27,7 +27,7 @@ from .utils.data import (
     get_patch_size
 )
 from .utils.extract import (
-    get_sam_embeddings_for_slice
+    get_slice_features
 )
 
 
@@ -166,8 +166,8 @@ class EmbeddingExtractorWidget(QWidget):
     def get_stack_sam_embeddings(
         self, image_layer, storage_path, patch_size, overlap
     ):
-        # initial sam model
-        sam_model, device = SAM.setup_mobile_sam_model()
+        # initial mobile-sam model
+        sam_model_adapter, device = MobileSAM.get_model(patch_size, overlap)
         # initial storage hdf5 file
         self.storage = h5py.File(storage_path, "w")
         # get sam embeddings slice by slice and save them into storage file
@@ -179,13 +179,13 @@ class EmbeddingExtractorWidget(QWidget):
         self.storage.attrs["overlap"] = overlap
 
         for slice_index in np_progress(
-            range(num_slices), desc="get embeddings for slices"
+            range(num_slices), desc="extract features for slices"
         ):
             image = image_layer.data[slice_index] if num_slices > 1 else image_layer.data
             slice_grp = self.storage.create_group(str(slice_index))
-            get_sam_embeddings_for_slice(
+            get_slice_features(
                 image, patch_size, overlap,
-                sam_model.image_encoder, device, slice_grp
+                sam_model_adapter, device, slice_grp
             )
 
             yield (slice_index, num_slices)

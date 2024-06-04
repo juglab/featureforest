@@ -20,7 +20,7 @@ import nrrd
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 
-from . import SAM
+from .models import MobileSAM
 from .widgets import (
     ScrollWidgetWrapper,
     get_layer,
@@ -48,15 +48,12 @@ class SAMRFSegmentationWidget(QWidget):
         self.storage = None
         self.rf_model = None
         self.device = None
-        self.sam_model = None
+        self.feature_model = None
         self.patch_size = 512
         self.overlap = 384
         self.stride = self.patch_size - self.overlap
 
         self.prepare_widget()
-
-        # init sam model & predictor
-        self.sam_model, self.device = self.get_model_on_device()
 
     def closeEvent(self, event):
         print("closing")
@@ -365,6 +362,9 @@ class SAMRFSegmentationWidget(QWidget):
                 "overlap", self.overlap)
             self.stride, _ = get_stride_margin(self.patch_size, self.overlap)
 
+            # init feature model
+            self.feature_model, self.device = self.get_model_on_device()
+
     def add_labels_layer(self):
         self.image_layer = get_layer(
             self.viewer,
@@ -410,7 +410,7 @@ class SAMRFSegmentationWidget(QWidget):
         self.each_class_label.setText("Labels per class:\n" + each_class)
 
     def get_model_on_device(self):
-        return SAM.setup_mobile_sam_model()
+        return MobileSAM.get_model(self.patch_size, self.overlap)
 
     def get_train_data(self):
         # get ground truth class labels
@@ -423,7 +423,7 @@ class SAMRFSegmentationWidget(QWidget):
 
         num_slices, img_height, img_width = get_stack_dims(self.image_layer.data)
         num_labels = sum([len(v) for v in labels_dict.values()])
-        total_channels = SAM.ENCODER_OUT_CHANNELS + SAM.EMBED_PATCH_CHANNELS
+        total_channels = self.feature_model.get_total_output_channels()
         train_data = np.zeros((num_labels, total_channels))
         labels = np.zeros(num_labels, dtype="int32") - 1
         count = 0
@@ -602,7 +602,7 @@ class SAMRFSegmentationWidget(QWidget):
         # shape: N x target_size x target_size x C
         feature_patches = self.storage[str(slice_index)]["sam"][:]
         num_patches = feature_patches.shape[0]
-        total_channels = SAM.ENCODER_OUT_CHANNELS + SAM.EMBED_PATCH_CHANNELS
+        total_channels = self.feature_model.get_total_output_channels()
         for i in np_progress(range(num_patches), desc="Predicting slice patches"):
             input_data = feature_patches[i].reshape(-1, total_channels)
             predictions = rf_model.predict(input_data).astype(np.uint8)
@@ -633,7 +633,7 @@ class SAMRFSegmentationWidget(QWidget):
                 area_threshold = float(self.area_threshold_textbox.text()) / 100
             if self.sam_post_checkbox.checkState() == Qt.Checked:
                 segmentation_image = postprocess_segmentations_with_sam(
-                    self.sam_model, segmentation_image, area_threshold
+                    self.feature_model, segmentation_image, area_threshold
                 )
             else:
                 segmentation_image = postprocess_segmentation(
