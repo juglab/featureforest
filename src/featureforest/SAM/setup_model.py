@@ -2,6 +2,7 @@ from pathlib import Path
 
 import torch
 
+from ..utils.downloader import download_model
 from .models import MobileSAM
 
 
@@ -10,13 +11,17 @@ def setup_mobile_sam_model():
     print(f"running on {device}")
     # sam model (light hq sam)
     model = MobileSAM.setup_model().to(device)
-    # load weights
-    weights = torch.load(
-        Path(__file__).parent.joinpath(
-            "./models/weights/mobile_sam.pt"
-        ),
-        map_location=device
+    # download model's weights
+    model_url = "https://github.com/ChaoningZhang/MobileSAM/raw/master/weights/mobile_sam.pt"
+    model_file = download_model(
+        model_url=model_url,
+        model_name="mobile_sam.pt"
     )
+    if model_file is None:
+        raise ValueError(f"Could not download the model from {model_url}.")
+
+    # load weights
+    weights = torch.load(model_file, map_location=device)
     model.load_state_dict(weights, strict=True)
     model.eval()
 
