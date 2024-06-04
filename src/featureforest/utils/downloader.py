@@ -2,13 +2,7 @@ from pathlib import Path
 import pooch
 
 
-MODELS_CACHE_DIR = Path.home().joinpath(".featureforest").joinpath("models")
-MODELS_CACHE_DIR.mkdir(parents=True, exist_ok=True)
-
-
-def is_model_exists(model_name: str) -> bool:
-    model_file = MODELS_CACHE_DIR.joinpath(model_name)
-    return model_file.exists()
+MODELS_CACHE_DIR = Path.home().joinpath(".featureforest", "models")
 
 
 def download_model(
@@ -27,9 +21,6 @@ def download_model(
     Returns:
         str: full path of the downloaded file.
     """
-    if is_model_exists(model_name):
-        return str(MODELS_CACHE_DIR.joinpath(model_name).absolute())
-
     try:
         downloaded_file = pooch.retrieve(
             url=model_url,
