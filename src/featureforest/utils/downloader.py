@@ -29,6 +29,14 @@ def download_model(
             known_hash=None,
             processor=pooch.Unzip() if is_archived else None
         )
+        # for zip files, get the file ending with "pt" or "pth" as model weights file.
+        if is_archived:
+            pytorch_files = [
+                f for f in downloaded_file
+                if Path(f).suffix in ["pt", "pth"]
+            ]
+            downloaded_file = pytorch_files[0] if len(pytorch_files) > 0 else None
+
         return downloaded_file
 
     except Exception as err:
