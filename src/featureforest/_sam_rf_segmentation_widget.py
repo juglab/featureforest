@@ -18,10 +18,9 @@ from qtpy.QtGui import QIntValidator, QDoubleValidator
 import h5py
 import nrrd
 import numpy as np
-from sklearn.ensemble import RandomForestClassifier
 
-from .models import MobileSAM
 from .utils.training import create_train_data, train_rf_model, predict_slice
+from .models import MobileSAM
 from .widgets import (
     ScrollWidgetWrapper,
     get_layer,
@@ -420,7 +419,7 @@ class SAMRFSegmentationWidget(QWidget):
         )
         if self.image_layer is None:
             notif.show_error("No Image layer is selected!")
-            return
+            return None
 
         # get the train data and labels
         if self.storage is None:
