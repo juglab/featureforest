@@ -2,7 +2,7 @@ import numpy as np
 import cv2
 import torch
 
-from featureforest.SAM import SamPredictor
+from segment_anything import SamPredictor
 
 
 def get_watershed_bboxes(image):
