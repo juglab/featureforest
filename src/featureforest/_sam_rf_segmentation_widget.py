@@ -21,6 +21,7 @@ import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 
 from .models import MobileSAM
+from .utils.training import create_train_data, train_rf_model, predict_slice
 from .widgets import (
     ScrollWidgetWrapper,
     get_layer,
@@ -412,54 +413,6 @@ class SAMRFSegmentationWidget(QWidget):
     def get_model_on_device(self):
         return MobileSAM.get_model(self.patch_size, self.overlap)
 
-    def get_train_data(self):
-        # get ground truth class labels
-        labels_dict = self.get_class_labels()
-        if not labels_dict:
-            return None
-        if self.storage is None:
-            notif.show_error("No embeddings storage file is selected!")
-            return None
-
-        num_slices, img_height, img_width = get_stack_dims(self.image_layer.data)
-        num_labels = sum([len(v) for v in labels_dict.values()])
-        total_channels = self.feature_model.get_total_output_channels()
-        train_data = np.zeros((num_labels, total_channels))
-        labels = np.zeros(num_labels, dtype="int32") - 1
-        count = 0
-        for class_index in np_progress(
-            labels_dict, desc="getting training data", total=len(labels_dict.keys())
-        ):
-            class_label_coords = labels_dict[class_index]
-            uniq_slices = np.unique(class_label_coords[:, 0]).tolist()
-            # for each unique slice, load unique patches from the storage,
-            # then get the pixel features within loaded patch.
-            for slice_index in np_progress(uniq_slices, desc="reading slices"):
-                slice_coords = class_label_coords[
-                    class_label_coords[:, 0] == slice_index
-                ][:, 1:]  # omit the slice dim
-                patch_indices = get_patch_indices(
-                    slice_coords, img_height, img_width,
-                    self.patch_size, self.overlap
-                )
-                grp_key = str(slice_index)
-                slice_dataset = self.storage[grp_key]["sam"]
-                for p_i in np.unique(patch_indices):
-                    patch_coords = slice_coords[patch_indices == p_i]
-                    patch_features = slice_dataset[p_i]
-                    train_data[count: count + len(patch_coords)] = patch_features[
-                        patch_coords[:, 0] % self.stride,
-                        patch_coords[:, 1] % self.stride
-                    ]
-                    labels[
-                        count: count + len(patch_coords)
-                    ] = class_index - 1  # to have bg class as zero
-                    count += len(patch_coords)
-
-        assert (labels > -1).all()
-
-        return train_data, labels
-
     def train_model(self):
         self.image_layer = get_layer(
             self.viewer,
@@ -467,10 +420,21 @@ class SAMRFSegmentationWidget(QWidget):
         )
         if self.image_layer is None:
             notif.show_error("No Image layer is selected!")
-            return None
+            return
 
         # get the train data and labels
-        dataset = self.get_train_data()
+        if self.storage is None:
+            notif.show_error("No embeddings storage file is selected!")
+            return
+        dataset = create_train_data(
+            labels_dict=self.get_class_labels(),
+            image_layer=self.image_layer.data,
+            feature_model=self.feature_model,
+            patch_size=self.patch_size,
+            overlap=self.overlap,
+            storage=self.storage,
+            stride=self.stride
+        )
         if dataset is None:
             return
         train_data, labels = dataset
@@ -478,20 +442,11 @@ class SAMRFSegmentationWidget(QWidget):
         self.model_status_label.clear()
         self.model_status_label.setText("Model status: Training...")
         notif.show_info("Model status: Training...")
-        # train a random forest model
-        num_trees = int(self.num_trees_textbox.text())
-        max_depth = int(self.max_depth_textbox.text())
-        if max_depth == 0:
-            max_depth = None
-        rf_classifier = RandomForestClassifier(
-            n_estimators=num_trees,
-            max_depth=max_depth,
-            min_samples_leaf=1,
-            n_jobs=2,
-            verbose=1
+        self.rf_model = train_rf_model(
+            labels, train_data,
+            num_trees=self.num_trees_textbox.text(),
+            max_depth=self.max_depth_textbox.text()
         )
-        rf_classifier.fit(train_data, labels)
-        self.rf_model = rf_classifier
         self.model_status_label.setText("Model status: Ready!")
         notif.show_info("Model status: Training is Done!")
         self.model_save_button.setEnabled(True)
@@ -572,9 +527,23 @@ class SAMRFSegmentationWidget(QWidget):
         self.prediction_worker.run()
 
     def run_prediction(self, slice_indices, img_height, img_width):
+        area_threshold = None
+        if len(self.area_threshold_textbox.text()) > 0:
+            area_threshold = float(self.area_threshold_textbox.text()) / 100
         for slice_index in np_progress(slice_indices):
-            segmentation_image = self.predict_slice(
-                self.rf_model, slice_index, img_height, img_width
+            segmentation_image = predict_slice(
+                rf_model=self.rf_model,
+                slice_index=slice_index,
+                img_height=img_height,
+                img_width=img_width,
+                postprocessing=self.postprocess_checkbox.checkState() == Qt.Checked,
+                sam_post=self.sam_post_checkbox.checkState() == Qt.Checked,
+                patch_size=self.patch_size,
+                overlap=self.overlap,
+                storage=self.storage,
+                feature_model=self.feature_model,
+                stride=self.stride,
+                area_threshold=area_threshold
             )
             # add/update segmentation result layer
             if (
@@ -595,52 +564,6 @@ class SAMRFSegmentationWidget(QWidget):
             cm, _ = colormaps.create_colormap(len(np.unique(segmentation_image)))
             self.segmentation_layer.colormap = cm
         self.segmentation_layer.refresh()
-
-    def predict_slice(self, rf_model, slice_index, img_height, img_width):
-        """Predict a slice patch by patch"""
-        segmentation_image = []
-        # shape: N x target_size x target_size x C
-        feature_patches = self.storage[str(slice_index)]["sam"][:]
-        num_patches = feature_patches.shape[0]
-        total_channels = self.feature_model.get_total_output_channels()
-        for i in np_progress(range(num_patches), desc="Predicting slice patches"):
-            input_data = feature_patches[i].reshape(-1, total_channels)
-            predictions = rf_model.predict(input_data).astype(np.uint8)
-            # to match segmentation colormap with the labels' colormap
-            predictions[predictions > 0] += 1
-            segmentation_image.append(predictions)
-
-        segmentation_image = np.vstack(segmentation_image)
-        # reshape into the image size + padding
-        patch_rows, patch_cols = get_num_patches(
-            img_height, img_width, self.patch_size, self.overlap
-        )
-        segmentation_image = segmentation_image.reshape(
-            patch_rows, patch_cols, self.stride, self.stride
-        )
-        segmentation_image = np.moveaxis(segmentation_image, 1, 2).reshape(
-            patch_rows * self.stride,
-            patch_cols * self.stride
-        )
-        # skip paddings
-        segmentation_image = segmentation_image[:img_height, :img_width]
-
-        # check for postprocessing
-        if self.postprocess_checkbox.checkState() == Qt.Checked:
-            # apply postprocessing
-            area_threshold = None
-            if len(self.area_threshold_textbox.text()) > 0:
-                area_threshold = float(self.area_threshold_textbox.text()) / 100
-            if self.sam_post_checkbox.checkState() == Qt.Checked:
-                segmentation_image = postprocess_segmentations_with_sam(
-                    self.feature_model, segmentation_image, area_threshold
-                )
-            else:
-                segmentation_image = postprocess_segmentation(
-                    segmentation_image, area_threshold
-                )
-
-        return segmentation_image
 
     def stop_predict(self):
         if self.prediction_worker is not None:
