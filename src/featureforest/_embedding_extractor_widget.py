@@ -132,8 +132,13 @@ class EmbeddingExtractorWidget(QWidget):
                 self.image_combo.setCurrentIndex(index)
 
     def save_storage(self):
+        # default storage name
+        image_layer_name = self.image_combo.currentText()
+        model_name = self.model_combo.currentText()
+        storage_name = f"{image_layer_name}_{model_name}.hdf5"
+        # open the save dialog
         selected_file, _filter = QFileDialog.getSaveFileName(
-            self, "Jug Lab", ".", "Embeddings Storage(*.hdf5)"
+            self, "Jug Lab", storage_name, "Embeddings Storage(*.hdf5)"
         )
         if selected_file is not None and len(selected_file) > 0:
             if not selected_file.endswith(".hdf5"):
