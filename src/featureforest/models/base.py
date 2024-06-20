@@ -14,23 +14,34 @@ class BaseModelAdapter:
     def __init__(
         self,
         model: nn.Module,
-        input_transforms: tv_transforms2.Compose,
-        patch_size: int,
-        overlap: int,
+        img_height: float,
+        img_width: float,
     ) -> None:
         """Initialization function
 
         Args:
             model (nn.Module): the pytorch model (e.g. a ViT encoder)
-            input_transforms (tv_transforms2.Compose): input transformations for the specific model
-            patch_size (int): input patch size
-            overlap (int): input patch overlap
+            input_transforms (tv_transforms2.Compose):
+                input transformations for the specific model
+            img_height (float): input image height
+            img_width (float): input image width
         """
+        self.name = "Base"
         self.model = model
-        self.input_transforms = input_transforms
-        self.patch_size = patch_size
-        self.overlap = overlap
-        # to transform feature patches to the original patch size
+        self.img_height = img_height
+        self.img_width = img_width
+        # set patch size and overlap
+        self.patch_size = 512
+        self.overlap = 3 * self.patch_size // 4
+        # input image transforms
+        self.input_transforms = tv_transforms2.Compose([
+            tv_transforms2.Resize(
+                (1024, 1024),
+                interpolation=tv_transforms2.InterpolationMode.BICUBIC,
+                antialias=True
+            ),
+        ])
+        # to transform feature patches back to the original patch size
         self.embedding_transform = tv_transforms2.Compose([
             tv_transforms2.Resize(
                 (self.patch_size, self.patch_size),
@@ -38,6 +49,11 @@ class BaseModelAdapter:
                 antialias=True
             ),
         ])
+
+    def _set_patch_size(self) -> None:
+        """Sets the proper patch size and patch overlap with respect to the model
+        """
+        raise NotImplementedError
 
     def get_features_patches(
         self, in_patches: Tensor
@@ -53,12 +69,12 @@ class BaseModelAdapter:
         """
         # get the model output
         with torch.no_grad():
-            out_features = self.model(self.input_transforms(in_patches))
+            output_features = self.model(self.input_transforms(in_patches))
         # assert self.patch_size == out_features.shape[-1]
 
         # get non-overlapped feature patches
         feature_patches = get_nonoverlapped_patches(
-            self.embedding_transform(out_features.cpu()),
+            self.embedding_transform(output_features.cpu()),
             self.patch_size, self.overlap
         )
 

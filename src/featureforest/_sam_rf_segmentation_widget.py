@@ -20,7 +20,7 @@ import nrrd
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 
-from .models import MobileSAM
+from .models import get_model
 from .widgets import (
     ScrollWidgetWrapper,
     get_layer,
@@ -35,7 +35,7 @@ from .utils import (
 from .utils.postprocess import (
     postprocess_segmentation,
 )
-from .utils.postprocess_with_sam import postprocess_segmentations_with_sam
+# from .utils.postprocess_with_sam import postprocess_segmentations_with_sam
 
 
 class SAMRFSegmentationWidget(QWidget):
@@ -47,9 +47,9 @@ class SAMRFSegmentationWidget(QWidget):
         self.segmentation_layer = None
         self.storage = None
         self.rf_model = None
+        self.model_adapter = None
         self.device = None
-        self.feature_model = None
-        self.patch_size = 512
+        self.patch_size = 512  # default values
         self.overlap = 384
         self.stride = self.patch_size - self.overlap
 
@@ -351,19 +351,25 @@ class SAMRFSegmentationWidget(QWidget):
 
     def select_storage(self):
         selected_file, _filter = QFileDialog.getOpenFileName(
-            self, "Jug Lab", ".", "Embeddings Storage(*.hdf5)"
+            self, "Jug Lab", ".", "Feature Storage(*.hdf5)"
         )
         if selected_file is not None and len(selected_file) > 0:
             self.storage_textbox.setText(selected_file)
             # load the storage
             self.storage = h5py.File(selected_file, "r")
+            # set the patch size and overlap from the selected storage
             self.patch_size = self.storage.attrs.get("patch_size", self.patch_size)
             self.overlap = self.storage.attrs.get(
                 "overlap", self.overlap)
             self.stride, _ = get_stride_margin(self.patch_size, self.overlap)
 
-            # init feature model
-            self.feature_model, self.device = self.get_model_on_device()
+            # initialize the model based on the selected storage
+            img_height = self.storage.attrs["img_height"]
+            img_width = self.storage.attrs["img_width"]
+            # TODO: raise an error if current image dims are in conflicting with storage
+            model_name = self.storage.attrs["model"]
+            self.model_adapter, self.device = get_model(model_name, img_height, img_width)
+            print(model_name, self.patch_size, self.overlap)
 
     def add_labels_layer(self):
         self.image_layer = get_layer(
@@ -409,9 +415,6 @@ class SAMRFSegmentationWidget(QWidget):
         ])
         self.each_class_label.setText("Labels per class:\n" + each_class)
 
-    def get_model_on_device(self):
-        return MobileSAM.get_model(self.patch_size, self.overlap)
-
     def get_train_data(self):
         # get ground truth class labels
         labels_dict = self.get_class_labels()
@@ -423,7 +426,7 @@ class SAMRFSegmentationWidget(QWidget):
 
         num_slices, img_height, img_width = get_stack_dims(self.image_layer.data)
         num_labels = sum([len(v) for v in labels_dict.values()])
-        total_channels = self.feature_model.get_total_output_channels()
+        total_channels = self.model_adapter.get_total_output_channels()
         train_data = np.zeros((num_labels, total_channels))
         labels = np.zeros(num_labels, dtype="int32") - 1
         count = 0
@@ -443,7 +446,7 @@ class SAMRFSegmentationWidget(QWidget):
                     self.patch_size, self.overlap
                 )
                 grp_key = str(slice_index)
-                slice_dataset = self.storage[grp_key]["sam"]
+                slice_dataset = self.storage[grp_key][self.model_adapter.name]
                 for p_i in np.unique(patch_indices):
                     patch_coords = slice_coords[patch_indices == p_i]
                     patch_features = slice_dataset[p_i]
@@ -600,9 +603,9 @@ class SAMRFSegmentationWidget(QWidget):
         """Predict a slice patch by patch"""
         segmentation_image = []
         # shape: N x target_size x target_size x C
-        feature_patches = self.storage[str(slice_index)]["sam"][:]
+        feature_patches = self.storage[str(slice_index)][self.model_adapter.name][:]
         num_patches = feature_patches.shape[0]
-        total_channels = self.feature_model.get_total_output_channels()
+        total_channels = self.model_adapter.get_total_output_channels()
         for i in np_progress(range(num_patches), desc="Predicting slice patches"):
             input_data = feature_patches[i].reshape(-1, total_channels)
             predictions = rf_model.predict(input_data).astype(np.uint8)
@@ -631,14 +634,14 @@ class SAMRFSegmentationWidget(QWidget):
             area_threshold = None
             if len(self.area_threshold_textbox.text()) > 0:
                 area_threshold = float(self.area_threshold_textbox.text()) / 100
-            if self.sam_post_checkbox.checkState() == Qt.Checked:
-                segmentation_image = postprocess_segmentations_with_sam(
-                    self.feature_model, segmentation_image, area_threshold
-                )
-            else:
-                segmentation_image = postprocess_segmentation(
-                    segmentation_image, area_threshold
-                )
+            # if self.sam_post_checkbox.checkState() == Qt.Checked:
+            #     segmentation_image = postprocess_segmentations_with_sam(
+            #         self.model_adapter, segmentation_image, area_threshold
+            #     )
+            # else:
+            segmentation_image = postprocess_segmentation(
+                segmentation_image, area_threshold
+            )
 
         return segmentation_image
 

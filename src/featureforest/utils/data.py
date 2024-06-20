@@ -7,26 +7,36 @@ import torch.nn.functional as F
 from torch import Tensor
 
 
-def get_patch_size(img_height: float, img_width: float) -> int:
+def get_patch_size(
+    img_height: float, img_width: float, divisible_by: float = None
+) -> int:
     """Calculate the patch size given image dimensions.
 
     Args:
         img_height (int): image height
         img_width (int): image width
+        divisible_by (float): if given, the patch size must be divisible by it.
 
     Returns:
         int: patch size
     """
     patch_size = 512
     img_min_dim = min(img_height, img_width)
-    # if image dim(s) is too small
+    # if image is too small
     if img_min_dim <= patch_size:
         # get a power of two smaller than image dim
         patch_size = 2 ** int(np.log2(img_min_dim))
-        return patch_size
+    else:
+        while img_min_dim / patch_size < 2:
+            patch_size = patch_size // 2
 
-    while img_min_dim / patch_size < 2:
-        patch_size = patch_size // 2
+    if divisible_by is not None:
+        if patch_size < divisible_by:
+            raise ValueError("Image dimension is too small!")
+        # calc. a patch size which is divisible by the given number
+        reminder = patch_size % divisible_by
+        if reminder != 0:
+            patch_size += divisible_by - reminder
 
     return patch_size
 
@@ -138,12 +148,12 @@ def get_nonoverlapped_patches(patches: Tensor, patch_size: int, overlap: int) ->
     """Extracts and returns non-overlap patches from patches with overlap.
 
     Args:
-        patches (Tensor): overlapped patches
+        patches (Tensor): overlapped patches (b,c,h,w)
         patch_size (int): patch size
         overlap (int): patch overlap size
 
     Returns:
-        Tensor: non-overlapped patches
+        Tensor: non-overlapped patches (b,h,w,c)
     """
     stride, margin = get_stride_margin(patch_size, overlap)
 

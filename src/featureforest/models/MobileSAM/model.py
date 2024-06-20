@@ -1,5 +1,6 @@
+from typing import Tuple
+
 import torch
-from torchvision.transforms import v2 as tv_transforms2
 
 from .tiny_vit_sam import TinyViT
 from segment_anything.modeling import MaskDecoder, PromptEncoder, Sam, TwoWayTransformer
@@ -8,13 +9,16 @@ from featureforest.utils.downloader import download_model
 from .adapter import MobileSAMAdapter
 
 
-def get_model(patch_size: int, overlap: int):
+def get_model(
+    img_height: float, img_width: float, *args, **kwargs
+) -> Tuple[MobileSAMAdapter, torch.device]:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"running on {device}")
     # get the model
     model = setup_model().to(device)
     # download model's weights
-    model_url = "https://github.com/ChaoningZhang/MobileSAM/raw/master/weights/mobile_sam.pt"
+    model_url = \
+        "https://github.com/ChaoningZhang/MobileSAM/raw/master/weights/mobile_sam.pt"
     model_file = download_model(
         model_url=model_url,
         model_name="mobile_sam.pt"
@@ -27,18 +31,9 @@ def get_model(patch_size: int, overlap: int):
     model.load_state_dict(weights, strict=True)
     model.eval()
 
-    # input transform for sam
-    sam_input_dim = 1024
-    input_transforms = tv_transforms2.Compose([
-        tv_transforms2.Resize(
-            (sam_input_dim, sam_input_dim),
-            interpolation=tv_transforms2.InterpolationMode.BICUBIC,
-            antialias=True
-        ),
-    ])
     # create the model adapter
     sam_model_adapter = MobileSAMAdapter(
-        model, input_transforms, patch_size, overlap
+        model, img_height, img_width
     )
 
     return sam_model_adapter, device
