@@ -18,7 +18,6 @@ from .widgets import (
     ScrollWidgetWrapper,
     get_layer,
 )
-# from .models import MobileSAM
 from .models import get_available_models, get_model
 from .utils import (
     config
@@ -60,7 +59,7 @@ class EmbeddingExtractorWidget(QWidget):
         self.model_combo.addItems(get_available_models())
         self.model_combo.setCurrentIndex(0)
         # sam storage
-        storage_label = QLabel("Feature Storage File:")
+        storage_label = QLabel("Features Storage File:")
         self.storage_textbox = QLineEdit()
         self.storage_textbox.setReadOnly(True)
         storage_button = QPushButton("Set Storage File")
