@@ -1,4 +1,4 @@
-# napari-sam-labeling-tools
+# Feature Forest
 
 [![License BSD-3](https://img.shields.io/pypi/l/napari-sam-labeling-tools.svg?color=green)](https://github.com/juglab/napari-sam-labeling-tools/raw/main/LICENSE)
 [![PyPI](https://img.shields.io/pypi/v/napari-sam-labeling-tools.svg?color=green)](https://pypi.org/project/napari-sam-labeling-tools)
@@ -7,8 +7,8 @@
 [![codecov](https://codecov.io/gh/juglab/napari-sam-labeling-tools/branch/main/graph/badge.svg)](https://codecov.io/gh/juglab/napari-sam-labeling-tools)
 [![napari hub](https://img.shields.io/endpoint?url=https://api.napari-hub.org/shields/napari-sam-labeling-tools)](https://napari-hub.org/plugins/napari-sam-labeling-tools)
 
-A plugin for segmentation using SAM model and its feature space.  
-We developed a *napari* plugin to train a *Random Forest* model using extracted embeddings of the *SAM* model for input and just a few scribble labels provided by the user. This approach can do the segmentation of desired objects almost as well as manual segmentations but in a much shorter time with less manual effort.
+A napari plugin for segmentation using vision transformers' features.  
+We developed a *napari* plugin to train a *Random Forest* model using extracted embeddings of ViT models for input and just a few scribble labels provided by the user. This approach can do the segmentation of desired objects almost as well as manual segmentations but in a much shorter time with less manual effort.
 
 ----------------------------------
 
@@ -46,11 +46,11 @@ For detailed napari installation see [here](https://napari.org/stable/tutorials/
 If you use the conda `env.yml` file, the plugin will be installed automatically. But in case you already have the environment setup, 
 you can just install the plugin. First clone the repository:
 ```bash
-git clone https://github.com/juglab/napari-sam-labeling-tools
+git clone https://github.com/juglab/featureforest
 ```
 Then run the following commands:
 ```bash
-cd ./napari-sam-labeling-tools
+cd ./featureforest
 pip install .
 ```
 
@@ -69,7 +69,7 @@ the coverage at least stays the same before you submit a pull request. -->
 ## License
 
 Distributed under the terms of the [BSD-3] license,
-"napari-sam-labeling-tools" is free and open source software
+"featureforest" is free and open source software
 
 ## Issues
 
