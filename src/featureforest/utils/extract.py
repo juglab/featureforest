@@ -48,7 +48,7 @@ def get_slice_features(
     total_channels = model_adapter.get_total_output_channels()
     stride, _ = get_stride_margin(patch_size, overlap)
     dataset = storage_group.create_dataset(
-        "sam", shape=(
+        model_adapter.name, shape=(
             num_patches, stride, stride, total_channels
         )
     )

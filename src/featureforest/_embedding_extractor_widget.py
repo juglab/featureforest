@@ -18,13 +18,12 @@ from .widgets import (
     ScrollWidgetWrapper,
     get_layer,
 )
-from .models import MobileSAM
+from .models import get_available_models, get_model
 from .utils import (
     config
 )
 from .utils.data import (
     get_stack_dims,
-    get_patch_size
 )
 from .utils.extract import (
     get_slice_features
@@ -37,6 +36,8 @@ class EmbeddingExtractorWidget(QWidget):
         self.viewer = napari_viewer
         self.extract_worker = None
         self.storage = None
+        self.model_adapter = None
+        self.device = None
 
         self.prepare_widget()
 
@@ -50,10 +51,15 @@ class EmbeddingExtractorWidget(QWidget):
         self.setLayout(vbox)
 
         # input layer
-        input_label = QLabel("Input Layer:")
+        input_label = QLabel("Image Layer:")
         self.image_combo = QComboBox()
+        # model selection
+        self.model_combo = QComboBox()
+        self.model_combo.setEditable(False)
+        self.model_combo.addItems(get_available_models())
+        self.model_combo.setCurrentIndex(0)
         # sam storage
-        storage_label = QLabel("Embeddings Storage File:")
+        storage_label = QLabel("Features Storage File:")
         self.storage_textbox = QLineEdit()
         self.storage_textbox.setReadOnly(True)
         storage_button = QPushButton("Set Storage File")
@@ -82,6 +88,7 @@ class EmbeddingExtractorWidget(QWidget):
         vbox.setContentsMargins(0, 0, 0, 0)
         vbox.addWidget(input_label)
         vbox.addWidget(self.image_combo)
+        vbox.addWidget(self.model_combo)
         layout.addLayout(vbox)
 
         vbox = QVBoxLayout()
@@ -124,8 +131,13 @@ class EmbeddingExtractorWidget(QWidget):
                 self.image_combo.setCurrentIndex(index)
 
     def save_storage(self):
+        # default storage name
+        image_layer_name = self.image_combo.currentText()
+        model_name = self.model_combo.currentText()
+        storage_name = f"{image_layer_name}_{model_name}.hdf5"
+        # open the save dialog
         selected_file, _filter = QFileDialog.getSaveFileName(
-            self, "Jug Lab", ".", "Embeddings Storage(*.hdf5)"
+            self, "Jug Lab", storage_name, "Embeddings Storage(*.hdf5)"
         )
         if selected_file is not None and len(selected_file) > 0:
             if not selected_file.endswith(".hdf5"):
@@ -148,35 +160,34 @@ class EmbeddingExtractorWidget(QWidget):
         if storage_path is None or len(storage_path) < 6:
             notif.show_error("No storage path was set.")
             return
-        # get proper patch sizes
+        # initialize the selected model
         _, img_height, img_width = get_stack_dims(image_layer.data)
-        patch_size = get_patch_size(img_height, img_width)
-        overlap = 3 * patch_size // 4
+        model_name = self.model_combo.currentText()
+        self.model_adapter, self.device = get_model(model_name, img_height, img_width)
 
         self.extract_button.setEnabled(False)
         self.stop_button.setEnabled(True)
         self.extract_worker = create_worker(
             self.get_stack_sam_embeddings,
-            image_layer, storage_path, patch_size, overlap
+            image_layer, storage_path
         )
         self.extract_worker.yielded.connect(self.update_extract_progress)
         self.extract_worker.finished.connect(self.extract_is_done)
         self.extract_worker.run()
 
     def get_stack_sam_embeddings(
-        self, image_layer, storage_path, patch_size, overlap
+        self, image_layer, storage_path
     ):
-        # initial mobile-sam model
-        sam_model_adapter, device = MobileSAM.get_model(patch_size, overlap)
-        # initial storage hdf5 file
+        # prepare the storage hdf5 file
         self.storage = h5py.File(storage_path, "w")
         # get sam embeddings slice by slice and save them into storage file
         num_slices, img_height, img_width = get_stack_dims(image_layer.data)
         self.storage.attrs["num_slices"] = num_slices
         self.storage.attrs["img_height"] = img_height
         self.storage.attrs["img_width"] = img_width
-        self.storage.attrs["patch_size"] = patch_size
-        self.storage.attrs["overlap"] = overlap
+        self.storage.attrs["model"] = self.model_combo.currentText()
+        self.storage.attrs["patch_size"] = self.model_adapter.patch_size
+        self.storage.attrs["overlap"] = self.model_adapter.overlap
 
         for slice_index in np_progress(
             range(num_slices), desc="extract features for slices"
@@ -184,8 +195,8 @@ class EmbeddingExtractorWidget(QWidget):
             image = image_layer.data[slice_index] if num_slices > 1 else image_layer.data
             slice_grp = self.storage.create_group(str(slice_index))
             get_slice_features(
-                image, patch_size, overlap,
-                sam_model_adapter, device, slice_grp
+                image, self.model_adapter.patch_size, self.model_adapter.overlap,
+                self.model_adapter, self.device, slice_grp
             )
 
             yield (slice_index, num_slices)

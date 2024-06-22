@@ -7,6 +7,7 @@ from torchvision.transforms import v2 as tv_transforms2
 
 from featureforest.models.base import BaseModelAdapter
 from featureforest.utils.data import (
+    get_patch_size,
     get_nonoverlapped_patches,
 )
 
@@ -17,15 +18,29 @@ class MobileSAMAdapter(BaseModelAdapter):
     def __init__(
         self,
         model: nn.Module,
-        input_transforms: tv_transforms2.Compose,
-        patch_size: int,
-        overlap: int,
+        img_height: float,
+        img_width: float,
     ) -> None:
-        super().__init__(model, input_transforms, patch_size, overlap)
+        super().__init__(model, img_height, img_width)
+        self.name = "MobileSAM"
         # we need sam image encoder part
         self.encoder = self.model.image_encoder
         self.encoder_num_channels = 256
         self.embed_layer_num_channels = 64
+        self._set_patch_size()
+        # input transform for sam
+        self.sam_input_dim = 1024
+        self.input_transforms = tv_transforms2.Compose([
+            tv_transforms2.Resize(
+                (self.sam_input_dim, self.sam_input_dim),
+                interpolation=tv_transforms2.InterpolationMode.BICUBIC,
+                antialias=True
+            ),
+        ])
+
+    def _set_patch_size(self) -> None:
+        self.patch_size = get_patch_size(self.img_height, self.img_width)
+        self.overlap = 3 * self.patch_size // 4
 
     def get_features_patches(
         self, in_patches: Tensor
