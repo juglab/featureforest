@@ -7,10 +7,10 @@ contributions:
   commands:
     - id: featureforest.make_extractor_widget
       python_name: featureforest:EmbeddingExtractorWidget
-      title: Make SAM embeddings extractor widget
-    - id: featureforest.make_rf_segmentation_widget
-      python_name: featureforest:SAMRFSegmentationWidget
-      title: Make SAM-RF segmentation widget
+      title: Make embeddings extractor widget
+    - id: featureforest.make_segmentation_widget
+      python_name: featureforest:SegmentationWidget
+      title: Make segmentation widget
     # - id: featureforest.make_prompt_segmentation_widget
     #   python_name: featureforest:SAMPromptSegmentationWidget
     #   title: Make SAM Prompt segmentation widget
@@ -19,9 +19,9 @@ contributions:
     #   title: Make SAM predictor widget
   widgets:
     - command: featureforest.make_extractor_widget
-      display_name: SAM Embedding Extractor
-    - command: featureforest.make_rf_segmentation_widget
-      display_name: SAM-RF Segmentation Widget
+      display_name: Embedding Extractor
+    - command: featureforest.make_segmentation_widget
+      display_name: Segmentation Widget
     # - command: featureforest.make_prompt_segmentation_widget
     #   display_name: SAM Prompt Segmentation Widget
     # - command: featureforest.make_predictor_widget

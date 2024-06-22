@@ -38,7 +38,7 @@ from .utils.postprocess import (
 # from .utils.postprocess_with_sam import postprocess_segmentations_with_sam
 
 
-class SAMRFSegmentationWidget(QWidget):
+class SegmentationWidget(QWidget):
     def __init__(self, napari_viewer: napari.Viewer):
         super().__init__()
         self.viewer = napari_viewer
