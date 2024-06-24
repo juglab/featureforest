@@ -1,8 +1,8 @@
-from typing import Tuple, List, Optional
+from typing import Tuple, Optional
 
 import numpy as np
 from numpy import ndarray
-import torch
+
 import torch.nn.functional as F
 from torch import Tensor
 
@@ -239,15 +239,15 @@ def get_patch_position(
 
 
 def is_image_rgb(image_data: ndarray) -> bool:
-    """Returns True if the image is an RGB image.
+    """Returns True if the image is an RGB(A) image.
 
     Args:
         image_data (ndarray): image array
 
     Returns:
-        bool: is image RGB?
+        bool: is image RGB(A)?
     """
-    return image_data.shape[-1] == 3
+    return image_data.shape[-1] >= 3
 
 
 def is_stacked(image_data: ndarray) -> bool:

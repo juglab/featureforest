@@ -29,12 +29,12 @@ def get_slice_features(
         device (torch.device): _description_
         storage_group (h5py.Group): _description_
     """
-    img_height, img_width = image.shape[:2]
     # image to torch tensor
     img_data = torch.from_numpy(image).to(torch.float32) / 255.0
     # for sam the input image should be 4D: BxCxHxW ; an RGB image.
     if is_image_rgb(image):
         # it's already RGB, put the channels first and add a batch dim.
+        img_data = img_data[..., :3]  # ignore the Alpha channel (in case of PNG).
         img_data = img_data.permute([2, 0, 1]).unsqueeze(0)
     else:
         img_data = img_data.unsqueeze(0).unsqueeze(0).expand(-1, 3, -1, -1)
