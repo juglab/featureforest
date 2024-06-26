@@ -247,7 +247,7 @@ def is_image_rgb(image_data: ndarray) -> bool:
     Returns:
         bool: is image RGB(A)?
     """
-    return image_data.shape[-1] >= 3
+    return image_data.shape[-1] in [3, 4]
 
 
 def is_stacked(image_data: ndarray) -> bool:
