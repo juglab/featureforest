@@ -37,6 +37,14 @@ class MobileSAMAdapter(BaseModelAdapter):
                 antialias=True
             ),
         ])
+        # to transform feature patches back to the original patch size
+        self.embedding_transform = tv_transforms2.Compose([
+            tv_transforms2.Resize(
+                (self.patch_size, self.patch_size),
+                interpolation=tv_transforms2.InterpolationMode.BICUBIC,
+                antialias=True
+            ),
+        ])
 
     def _set_patch_size(self) -> None:
         self.patch_size = get_patch_size(self.img_height, self.img_width)
