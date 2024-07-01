@@ -1,8 +1,8 @@
 from .model import get_model
-from .adapter import MobileSAMAdapter
+from .adapter import SAMAdapter
 
 
 __all__ = [
     "get_model",
-    "MobileSAMAdapter",
+    "SAMAdapter"
 ]

@@ -9,6 +9,7 @@ from .data import (
     is_image_rgb,
 )
 from featureforest.models.base import BaseModelAdapter
+from featureforest.models.SAM import SAMAdapter
 
 
 def get_slice_features(
@@ -42,7 +43,13 @@ def get_slice_features(
     # get input patches
     data_patches = patchify(img_data, patch_size, overlap)
     num_patches = len(data_patches)
-    batch_size = 10
+
+    # set a low batch size
+    batch_size = 8
+    # for big SAM we need even lower batch size :(
+    if isinstance(model_adapter, SAMAdapter):
+        batch_size = 2
+
     num_batches = int(np.ceil(num_patches / batch_size))
     # prepare storage for the slice embeddings
     total_channels = model_adapter.get_total_output_channels()
