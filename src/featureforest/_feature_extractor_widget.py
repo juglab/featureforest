@@ -30,7 +30,7 @@ from .utils.extract import (
 )
 
 
-class EmbeddingExtractorWidget(QWidget):
+class FeatureExtractorWidget(QWidget):
     def __init__(self, napari_viewer: napari.Viewer):
         super().__init__()
         self.viewer = napari_viewer
@@ -65,7 +65,7 @@ class EmbeddingExtractorWidget(QWidget):
         storage_button = QPushButton("Set Storage File")
         storage_button.clicked.connect(self.save_storage)
         # extract button
-        self.extract_button = QPushButton("Extract Embeddings")
+        self.extract_button = QPushButton("Extract Features")
         self.extract_button.setEnabled(False)
         self.extract_button.clicked.connect(self.extract_embeddings)
         self.extract_button.setMinimumWidth(150)
@@ -112,7 +112,7 @@ class EmbeddingExtractorWidget(QWidget):
         layout.addLayout(vbox)
 
         gbox = QGroupBox()
-        gbox.setTitle("Extractor Widget")
+        gbox.setTitle("Feature Extractor Widget")
         gbox.setMinimumWidth(100)
         gbox.setLayout(layout)
         self.base_layout.addWidget(gbox)

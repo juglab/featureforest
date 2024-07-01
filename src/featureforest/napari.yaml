@@ -5,9 +5,9 @@ visibility: public
 categories: ["Annotation", "Segmentation"]
 contributions:
   commands:
-    - id: featureforest.make_extractor_widget
-      python_name: featureforest:EmbeddingExtractorWidget
-      title: Make embeddings extractor widget
+    - id: featureforest.make_feature_extractor_widget
+      python_name: featureforest:FeatureExtractorWidget
+      title: Make feature extractor widget
     - id: featureforest.make_segmentation_widget
       python_name: featureforest:SegmentationWidget
       title: Make segmentation widget
@@ -18,8 +18,8 @@ contributions:
     #   python_name: featureforest:SAMPredictorWidget
     #   title: Make SAM predictor widget
   widgets:
-    - command: featureforest.make_extractor_widget
-      display_name: Embedding Extractor
+    - command: featureforest.make_feature_extractor_widget
+      display_name: Feature Extractor
     - command: featureforest.make_segmentation_widget
       display_name: Segmentation Widget
     # - command: featureforest.make_prompt_segmentation_widget
