@@ -19,7 +19,7 @@ def get_model(
         "https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth"
     model_file = download_model(
         model_url=model_url,
-        model_name="sam_vit_h.pt"
+        model_name="sam_vit_h_4b8939.pt"
     )
     if model_file is None:
         raise ValueError(f"Could not download the model from {model_url}.")
