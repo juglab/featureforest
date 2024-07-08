@@ -4,11 +4,13 @@ import torch
 
 from .base import BaseModelAdapter
 from .MobileSAM import get_model as get_mobile_sam_model
+from .SAM import get_model as get_sam_model
 from .DinoV2 import get_model as get_dino_v2_model
 
 
 _MODELS_DICT = {
     "MobileSAM": get_mobile_sam_model,
+    "SAM": get_sam_model,
     "DinoV2": get_dino_v2_model,
 }
 
