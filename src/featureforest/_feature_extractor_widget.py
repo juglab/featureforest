@@ -1,5 +1,6 @@
 import napari
 import napari.utils.notifications as notif
+import torch
 from napari.qt.threading import create_worker
 from napari.utils.events import Event
 
@@ -192,3 +193,9 @@ class FeatureExtractorWidget(QWidget):
         self.stop_button.setEnabled(False)
         print("Extracting is done!")
         notif.show_info("Extracting is done!")
+        self.free_resource()
+
+    def free_resource(self):
+        if self.model_adapter is not None:
+            del self.model_adapter
+            torch.cuda.empty_cache()
