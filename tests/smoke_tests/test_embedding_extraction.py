@@ -1,4 +1,4 @@
-from tempfile import NamedTemporaryFile
+from tempfile import TemporaryDirectory
 
 import h5py
 import numpy as np
@@ -32,10 +32,12 @@ def test_embedding_extraction(
     num_slices, img_height, img_width = get_stack_dims(test_image)
     model_adapter = get_model(test_model_name, img_height, img_width)
 
-    with NamedTemporaryFile() as tmp_file:
+    with TemporaryDirectory() as tmp_dir:
+        tmp_file = tmp_dir + "/tmp.h5"
+
         extractor_generator = extract_embeddings_to_file(
             image=test_image,
-            storage_file_path=tmp_file.name,
+            storage_file_path=tmp_file,
             model_adapter=model_adapter
         )
 
