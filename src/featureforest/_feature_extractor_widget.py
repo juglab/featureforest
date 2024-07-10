@@ -1,23 +1,16 @@
 import napari
 import napari.utils.notifications as notif
-from napari.utils.events import Event
 from napari.qt.threading import create_worker
-from napari.utils import progress as np_progress
+from napari.utils.events import Event
 
+from qtpy.QtCore import Qt
 from qtpy.QtWidgets import (
     QHBoxLayout, QVBoxLayout, QWidget,
     QGroupBox,
     QPushButton, QLabel, QComboBox, QLineEdit,
     QFileDialog, QProgressBar,
 )
-from qtpy.QtCore import Qt
 
-import h5py
-
-from .widgets import (
-    ScrollWidgetWrapper,
-    get_layer,
-)
 from .models import get_available_models, get_model
 from .utils import (
     config
@@ -25,8 +18,10 @@ from .utils import (
 from .utils.data import (
     get_stack_dims,
 )
-from .utils.extract import (
-    get_slice_features
+from .utils.extract import extract_embeddings_to_file
+from .widgets import (
+    ScrollWidgetWrapper,
+    get_layer,
 )
 
 
@@ -35,7 +30,6 @@ class FeatureExtractorWidget(QWidget):
         super().__init__()
         self.viewer = napari_viewer
         self.extract_worker = None
-        self.storage = None
         self.model_adapter = None
         self.device = None
 
@@ -168,48 +162,21 @@ class FeatureExtractorWidget(QWidget):
         self.extract_button.setEnabled(False)
         self.stop_button.setEnabled(True)
         self.extract_worker = create_worker(
-            self.get_stack_sam_embeddings,
-            image_layer, storage_path
+            extract_embeddings_to_file,
+            image=image_layer.data,
+            storage_file_path=storage_path,
+            model_adapter=self.model_adapter,
+            device=self.device,
+            model_name=model_name
         )
         self.extract_worker.yielded.connect(self.update_extract_progress)
         self.extract_worker.finished.connect(self.extract_is_done)
         self.extract_worker.run()
 
-    def get_stack_sam_embeddings(
-        self, image_layer, storage_path
-    ):
-        # prepare the storage hdf5 file
-        self.storage = h5py.File(storage_path, "w")
-        # get sam embeddings slice by slice and save them into storage file
-        num_slices, img_height, img_width = get_stack_dims(image_layer.data)
-        self.storage.attrs["num_slices"] = num_slices
-        self.storage.attrs["img_height"] = img_height
-        self.storage.attrs["img_width"] = img_width
-        self.storage.attrs["model"] = self.model_combo.currentText()
-        self.storage.attrs["patch_size"] = self.model_adapter.patch_size
-        self.storage.attrs["overlap"] = self.model_adapter.overlap
-
-        for slice_index in np_progress(
-            range(num_slices), desc="extract features for slices"
-        ):
-            image = image_layer.data[slice_index] if num_slices > 1 else image_layer.data
-            slice_grp = self.storage.create_group(str(slice_index))
-            get_slice_features(
-                image, self.model_adapter.patch_size, self.model_adapter.overlap,
-                self.model_adapter, self.device, slice_grp
-            )
-
-            yield (slice_index, num_slices)
-
-        self.storage.close()
-
     def stop_extracting(self):
         if self.extract_worker is not None:
             self.extract_worker.quit()
             self.extract_worker = None
-        if isinstance(self.storage, h5py.File):
-            self.storage.close()
-            self.storage = None
         self.stop_button.setEnabled(False)
 
     def update_extract_progress(self, values):

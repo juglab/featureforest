@@ -1,15 +1,17 @@
+from typing import Generator, Tuple
+
+import h5py
+import numpy as np
+import torch
 from napari.utils import progress as np_progress
 
-import numpy as np
-import h5py
-import torch
-
-from .data import (
+from featureforest.models import BaseModelAdapter
+from featureforest.models.SAM import SAMAdapter
+from featureforest.utils.data import get_stack_dims
+from featureforest.utils.data import (
     patchify, get_stride_margin,
     is_image_rgb,
 )
-from featureforest.models.base import BaseModelAdapter
-from featureforest.models.SAM import SAMAdapter
 
 
 def get_slice_features(
@@ -83,3 +85,35 @@ def get_slice_features(
                 ch_end = ch_start + feat.shape[-1]  # number of features
                 dataset[start: start + num_out, :, :, ch_start: ch_end] = feat
                 ch_start = ch_end
+
+
+def extract_embeddings_to_file(
+    image: np.ndarray,
+    storage_file_path: str,
+    model_adapter: BaseModelAdapter,
+    device: torch.device,
+    model_name: str,
+) -> Generator[Tuple[int, int], None, None]:
+    patch_size = model_adapter.patch_size
+    overlap = model_adapter.overlap
+
+    with h5py.File(storage_file_path, "w") as storage:
+        num_slices, img_height, img_width = get_stack_dims(image)
+
+        storage.attrs["num_slices"] = num_slices
+        storage.attrs["img_height"] = img_height
+        storage.attrs["img_width"] = img_width
+        storage.attrs["model"] = model_name
+        storage.attrs["patch_size"] = patch_size
+        storage.attrs["overlap"] = overlap
+
+        for slice_index in np_progress(
+            range(num_slices), desc="extract features for slices"
+        ):
+            slice = image[slice_index] if num_slices > 1 else image
+            slice_grp = storage.create_group(str(slice_index))
+            get_slice_features(
+                slice, patch_size, overlap, model_adapter, device, slice_grp
+            )
+
+            yield slice_index, num_slices
