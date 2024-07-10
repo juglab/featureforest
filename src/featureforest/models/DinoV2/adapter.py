@@ -33,6 +33,14 @@ class DinoV2Adapter(BaseModelAdapter):
             tv_transforms2.Resize(self.patch_size * self.dino_patch_size),
             tv_transforms2.ToDtype(dtype=torch.float32, scale=True)
         ])
+        # to transform feature patches back to the original patch size
+        self.embedding_transform = tv_transforms2.Compose([
+            tv_transforms2.Resize(
+                (self.patch_size, self.patch_size),
+                interpolation=tv_transforms2.InterpolationMode.BICUBIC,
+                antialias=True
+            ),
+        ])
 
     def _set_patch_size(self) -> None:
         self.patch_size = self.dino_patch_size * 5

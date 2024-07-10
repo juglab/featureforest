@@ -12,21 +12,21 @@ from featureforest.utils.data import (
 )
 
 
-class MobileSAMAdapter(BaseModelAdapter):
-    """MobileSAM model adapter
+class SAMAdapter(BaseModelAdapter):
+    """SAM model adapter (vit_h)
     """
     def __init__(
         self,
-        model: nn.Module,
+        image_encoder: nn.Module,
         img_height: float,
         img_width: float,
     ) -> None:
-        super().__init__(model, img_height, img_width)
-        self.name = "MobileSAM"
+        super().__init__(image_encoder, img_height, img_width)
+        self.name = "SAM"
         # we need sam image encoder part
-        self.encoder = self.model.image_encoder
+        self.encoder = image_encoder
         self.encoder_num_channels = 256
-        self.embed_layer_num_channels = 64
+        self.embed_layer_num_channels = 1280
         self._set_patch_size()
         # input transform for sam
         self.sam_input_dim = 1024
@@ -55,9 +55,14 @@ class MobileSAMAdapter(BaseModelAdapter):
     ) -> Tuple[Tensor, Tensor]:
         # get the mobile-sam encoder and embedding layer outputs
         with torch.no_grad():
-            output, embed_output, _ = self.encoder(
+            # output: b,256,64,64
+            output = self.encoder(
                 self.input_transforms(in_patches)
             )
+            # embed_output: b,64,64,1280 -> b,1280,64,64
+            embed_output = self.encoder.patch_embed(
+                self.input_transforms(in_patches)
+            ).permute(0, 3, 1, 2)
 
         # get non-overlapped feature patches
         out_feature_patches = get_nonoverlapped_patches(
