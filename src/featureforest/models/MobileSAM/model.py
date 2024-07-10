@@ -11,7 +11,7 @@ from .adapter import MobileSAMAdapter
 
 def get_model(
     img_height: float, img_width: float, *args, **kwargs
-) -> Tuple[MobileSAMAdapter, torch.device]:
+) -> MobileSAMAdapter:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"running on {device}")
     # get the model
@@ -33,10 +33,10 @@ def get_model(
 
     # create the model adapter
     sam_model_adapter = MobileSAMAdapter(
-        model, img_height, img_width
+        model, img_height, img_width, device
     )
 
-    return sam_model_adapter, device
+    return sam_model_adapter
 
 
 def setup_model() -> Sam:

@@ -11,7 +11,7 @@ from .adapter import SAMAdapter
 
 def get_model(
     img_height: float, img_width: float, *args, **kwargs
-) -> Tuple[SAMAdapter, torch.device]:
+) -> SAMAdapter:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"running on {device}")
     # download model's weights
@@ -32,7 +32,7 @@ def get_model(
 
     # create the model adapter
     sam_model_adapter = SAMAdapter(
-        sam_image_encoder, img_height, img_width
+        sam_image_encoder, img_height, img_width, device
     )
 
-    return sam_model_adapter, device
+    return sam_model_adapter

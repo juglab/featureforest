@@ -21,7 +21,7 @@ def get_available_models() -> List[str]:
 
 def get_model(
     model_name: str, img_height: float, img_width: float, *args, **kwargs
-) -> Tuple[BaseModelAdapter, torch.device]:
+) -> BaseModelAdapter:
     """Returns the requested model adapter.
 
     Args:
@@ -33,7 +33,7 @@ def get_model(
         ValueError: if the model was not found
 
     Returns:
-        Tuple[BaseModelAdapter, torch.device]: the model adapter and torch device
+        BaseModelAdapter: the model adapter
     """
     if model_name not in _MODELS_DICT:
         raise ValueError(f"Model {model_name} was not found!")

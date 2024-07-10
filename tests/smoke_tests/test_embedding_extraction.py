@@ -30,15 +30,13 @@ def test_embedding_extraction(
     test_image, test_model_name, expected_output_shape, expected_slices
 ):
     num_slices, img_height, img_width = get_stack_dims(test_image)
-    model_adapter, device = get_model(test_model_name, img_height, img_width)
+    model_adapter = get_model(test_model_name, img_height, img_width)
 
     with NamedTemporaryFile() as tmp_file:
         extractor_generator = extract_embeddings_to_file(
             image=test_image,
             storage_file_path=tmp_file.name,
-            model_adapter=model_adapter,
-            device=device,
-            model_name=test_model_name,
+            model_adapter=model_adapter
         )
 
         # Run the extractor generator till the end

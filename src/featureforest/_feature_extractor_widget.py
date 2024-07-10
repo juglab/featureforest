@@ -32,8 +32,6 @@ class FeatureExtractorWidget(QWidget):
         self.viewer = napari_viewer
         self.extract_worker = None
         self.model_adapter = None
-        self.device = None
-
         self.prepare_widget()
 
     def prepare_widget(self):
@@ -158,7 +156,7 @@ class FeatureExtractorWidget(QWidget):
         # initialize the selected model
         _, img_height, img_width = get_stack_dims(image_layer.data)
         model_name = self.model_combo.currentText()
-        self.model_adapter, self.device = get_model(model_name, img_height, img_width)
+        self.model_adapter = get_model(model_name, img_height, img_width)
 
         self.extract_button.setEnabled(False)
         self.stop_button.setEnabled(True)
@@ -166,9 +164,7 @@ class FeatureExtractorWidget(QWidget):
             extract_embeddings_to_file,
             image=image_layer.data,
             storage_file_path=storage_path,
-            model_adapter=self.model_adapter,
-            device=self.device,
-            model_name=model_name
+            model_adapter=self.model_adapter
         )
         self.extract_worker.yielded.connect(self.update_extract_progress)
         self.extract_worker.finished.connect(self.extract_is_done)

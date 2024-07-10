@@ -20,7 +20,6 @@ def get_slice_features(
     patch_size: int,
     overlap: int,
     model_adapter: BaseModelAdapter,
-    device: torch.device,
     storage_group: h5py.Group,
 ) -> Generator[int, None, None]:
     """Extract the model features for one slice and save them into storage file.
@@ -30,7 +29,6 @@ def get_slice_features(
         patch_size (int): _description_
         overlap (int): _description_
         model_adapter (BaseModelAdapter): _description_
-        device (torch.device): _description_
         storage_group (h5py.Group): _description_
     """
     # image to torch tensor
@@ -68,7 +66,7 @@ def get_slice_features(
         start = b_idx * batch_size
         end = start + batch_size
         slice_features = model_adapter.get_features_patches(
-            data_patches[start:end].to(device)
+            data_patches[start:end].to(model_adapter.device)
         )
         if not isinstance(slice_features, tuple):
             # model has only one output
@@ -88,9 +86,7 @@ def get_slice_features(
 def extract_embeddings_to_file(
     image: np.ndarray,
     storage_file_path: str,
-    model_adapter: BaseModelAdapter,
-    device: torch.device,
-    model_name: str,
+    model_adapter: BaseModelAdapter
 ) -> Generator[Tuple[int, int], None, None]:
     patch_size = model_adapter.patch_size
     overlap = model_adapter.overlap
@@ -101,7 +97,7 @@ def extract_embeddings_to_file(
         storage.attrs["num_slices"] = num_slices
         storage.attrs["img_height"] = img_height
         storage.attrs["img_width"] = img_width
-        storage.attrs["model"] = model_name
+        storage.attrs["model"] = model_adapter.name
         storage.attrs["patch_size"] = patch_size
         storage.attrs["overlap"] = overlap
 
@@ -111,6 +107,6 @@ def extract_embeddings_to_file(
             slice = image[slice_index] if num_slices > 1 else image
             slice_grp = storage.create_group(str(slice_index))
             for _ in get_slice_features(
-                slice, patch_size, overlap, model_adapter, device, slice_grp
+                slice, patch_size, overlap, model_adapter, slice_grp
             ):
                 yield slice_index, num_slices

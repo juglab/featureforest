@@ -48,7 +48,6 @@ class SegmentationWidget(QWidget):
         self.storage = None
         self.rf_model = None
         self.model_adapter = None
-        self.device = None
         self.patch_size = 512  # default values
         self.overlap = 384
         self.stride = self.patch_size - self.overlap
@@ -368,7 +367,7 @@ class SegmentationWidget(QWidget):
             img_width = self.storage.attrs["img_width"]
             # TODO: raise an error if current image dims are in conflicting with storage
             model_name = self.storage.attrs["model"]
-            self.model_adapter, self.device = get_model(model_name, img_height, img_width)
+            self.model_adapter = get_model(model_name, img_height, img_width)
             print(model_name, self.patch_size, self.overlap)
 
     def add_labels_layer(self):
