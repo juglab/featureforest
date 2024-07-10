@@ -171,6 +171,7 @@ class FeatureExtractorWidget(QWidget):
         )
         self.extract_worker.yielded.connect(self.update_extract_progress)
         self.extract_worker.finished.connect(self.extract_is_done)
+        self.extract_worker.errored.connect(self.stop_extracting)
         self.extract_worker.run()
 
     def stop_extracting(self):
