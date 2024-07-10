@@ -4,26 +4,33 @@ import h5py
 import numpy as np
 import pytest
 
-from featureforest.models import get_model, get_available_models
+from featureforest.models import get_model
 from featureforest.utils.extract import extract_embeddings_to_file
 from featureforest.utils.data import get_stack_dims
 
 
 @pytest.mark.parametrize(
-    "test_image, expected_output_shape, expected_slices",
+    "test_image, test_model_name, expected_output_shape, expected_slices",
     [
-        (np.ones((256, 256)), (25, 64, 64, 320), 1),  # 2D
-        (np.ones((256, 256, 3)), (25, 64, 64, 320), 1),  # 2D RGB
-        (np.ones((5, 256, 256)), (25, 64, 64, 320), 5),  # 3D
-        (np.ones((5, 256, 256, 3)), (25, 64, 64, 320), 5),  # 3D RGB
+        (np.ones((256, 256)), "MobileSAM", (25, 64, 64, 320), 1),  # 2D
+        (np.ones((256, 256, 3)), "MobileSAM", (25, 64, 64, 320), 1),  # 2D RGB
+        (np.ones((2, 256, 256)), "MobileSAM", (25, 64, 64, 320), 2),  # 3D
+        (np.ones((2, 256, 256, 3)), "MobileSAM", (25, 64, 64, 320), 2),  # 3D RGB
+        (np.ones((256, 256)), "SAM", (25, 64, 64, 1536), 1),  # 2D
+        (np.ones((256, 256, 3)), "SAM", (25, 64, 64, 1536), 1),  # 2D RGB
+        (np.ones((2, 256, 256)), "SAM", (25, 64, 64, 1536), 2),  # 3D
+        (np.ones((2, 256, 256, 3)), "SAM", (25, 64, 64, 1536), 2),  # 3D RGB
+        (np.ones((256, 256)), "DinoV2", (121, 28, 28, 384), 1),  # 2D
+        (np.ones((256, 256, 3)), "DinoV2", (121, 28, 28, 384), 1),  # 2D RGB
+        (np.ones((2, 256, 256)), "DinoV2", (121, 28, 28, 384), 2),  # 3D
+        (np.ones((2, 256, 256, 3)), "DinoV2", (121, 28, 28, 384), 2),  # 3D RGB
     ],
 )
-@pytest.mark.parametrize("model_name", get_available_models())
 def test_embedding_extraction(
-    test_image, expected_output_shape, expected_slices, model_name
+    test_image, test_model_name, expected_output_shape, expected_slices
 ):
     num_slices, img_height, img_width = get_stack_dims(test_image)
-    model_adapter, device = get_model(model_name, img_height, img_width)
+    model_adapter, device = get_model(test_model_name, img_height, img_width)
 
     with NamedTemporaryFile() as tmp_file:
         extractor_generator = extract_embeddings_to_file(
@@ -31,9 +38,11 @@ def test_embedding_extraction(
             storage_file_path=tmp_file.name,
             model_adapter=model_adapter,
             device=device,
-            model_name=model_name,
+            model_name=test_model_name,
         )
-        result = list(extractor_generator)
+
+        # Run the extractor generator till the end
+        _ = list(extractor_generator)
 
         with h5py.File(tmp_file, "r") as read_storage:
             slices = list(read_storage.keys())
@@ -42,7 +51,7 @@ def test_embedding_extraction(
             ), f"Unexpected number of slices: {len(slices)}, expected: {expected_slices}"
             for slice in slices:
                 slice_key = str(slice)
-                slice_dataset = read_storage[slice_key].get(model_name)
+                slice_dataset = read_storage[slice_key].get(test_model_name)
                 assert (
                     slice_dataset is not None
                 ), f"The dataset for slice {slice_key} is empty"
