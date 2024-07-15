@@ -35,7 +35,7 @@ from .utils import (
 from .utils.postprocess import (
     postprocess_segmentation,
 )
-# from .utils.postprocess_with_sam import postprocess_segmentations_with_sam
+from .utils.postprocess_with_sam import postprocess_segmentations_with_sam
 
 
 class SegmentationWidget(QWidget):
@@ -634,14 +634,14 @@ class SegmentationWidget(QWidget):
             area_threshold = None
             if len(self.area_threshold_textbox.text()) > 0:
                 area_threshold = float(self.area_threshold_textbox.text()) / 100
-            # if self.sam_post_checkbox.checkState() == Qt.Checked:
-            #     segmentation_image = postprocess_segmentations_with_sam(
-            #         self.model_adapter, segmentation_image, area_threshold
-            #     )
-            # else:
-            segmentation_image = postprocess_segmentation(
-                segmentation_image, area_threshold
-            )
+            if self.sam_post_checkbox.checkState() == Qt.Checked:
+                segmentation_image = postprocess_segmentations_with_sam(
+                    segmentation_image, area_threshold
+                )
+            else:
+                segmentation_image = postprocess_segmentation(
+                    segmentation_image, area_threshold
+                )
 
         return segmentation_image
 

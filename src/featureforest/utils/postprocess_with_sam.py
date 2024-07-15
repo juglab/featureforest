@@ -1,11 +1,60 @@
+from typing import List
+
+from napari.utils import progress as np_progress
+
 import numpy as np
 import cv2
 import torch
 
-from segment_anything import SamPredictor
+from cv2.typing import Rect
+from segment_anything_hq.modeling import Sam
+from segment_anything_hq.build_sam import build_sam_vit_t
+from segment_anything_hq import SamPredictor
+
+from featureforest.utils.downloader import download_model
 
 
-def get_watershed_bboxes(image):
+def get_light_hq_sam() -> Sam:
+    """Load the Light HQ SAM model instance. This model produces better masks.
+
+    Raises:
+        ValueError: if model's weights could not be downloaded.
+
+    Returns:
+        Sam: a Light HQ SAM model instance
+    """
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"running on {device}")
+    # download model's weights
+    model_url = \
+        "https://huggingface.co/lkeab/hq-sam/resolve/main/sam_hq_vit_tiny.pth"
+    model_file = download_model(
+        model_url=model_url,
+        model_name="sam_hq_vit_tiny.pth"
+    )
+    if model_file is None:
+        raise ValueError(f"Could not download the model from {model_url}.")
+
+    # init & load the light hq sam model
+    lhq_sam = build_sam_vit_t().to(device)
+    lhq_sam.load_state_dict(
+        torch.load(model_file, map_location=device)
+    )
+    lhq_sam.eval()
+
+    return lhq_sam
+
+
+def get_watershed_bboxes(image: np.ndarray) -> List[Rect]:
+    """Apply watershed algorithm to the input binary image
+    to get bounding boxes.
+
+    Args:
+        image (np.ndarray): input binary image
+
+    Returns:
+        List[Rect]: list of bounding boxes
+    """
     kernel = np.ones((3, 3), dtype=np.uint8)
     # sure background area
     sure_bg = cv2.dilate(image, kernel, iterations=5)
@@ -41,7 +90,15 @@ def get_watershed_bboxes(image):
     return bboxes
 
 
-def get_bounding_boxes(image):
+def get_bounding_boxes(image: np.ndarray) -> List[Rect]:
+    """Getting bounding boxes around contours in the input image.
+
+    Args:
+        image (np.ndarray): input binary image
+
+    Returns:
+        List[Rect]: list of bounding boxes
+    """
     contours, _ = cv2.findContours(
         image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
     )
@@ -52,7 +109,17 @@ def get_bounding_boxes(image):
     return bboxes
 
 
-def postprocess_label(bin_image, area_threshold: float = None):
+def postprocess_label(bin_image: np.ndarray, area_threshold: float = None) -> np.ndarray:
+    """Postprocess the label segmentation mask
+
+    Args:
+        bin_image (np.ndarray): input binary image
+        area_threshold (float, optional): threshold to remove small parts in the mask.
+        Defaults to None.
+
+    Returns:
+        np.ndarray: post-processed mask
+    """
     # remove noises
     kernel = np.ones((3, 3), dtype=np.uint8)
     morphed_img = cv2.morphologyEx(bin_image, cv2.MORPH_CLOSE, kernel, iterations=1)
@@ -70,16 +137,28 @@ def postprocess_label(bin_image, area_threshold: float = None):
         area_threshold = np.quantile(areas, area_threshold)
     small_parts = np.argwhere(stats[:, -1] <= area_threshold)
     morphed_img[np.isin(labels, small_parts)] = 0
-    print(small_parts.sum(0))
+    # print(small_parts.sum(0))
 
     return morphed_img
 
 
-def get_sam_mask(predictor, image, bboxes):
+def get_sam_mask(
+    predictor: SamPredictor, image: np.ndarray, bboxes: List[Rect]
+) -> np.ndarray:
+    """Returns a mask aggregated by sam predictor masks for each given bounding box.
+
+    Args:
+        predictor (SamPredictor): the sam predictor instance
+        image (np.ndarray): input binary image
+        bboxes (List[Rect]): bounding boxes
+
+    Returns:
+        np.ndarray: final mask
+    """
     # sam needs an RGB image
     image = np.repeat(image[:, :, np.newaxis], 3, axis=2)
     predictor.set_image(image)
-    # get sam-ready bboxes
+    # get sam-ready bounding boxes: x,y,w,h
     input_boxes = torch.tensor([
         (box[0], box[1], box[0] + box[2], box[1] + box[3])
         for box in bboxes
@@ -88,12 +167,11 @@ def get_sam_mask(predictor, image, bboxes):
         input_boxes, image.shape[:2]
     )
     # get sam predictor masks
-    masks, scores, logits = predictor.predict_torch(
+    masks, _, _ = predictor.predict_torch(
         point_coords=None,
         point_labels=None,
         boxes=transformed_boxes,
         multimask_output=True,
-        hq_token_only=False,
     )
     masks_np = masks.squeeze(1).cpu().numpy()
     final_mask = np.bitwise_or.reduce(masks_np, axis=0)
@@ -102,25 +180,39 @@ def get_sam_mask(predictor, image, bboxes):
 
 
 def postprocess_segmentations_with_sam(
-        sam_model, segmentations_image,
-        area_threshold: float = None
-):
-    predictor = SamPredictor(sam_model)
+    segmentations_image: np.ndarray,
+    area_threshold: float = None
+) -> np.ndarray:
+    """Post-processes segmentations using SAM predictor.
+
+    Args:
+        segmentations_image (np.ndarray): input segmentation image
+        area_threshold (float, optional): threshold to remove small parts in the mask.
+        Defaults to None.
+
+    Returns:
+        np.ndarray: _description_
+    """
+    # init a sam predictor using light hq sam
+    predictor = SamPredictor(get_light_hq_sam())
+
     final_image = np.zeros_like(segmentations_image, dtype=np.uint8)
-    # postprocessing gets done for each label's segmentation.
+    # postprocessing gets done for each class segmentation.
     bg_label = 0
     class_labels = [c for c in np.unique(segmentations_image) if c > bg_label]
-    for label in class_labels:
-        # make a binary image for the label
+    for label in np_progress(
+        class_labels, desc="Generating masks using SAM predictor"
+    ):
+        # make a binary image for the label (class)
         bin_image = (segmentations_image == label).astype(np.uint8) * 255
-        processed_label = postprocess_label(bin_image, area_threshold)
+        processed_mask = postprocess_label(bin_image, area_threshold)
         # get component bounding boxes
-        w_bboxes = get_watershed_bboxes(processed_label)
-        bboxes = get_bounding_boxes(processed_label)
+        w_bboxes = get_watershed_bboxes(processed_mask)
+        bboxes = get_bounding_boxes(processed_mask)
         bboxes.extend(w_bboxes)
         # get sam output mask
-        final_mask = get_sam_mask(predictor, processed_label, bboxes)
-        # put the processed image into final result image
+        final_mask = get_sam_mask(predictor, processed_mask, bboxes)
+        # put the final mask into final result image
         final_image[final_mask] = label
 
     return final_image
