@@ -167,14 +167,25 @@ def get_sam_mask(
         input_boxes, image.shape[:2]
     )
     # get sam predictor masks
-    masks, _, _ = predictor.predict_torch(
-        point_coords=None,
-        point_labels=None,
-        boxes=transformed_boxes,
-        multimask_output=True,
-    )
-    masks_np = masks.squeeze(1).cpu().numpy()
-    final_mask = np.bitwise_or.reduce(masks_np, axis=0)
+    bs = 16
+    num_batches = np.ceil(len(transformed_boxes) / bs).astype(int)
+    final_mask = np.zeros((image.shape[0], image.shape[1]), dtype=bool)
+    for i in np_progress(
+        range(num_batches), desc="Generating masks using SAM predictor"
+    ):
+        start = i * bs
+        end = start + bs
+        masks, _, _ = predictor.predict_torch(
+            point_coords=None,
+            point_labels=None,
+            boxes=transformed_boxes[start:end],
+            multimask_output=True,
+        )
+        masks_np = masks.squeeze(1).cpu().numpy()
+        final_mask = np.bitwise_or(
+            final_mask,
+            np.bitwise_or.reduce(masks_np, axis=0)
+        )
 
     return final_mask
 
@@ -201,7 +212,7 @@ def postprocess_segmentations_with_sam(
     bg_label = 0
     class_labels = [c for c in np.unique(segmentations_image) if c > bg_label]
     for label in np_progress(
-        class_labels, desc="Generating masks using SAM predictor"
+        class_labels, desc="Getting SAM masks for each class"
     ):
         # make a binary image for the label (class)
         bin_image = (segmentations_image == label).astype(np.uint8) * 255
