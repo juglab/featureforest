@@ -25,8 +25,8 @@ class MockDinoEncoder(nn.Module):
 def get_mock_model(img_height: float, img_width: float) -> DinoV2Adapter:
     model = MockDinoEncoder()
     device = torch.device("cpu")
-    sam_model_adapter = DinoV2Adapter(model, img_height, img_width, device)
-    return sam_model_adapter
+    dino_model_adapter = DinoV2Adapter(model, img_height, img_width, device)
+    return dino_model_adapter
 
 
 @pytest.mark.slow()
@@ -67,7 +67,7 @@ def test_mock_adapter(test_patch: np.ndarray):
         (np.ones((2, 256, 256, 3)), (121, 28, 28, 384), 2),  # 3D RGB
     ],
 )
-def test_mobilesam_embedding_extraction(
+def test_dino_embedding_extraction(
     test_image: np.ndarray, expected_output_shape: tuple, expected_slices: int
 ):
     num_slices, img_height, img_width = get_stack_dims(test_image)
