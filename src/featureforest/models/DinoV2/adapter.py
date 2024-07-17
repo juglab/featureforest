@@ -18,14 +18,16 @@ class DinoV2Adapter(BaseModelAdapter):
         self,
         model: nn.Module,
         img_height: float,
-        img_width: float
+        img_width: float,
+        device: torch.device
     ) -> None:
-        super().__init__(model, img_height, img_width)
+        super().__init__(model, img_height, img_width, device)
         self.name = "DinoV2"
         self.model = self.model
         self.dino_patch_size = 14
         self.dino_out_channels = 384
         self._set_patch_size()
+        self.device = device
 
         # input transform for dinov2
         self.input_transforms = tv_transforms2.Compose([

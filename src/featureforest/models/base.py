@@ -16,6 +16,7 @@ class BaseModelAdapter:
         model: nn.Module,
         img_height: float,
         img_width: float,
+        device: torch.device
     ) -> None:
         """Initialization function
 
@@ -30,6 +31,7 @@ class BaseModelAdapter:
         self.model = model
         self.img_height = img_height
         self.img_width = img_width
+        self.device = device
         # set patch size and overlap
         self.patch_size = 512
         self.overlap = 3 * self.patch_size // 4

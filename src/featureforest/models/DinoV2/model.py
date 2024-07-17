@@ -8,7 +8,7 @@ from .adapter import DinoV2Adapter
 
 def get_model(
     img_height: float, img_width: float, *args, **kwargs
-) -> Tuple[DinoV2Adapter, torch.device]:
+) -> DinoV2Adapter:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"running on {device}")
     # get the pretrained model
@@ -19,7 +19,7 @@ def get_model(
 
     # create the model adapter
     dino_model_adapter = DinoV2Adapter(
-        model, img_height, img_width
+        model, img_height, img_width, device
     )
 
-    return dino_model_adapter, device
+    return dino_model_adapter

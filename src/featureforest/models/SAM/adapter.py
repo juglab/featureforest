@@ -20,14 +20,17 @@ class SAMAdapter(BaseModelAdapter):
         image_encoder: nn.Module,
         img_height: float,
         img_width: float,
+        device: torch.device
     ) -> None:
-        super().__init__(image_encoder, img_height, img_width)
+        super().__init__(image_encoder, img_height, img_width, device)
         self.name = "SAM"
         # we need sam image encoder part
         self.encoder = image_encoder
         self.encoder_num_channels = 256
         self.embed_layer_num_channels = 1280
         self._set_patch_size()
+        self.device = device
+
         # input transform for sam
         self.sam_input_dim = 1024
         self.input_transforms = tv_transforms2.Compose([
