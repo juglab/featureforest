@@ -69,6 +69,7 @@ class SegmentationWidget(QWidget):
         self.create_label_stats_ui()
         self.create_train_ui()
         self.create_prediction_ui()
+        self.create_postprocessing_ui()
 
         scroll_content = QWidget()
         scroll_content.setLayout(self.base_layout)
@@ -221,30 +222,11 @@ class SegmentationWidget(QWidget):
         self.prediction_layer_combo = QComboBox()
         self.prediction_layer_combo.setEnabled(False)
         self.seg_add_radiobutton = QRadioButton("Add Segmentations")
-        self.seg_add_radiobutton.setChecked(True)
+        self.seg_add_radiobutton.setChecked(False)
         self.seg_add_radiobutton.setEnabled(False)
         self.seg_replace_radiobutton = QRadioButton("Replace Segmentations")
+        self.seg_replace_radiobutton.setChecked(True)
         self.seg_replace_radiobutton.setEnabled(False)
-
-        # post-process ui
-        area_label = QLabel("Area Threshold(%):")
-        self.area_threshold_textbox = QLineEdit()
-        self.area_threshold_textbox.setText("15")
-        self.area_threshold_textbox.setValidator(
-            QDoubleValidator(
-                1.000, 100.000, 3, notation=QDoubleValidator.StandardNotation
-            )
-        )
-        self.area_threshold_textbox.setToolTip(
-            "Keeps regions with area above the threshold percentage."
-        )
-        self.area_threshold_textbox.setEnabled(False)
-
-        self.sam_post_checkbox = QCheckBox("Use SAM Predictor")
-        self.sam_post_checkbox.setEnabled(False)
-
-        self.postprocess_checkbox = QCheckBox("Postprocess Segmentations")
-        self.postprocess_checkbox.stateChanged.connect(self.postprocess_checkbox_changed)
 
         predict_button = QPushButton("Predict Slice")
         predict_button.setMinimumWidth(150)
@@ -274,11 +256,6 @@ class SegmentationWidget(QWidget):
         hbox.addWidget(self.seg_add_radiobutton)
         hbox.addWidget(self.seg_replace_radiobutton)
         vbox.addLayout(hbox)
-        vbox.addWidget(self.postprocess_checkbox)
-        vbox.addWidget(area_label)
-        vbox.addWidget(self.area_threshold_textbox)
-        vbox.addWidget(self.sam_post_checkbox)
-        vbox.addSpacing(20)
         vbox.addWidget(predict_button, alignment=Qt.AlignLeft)
         hbox = QHBoxLayout()
         hbox.setContentsMargins(0, 0, 0, 0)
@@ -298,16 +275,57 @@ class SegmentationWidget(QWidget):
         gbox.setLayout(layout)
         self.base_layout.addWidget(gbox)
 
+    def create_postprocessing_ui(self):
+        area_label = QLabel("Area Threshold(%):")
+        self.area_threshold_textbox = QLineEdit()
+        self.area_threshold_textbox.setText("15")
+        self.area_threshold_textbox.setValidator(
+            QDoubleValidator(
+                1.000, 100.000, 3, notation=QDoubleValidator.StandardNotation
+            )
+        )
+        self.area_threshold_textbox.setToolTip(
+            "Keeps only regions with area above the threshold."
+        )
+
+        self.sam_post_checkbox = QCheckBox("Use SAM Predictor")
+        sam_label = QLabel(
+            "This will generate prompts for SAM Predictor using bounding boxes"
+            " around segmented regions."
+        )
+        sam_label.setWordWrap(True)
+
+        postprocess_button = QPushButton("Apply")
+        postprocess_button.setMinimumWidth(150)
+        # postprocess_button.clicked.connect(lambda: self.predict(whole_stack=False))
+        postprocess_all_button = QPushButton("Apply to Stack")
+        postprocess_all_button.setMinimumWidth(150)
+
+        layout = QVBoxLayout()
+        vbox = QVBoxLayout()
+        vbox.setContentsMargins(0, 0, 0, 0)
+        vbox.addWidget(area_label)
+        vbox.addWidget(self.area_threshold_textbox)
+        vbox.addSpacing(10)
+        vbox.addWidget(self.sam_post_checkbox)
+        vbox.addWidget(sam_label)
+        vbox.addSpacing(5)
+        vbox.addWidget(postprocess_button, alignment=Qt.AlignLeft)
+        vbox.addWidget(postprocess_all_button, alignment=Qt.AlignLeft)
+        # vbox.addSpacing(20)
+        layout.addLayout(vbox)
+
+        gbox = QGroupBox()
+        gbox.setTitle("Post-processing")
+        gbox.setMinimumWidth(100)
+        gbox.setLayout(layout)
+        self.base_layout.addWidget(gbox)
+
     def new_layer_checkbox_changed(self):
         state = self.new_layer_checkbox.checkState()
         self.prediction_layer_combo.setEnabled(state == Qt.Unchecked)
         self.seg_add_radiobutton.setEnabled(state == Qt.Unchecked)
         self.seg_replace_radiobutton.setEnabled(state == Qt.Unchecked)
-
-    def postprocess_checkbox_changed(self):
-        state = self.postprocess_checkbox.checkState()
-        self.area_threshold_textbox.setEnabled(state == Qt.Checked)
-        self.sam_post_checkbox.setEnabled(state == Qt.Checked)
 
     def check_input_layers(self, event: Event):
         curr_text = self.image_combo.currentText()
@@ -627,21 +645,6 @@ class SegmentationWidget(QWidget):
         # skip paddings
         segmentation_image = segmentation_image[:img_height, :img_width]
 
-        # check for postprocessing
-        if self.postprocess_checkbox.checkState() == Qt.Checked:
-            # apply postprocessing
-            area_threshold = None
-            if len(self.area_threshold_textbox.text()) > 0:
-                area_threshold = float(self.area_threshold_textbox.text()) / 100
-            if self.sam_post_checkbox.checkState() == Qt.Checked:
-                segmentation_image = postprocess_segmentations_with_sam(
-                    segmentation_image, area_threshold
-                )
-            else:
-                segmentation_image = postprocess_segmentation(
-                    segmentation_image, area_threshold
-                )
-
         return segmentation_image
 
     def stop_predict(self):
@@ -662,6 +665,20 @@ class SegmentationWidget(QWidget):
         self.predict_stop_button.setEnabled(False)
         print("Prediction is done!")
         notif.show_info("Prediction is done!")
+
+    def postprocess_slice(self, segmentation_image):
+        # apply postprocessing
+        area_threshold = None
+        if len(self.area_threshold_textbox.text()) > 0:
+            area_threshold = float(self.area_threshold_textbox.text()) / 100
+        if self.sam_post_checkbox.checkState() == Qt.Checked:
+            segmentation_image = postprocess_segmentations_with_sam(
+                segmentation_image, area_threshold
+            )
+        else:
+            segmentation_image = postprocess_segmentation(
+                segmentation_image, area_threshold
+            )
 
     def export_segmentation(self, out_format="nrrd"):
         if self.segmentation_layer is None:
