@@ -297,7 +297,7 @@ class SegmentationWidget(QWidget):
 
         postprocess_button = QPushButton("Apply")
         postprocess_button.setMinimumWidth(150)
-        # postprocess_button.clicked.connect(lambda: self.predict(whole_stack=False))
+        postprocess_button.clicked.connect(self.postprocess_slice)
         postprocess_all_button = QPushButton("Apply to Stack")
         postprocess_all_button.setMinimumWidth(150)
 
@@ -666,11 +666,14 @@ class SegmentationWidget(QWidget):
         print("Prediction is done!")
         notif.show_info("Prediction is done!")
 
-    def postprocess_slice(self, segmentation_image):
-        # apply postprocessing
+    def postprocess_slice(self, whole_stack=False):
+        curr_slice = self.viewer.dims.current_step[0]
+        segmentation_image = self.segmentation_layer.data[curr_slice]
+
         area_threshold = None
         if len(self.area_threshold_textbox.text()) > 0:
             area_threshold = float(self.area_threshold_textbox.text()) / 100
+
         if self.sam_post_checkbox.checkState() == Qt.Checked:
             segmentation_image = postprocess_segmentations_with_sam(
                 segmentation_image, area_threshold
@@ -679,6 +682,8 @@ class SegmentationWidget(QWidget):
             segmentation_image = postprocess_segmentation(
                 segmentation_image, area_threshold
             )
+
+        self.segmentation_layer.data[curr_slice] = segmentation_image
 
     def export_segmentation(self, out_format="nrrd"):
         if self.segmentation_layer is None:
