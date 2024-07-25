@@ -190,7 +190,7 @@ def get_sam_mask(
     return final_mask
 
 
-def postprocess_segmentations_with_sam(
+def postprocess_with_sam(
     segmentations_image: np.ndarray,
     area_threshold: float = None
 ) -> np.ndarray:

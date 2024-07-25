@@ -1,6 +1,67 @@
 import numpy as np
 import cv2
 
+from .mean_curvature import mean_curvature_smoothing
+
+
+def postprocess_label_mask(
+    bin_image: np.ndarray,
+    smoothing_iterations: int,
+    area_threshold: int,
+    area_is_abs: bool
+):
+    # image morphology: trying to close small holes
+    elipse = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
+    smoothed_mask = cv2.morphologyEx(bin_image, cv2.MORPH_DILATE, elipse, iterations=2)
+    smoothed_mask = cv2.morphologyEx(smoothed_mask, cv2.MORPH_ERODE, elipse, iterations=2)
+    # iterative mean curvature smoothing
+    smoothed_mask = mean_curvature_smoothing(smoothed_mask, smoothing_iterations)
+
+    # remove regions with small areas
+    # stats: left, top, height, width, area
+    num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(
+        smoothed_mask, connectivity=8, ltype=cv2.CV_32S
+    )
+    # if there is only background or only one region plus bg:
+    # num_labels = 1 -> only bg
+    # num_labels = 2 -> only one region
+    if num_labels < 3:
+        return smoothed_mask
+
+    # get not background areas (not 0)
+    areas = stats[1:, -1]
+    # if given threshold is a percentage then get corresponding area value
+    if not area_is_abs:
+        if area_threshold > 100:
+            area_threshold = 100
+        area_threshold = np.percentile(areas, area_threshold)
+    # eliminate small regions
+    small_parts = np.argwhere(stats[:, -1] <= area_threshold)
+    smoothed_mask[np.isin(labels, small_parts)] = 0
+
+    return smoothed_mask
+
+
+def postprocess(
+    segmentation_image,
+    smoothing_iterations: int = 25,
+    area_threshold: int = 15,
+    area_is_abs: bool = False
+):
+    final_mask = np.zeros_like(segmentation_image, dtype=np.uint8)
+    # postprocessing gets done for each label's segments.
+    class_labels = [c for c in np.unique(segmentation_image) if c > 0]
+    for label in class_labels:
+        # make a binary image for the label
+        bin_image = (segmentation_image == label).astype(np.uint8) * 255
+        processed_mask = postprocess_label_mask(
+            bin_image, smoothing_iterations, area_threshold, area_is_abs
+        )
+        # put the processed image into final result image
+        final_mask[processed_mask == 255] = label
+
+    return final_mask
+
 
 def process_similarity_matrix(sim_mat):
     """Smooth out given similarity matrix."""
@@ -8,49 +69,6 @@ def process_similarity_matrix(sim_mat):
     sim_mat_smoothed = cv2.medianBlur(sim_mat_uint8, 13) / 255.
 
     return sim_mat_smoothed
-
-
-def postprocess_label(bin_image, area_threshold: float = None):
-    # image morphology
-    elipse1 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
-    elipse2 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
-    morphed_img = cv2.morphologyEx(bin_image, cv2.MORPH_DILATE, elipse1, iterations=1)
-    morphed_img = cv2.morphologyEx(morphed_img, cv2.MORPH_ERODE, elipse2, iterations=1)
-    # remove components with small areas
-    # stats: left, top, height, width, area
-    num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(
-        morphed_img, connectivity=8, ltype=cv2.CV_32S
-    )
-    # if there is only background or only one component besides it:
-    # num_labels = 1 -> only bg
-    # num_labels = 2 -> only one component
-    if num_labels < 3:
-        return morphed_img
-
-    # get not background(0) areas
-    areas = stats[1:, -1]
-    if area_threshold is None:
-        area_threshold = np.quantile(areas, 0.5)
-    else:
-        area_threshold = np.quantile(areas, area_threshold)
-    small_parts = np.argwhere(stats[:, -1] <= area_threshold)
-    morphed_img[np.isin(labels, small_parts)] = 0
-
-    return morphed_img
-
-
-def postprocess_segmentation(segmentation_image, area_threshold: float = None):
-    final_image = np.zeros_like(segmentation_image, dtype=np.uint8)
-    # postprocessing gets done for each label's segments.
-    class_labels = [c for c in np.unique(segmentation_image) if c > 0]
-    for label in class_labels:
-        # make a binary image for the label
-        bin_image = (segmentation_image == label).astype(np.uint8) * 255
-        processed_image = postprocess_label(bin_image, area_threshold)
-        # put the processed image into final result image
-        final_image[processed_image == 255] = label
-
-    return final_image
 
 
 def get_furthest_point_from_edge(mask):
