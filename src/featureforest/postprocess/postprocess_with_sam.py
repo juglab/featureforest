@@ -12,6 +12,7 @@ from segment_anything_hq.build_sam import build_sam_vit_t
 from segment_anything_hq import SamPredictor
 
 from featureforest.utils.downloader import download_model
+from .postprocess import postprocess_label_mask
 
 
 def get_light_hq_sam() -> Sam:
@@ -109,39 +110,6 @@ def get_bounding_boxes(image: np.ndarray) -> List[Rect]:
     return bboxes
 
 
-def postprocess_label(bin_image: np.ndarray, area_threshold: float = None) -> np.ndarray:
-    """Postprocess the label segmentation mask
-
-    Args:
-        bin_image (np.ndarray): input binary image
-        area_threshold (float, optional): threshold to remove small parts in the mask.
-        Defaults to None.
-
-    Returns:
-        np.ndarray: post-processed mask
-    """
-    # remove noises
-    kernel = np.ones((3, 3), dtype=np.uint8)
-    morphed_img = cv2.morphologyEx(bin_image, cv2.MORPH_CLOSE, kernel, iterations=1)
-    morphed_img = cv2.morphologyEx(morphed_img, cv2.MORPH_OPEN, kernel, iterations=2)
-    # remove components with small areas
-    # stats: left, top, height, width, area
-    num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(
-        morphed_img, connectivity=8, ltype=cv2.CV_32S
-    )
-    # get not background(0) areas
-    areas = stats[1:, -1]
-    if area_threshold is None:
-        area_threshold = np.quantile(areas, 0.5)
-    else:
-        area_threshold = np.quantile(areas, area_threshold)
-    small_parts = np.argwhere(stats[:, -1] <= area_threshold)
-    morphed_img[np.isin(labels, small_parts)] = 0
-    # print(small_parts.sum(0))
-
-    return morphed_img
-
-
 def get_sam_mask(
     predictor: SamPredictor, image: np.ndarray, bboxes: List[Rect]
 ) -> np.ndarray:
@@ -191,32 +159,40 @@ def get_sam_mask(
 
 
 def postprocess_with_sam(
-    segmentations_image: np.ndarray,
-    area_threshold: float = None
+    segmentation_image: np.ndarray,
+    smoothing_iterations: int = 25,
+    area_threshold: int = 15,
+    area_is_abs: bool = False
 ) -> np.ndarray:
     """Post-processes segmentations using SAM predictor.
 
     Args:
-        segmentations_image (np.ndarray): input segmentation image
-        area_threshold (float, optional): threshold to remove small parts in the mask.
-        Defaults to None.
+        segmentation_image (np.ndarray): input segmentation image
+        smoothing_iterations (int, optional): number of smoothing iterations.
+        Defaults to 25.
+        area_threshold (int, optional): threshold to remove small regions.
+        Defaults to 15.
+        area_is_abs (bool, optional): False if the threshold is a percentage.
+        Defaults to False.
 
     Returns:
-        np.ndarray: _description_
+        np.ndarray: post-processed segmentation image
     """
     # init a sam predictor using light hq sam
     predictor = SamPredictor(get_light_hq_sam())
 
-    final_image = np.zeros_like(segmentations_image, dtype=np.uint8)
+    final_image = np.zeros_like(segmentation_image, dtype=np.uint8)
     # postprocessing gets done for each class segmentation.
     bg_label = 0
-    class_labels = [c for c in np.unique(segmentations_image) if c > bg_label]
+    class_labels = [c for c in np.unique(segmentation_image) if c > bg_label]
     for label in np_progress(
         class_labels, desc="Getting SAM masks for each class"
     ):
         # make a binary image for the label (class)
-        bin_image = (segmentations_image == label).astype(np.uint8) * 255
-        processed_mask = postprocess_label(bin_image, area_threshold)
+        bin_image = (segmentation_image == label).astype(np.uint8) * 255
+        processed_mask = postprocess_label_mask(
+            bin_image, smoothing_iterations, area_threshold, area_is_abs
+        )
         # get component bounding boxes
         w_bboxes = get_watershed_bboxes(processed_mask)
         bboxes = get_bounding_boxes(processed_mask)

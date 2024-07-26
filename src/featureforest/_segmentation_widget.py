@@ -729,9 +729,9 @@ class SegmentationWidget(QWidget):
         )
         for slice_index in np_progress(slice_indices):
             if self.sam_post_checkbox.checkState() == Qt.Checked:
-                # TODO
                 self.postprocess_result[slice_index] = postprocess_with_sam(
-                    self.segmentation_result[slice_index], area_threshold
+                    self.segmentation_result[slice_index],
+                    smoothing_iterations, area_threshold, area_is_absolute
                 )
             else:
                 self.postprocess_result[slice_index] = postprocess(

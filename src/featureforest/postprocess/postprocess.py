@@ -9,7 +9,18 @@ def postprocess_label_mask(
     smoothing_iterations: int,
     area_threshold: int,
     area_is_abs: bool
-):
+) -> np.ndarray:
+    """Post-process a binary mask image (of a class label)
+
+    Args:
+        bin_image (np.ndarray): input mask image
+        smoothing_iterations (int): number of smoothing iterations
+        area_threshold (int): threshold to remove small regions
+        area_is_abs (bool): False if the threshold is a percentage
+
+    Returns:
+        np.ndarray: post-processed mask image
+    """
     # image morphology: trying to close small holes
     elipse = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
     smoothed_mask = cv2.morphologyEx(bin_image, cv2.MORPH_DILATE, elipse, iterations=2)
@@ -43,11 +54,25 @@ def postprocess_label_mask(
 
 
 def postprocess(
-    segmentation_image,
+    segmentation_image: np.ndarray,
     smoothing_iterations: int = 25,
     area_threshold: int = 15,
     area_is_abs: bool = False
-):
+) -> np.ndarray:
+    """Post-process a segmentation image mask containing multiple classes.
+
+    Args:
+        segmentation_image (np.ndarray): input segmentation image
+        smoothing_iterations (int, optional): number of smoothing iterations.
+        Defaults to 25.
+        area_threshold (int, optional): threshold to remove small regions.
+        Defaults to 15.
+        area_is_abs (bool, optional): False if the threshold is a percentage.
+        Defaults to False.
+
+    Returns:
+        np.ndarray: post-processed segmentation image
+    """
     final_mask = np.zeros_like(segmentation_image, dtype=np.uint8)
     # postprocessing gets done for each label's segments.
     class_labels = [c for c in np.unique(segmentation_image) if c > 0]
