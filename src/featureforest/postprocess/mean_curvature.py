@@ -81,6 +81,6 @@ def mean_curvature_smoothing(
     output_image = output_image.astype(np.uint8)
     # apply a threshold to get the final mask
     # TODO: find a proper threshold in a more intelligent way!
-    output_image = apply_threshold(output_image, 30)
+    output_image = apply_threshold(output_image, t=output_image.mean())
 
     return output_image
