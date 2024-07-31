@@ -31,8 +31,8 @@ from .utils.data import (
 from .utils import (
     colormaps, config
 )
-from .utils.postprocess import (
-    process_similarity_matrix, postprocess_label,
+from .postprocess.postprocess import (
+    process_similarity_matrix, postprocess_label_mask,
     generate_mask_prompts,
 )
 
@@ -519,7 +519,7 @@ class SAMPromptSegmentationWidget(QWidget):
             high_sim_mask[
                 sim_mat >= float(self.similarity_threshold_textbox.text())
             ] = 255
-            post_high_sim_mask = postprocess_label(high_sim_mask, 0.15)
+            post_high_sim_mask = postprocess_label_mask(high_sim_mask, 0.15)
             positive_prompts = generate_mask_prompts(post_high_sim_mask)
 
             if len(positive_prompts) == 0:
