@@ -1,10 +1,16 @@
 import numpy as np
+import cv2
 
 
-def apply_threshold(img, t=127):
+def apply_threshold(img, t=None):
     img_copy = img.copy()
-    img_copy[img_copy > t] = 255
-    img_copy[img_copy <= t] = 0
+    if t is None:
+        t, img_copy = cv2.threshold(
+            img_copy, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
+        )
+    else:
+        img_copy[img_copy > t] = 255
+        img_copy[img_copy <= t] = 0
 
     return img_copy
 
@@ -80,7 +86,6 @@ def mean_curvature_smoothing(
     )
     output_image = output_image.astype(np.uint8)
     # apply a threshold to get the final mask
-    # TODO: find a proper threshold in a more intelligent way!
-    output_image = apply_threshold(output_image, t=output_image.mean())
+    output_image = apply_threshold(output_image)
 
     return output_image
