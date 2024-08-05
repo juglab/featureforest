@@ -34,7 +34,8 @@ from .utils import (
 )
 from .postprocess import (
     postprocess,
-    postprocess_with_sam
+    postprocess_with_sam,
+    postprocess_with_sam_auto
 )
 
 
@@ -299,11 +300,30 @@ class SegmentationWidget(QWidget):
         self.area_abs_radiobutton = QRadioButton("absolute")
 
         self.sam_post_checkbox = QCheckBox("Use SAM Predictor")
+        self.sam_post_checkbox.clicked.connect(self.sam_post_checked)
         sam_label = QLabel(
             "This will generate prompts for SAM Predictor using bounding boxes"
             " around segmented regions."
         )
         sam_label.setWordWrap(True)
+
+        self.sam_auto_post_checkbox = QCheckBox("Use SAM Auto-Segmentation")
+        self.sam_auto_post_checkbox.clicked.connect(self.sam_auto_post_checked)
+        sam_threshold_label = QLabel("IOU Matching Threshold:")
+        self.sam_auto_threshold_textbox = QLineEdit()
+        validator = QDoubleValidator(0.0, 1.0, 2)
+        validator.setNotation(QDoubleValidator.StandardNotation)
+        self.sam_auto_threshold_textbox.setValidator(validator)
+        self.sam_auto_threshold_textbox.setText("0.45")
+        self.sam_auto_threshold_textbox.setToolTip(
+            "Keeps prediction mask regions with having IOU against SAM generated masks"
+            " above the threshold (should be between [0, 1])."
+        )
+        sam_auto_label = QLabel(
+            "This will use SAM auto-segmentation instances' masks to generate"
+            " final semantic segmentation mask."
+        )
+        sam_auto_label.setWordWrap(True)
 
         postprocess_button = QPushButton("Apply")
         postprocess_button.setMinimumWidth(150)
@@ -333,7 +353,12 @@ class SegmentationWidget(QWidget):
         vbox.addSpacing(15)
         vbox.addWidget(self.sam_post_checkbox)
         vbox.addWidget(sam_label)
-        vbox.addSpacing(5)
+        vbox.addSpacing(3)
+        vbox.addWidget(self.sam_auto_post_checkbox)
+        vbox.addWidget(sam_threshold_label)
+        vbox.addWidget(self.sam_auto_threshold_textbox)
+        vbox.addWidget(sam_auto_label)
+        vbox.addSpacing(7)
         hbox = QHBoxLayout()
         hbox.setContentsMargins(0, 0, 0, 0)
         hbox.addWidget(postprocess_button)
@@ -393,6 +418,14 @@ class SegmentationWidget(QWidget):
             )
             if index > -1:
                 self.prediction_layer_combo.setCurrentIndex(index)
+
+    def sam_post_checked(self, checked: bool):
+        if checked:
+            self.sam_auto_post_checkbox.setChecked(False)
+
+    def sam_auto_post_checked(self, checked: bool):
+        if checked:
+            self.sam_post_checkbox.setChecked(False)
 
     def select_storage(self):
         selected_file, _filter = QFileDialog.getOpenFileName(
@@ -728,10 +761,24 @@ class SegmentationWidget(QWidget):
             (num_slices, img_height, img_width), dtype=np.uint8
         )
         for slice_index in np_progress(slice_indices):
-            if self.sam_post_checkbox.checkState() == Qt.Checked:
+            if self.sam_post_checkbox.isChecked():
                 self.postprocess_result[slice_index] = postprocess_with_sam(
                     self.segmentation_result[slice_index],
                     smoothing_iterations, area_threshold, area_is_absolute
+                )
+            elif self.sam_auto_post_checkbox.isChecked():
+                # get input image/slice
+                num_slices, _, _ = get_stack_dims(self.image_layer.data)
+                input_image = self.image_layer.data
+                if num_slices > 1:
+                    input_image = self.image_layer.data[slice_index]
+                iou_threshold = float(self.sam_auto_threshold_textbox.text())
+                # postprocess
+                self.postprocess_result[slice_index] = postprocess_with_sam_auto(
+                    input_image,
+                    self.segmentation_result[slice_index],
+                    smoothing_iterations, iou_threshold,
+                    area_threshold, area_is_absolute
                 )
             else:
                 self.postprocess_result[slice_index] = postprocess(

@@ -1,6 +1,7 @@
 from typing import List
 
 from napari.utils import progress as np_progress
+# import napari.utils.notifications as notif
 
 import numpy as np
 import cv2
@@ -9,9 +10,10 @@ import torch
 from cv2.typing import Rect
 from segment_anything_hq.modeling import Sam
 from segment_anything_hq.build_sam import build_sam_vit_t
-from segment_anything_hq import SamPredictor
+from segment_anything_hq import SamPredictor, SamAutomaticMaskGenerator
 
 from featureforest.utils.downloader import download_model
+from featureforest.utils.data import is_image_rgb
 from .postprocess import postprocess_label_mask
 
 
@@ -181,7 +183,7 @@ def postprocess_with_sam(
     # init a sam predictor using light hq sam
     predictor = SamPredictor(get_light_hq_sam())
 
-    final_image = np.zeros_like(segmentation_image, dtype=np.uint8)
+    final_mask = np.zeros_like(segmentation_image, dtype=np.uint8)
     # postprocessing gets done for each class segmentation.
     bg_label = 0
     class_labels = [c for c in np.unique(segmentation_image) if c > bg_label]
@@ -193,13 +195,122 @@ def postprocess_with_sam(
         processed_mask = postprocess_label_mask(
             bin_image, smoothing_iterations, area_threshold, area_is_abs
         )
-        # get component bounding boxes
+        # get bounding boxes around connected components
         w_bboxes = get_watershed_bboxes(processed_mask)
         bboxes = get_bounding_boxes(processed_mask)
         bboxes.extend(w_bboxes)
         # get sam output mask
-        final_mask = get_sam_mask(predictor, processed_mask, bboxes)
-        # put the final mask into final result image
-        final_image[final_mask] = label
+        sam_label_mask = get_sam_mask(predictor, processed_mask, bboxes)
+        # put the final label mask into final result mask
+        final_mask[sam_label_mask] = label
 
-    return final_image
+    return final_mask
+
+
+def get_ious(mask: np.ndarray, sam_masks: np.ndarray) -> np.ndarray:
+    """Calculate IOU between prediction mask and all SAM generated masks.
+
+    Args:
+        mask (np.ndarray): a single component of the prediction mask (B=1, H, W).
+        sam_masks (np.ndarray): SAM generated masks (B, H, W).
+
+    Returns:
+        np.ndarray: IOUs array
+    """
+    epsilon = 1e-6
+    intersection = (mask & sam_masks).sum((1, 2))
+    union = (mask | sam_masks).sum((1, 2))
+    ious = (intersection + epsilon) / (union + epsilon)
+
+    return ious
+
+
+def postprocess_with_sam_auto(
+    input_image: np.ndarray,
+    segmentation_image: np.ndarray,
+    smoothing_iterations: int = 20,
+    iou_threshold: float = 0.45,
+    area_threshold: int = 15,
+    area_is_abs: bool = False
+) -> np.ndarray:
+    """Post-processes segmentations using SAM auto-segmentation instances' masks.
+
+    Args:
+        input_image (np.ndarray): input image
+        segmentation_image (np.ndarray): input segmentation image
+        smoothing_iterations (int, optional): number of smoothing iterations.
+        Defaults to 25.
+        iou_threshold (float, optional): IOU threshold for matching prediction masks
+        with SAM generated masks. Defaults to 0.45
+        area_threshold (int, optional): threshold to remove small regions.
+        Defaults to 15.
+        area_is_abs (bool, optional): False if the threshold is a percentage.
+        Defaults to False.
+
+    Returns:
+        np.ndarray: post-processed segmentation image
+    """
+    if not is_image_rgb(input_image):
+        input_image = np.repeat(
+            input_image[..., np.newaxis],
+            3, axis=-1
+        )
+    assert is_image_rgb(input_image)
+    if iou_threshold > 1.0:
+        iou_threshold = 1.0
+    # init a sam auto-segmentation mask generator
+    mask_generator = SamAutomaticMaskGenerator(
+        model=get_light_hq_sam(),
+        points_per_side=64,
+        pred_iou_thresh=0.8,
+        stability_score_thresh=0.85,
+        stability_score_offset=0.9,
+        crop_n_layers=1,
+        crop_n_points_downscale_factor=2,
+        # crop_nms_thresh=0.7,
+        min_mask_region_area=20
+    )
+    # generate SAM masks
+    print("generating masks using SamAutomaticMaskGenerator...")
+    with np_progress(range(1), desc="Generating masks using SamAutomaticMaskGenerator"):
+        sam_generated_masks = mask_generator.generate(input_image)
+    sam_masks = np.array([mask["segmentation"] for mask in sam_generated_masks])
+    sam_areas = np.array([mask["area"] for mask in sam_generated_masks])
+    print(f"generated masks: {len(sam_generated_masks)}")
+
+    final_mask = np.zeros_like(segmentation_image, dtype=np.uint8)
+    # postprocessing gets done for each class segmentation.
+    bg_label = 0
+    class_labels = [c for c in np.unique(segmentation_image) if c > bg_label]
+    for class_label in np_progress(
+        class_labels, desc="Getting SAM masks for each class"
+    ):
+        # make a binary image for the label (class)
+        bin_image = (segmentation_image == class_label).astype(np.uint8) * 255
+        processed_mask = postprocess_label_mask(
+            bin_image, smoothing_iterations, area_threshold, area_is_abs
+        )
+        # get connected components of the label mask
+        num_components, component_labels, _, _ = cv2.connectedComponentsWithStats(
+            processed_mask, connectivity=8, ltype=cv2.CV_32S
+        )
+        # component label 0 is bg.
+        final_label_mask = np.zeros_like(processed_mask, dtype=bool)
+        for cl in np_progress(range(1, num_components), desc="connected component masks"):
+            print(f"connected component masks: {cl} / {num_components - 1}", end="\r")
+            component_mask = component_labels == cl
+            ious = get_ious(component_mask[np.newaxis], sam_masks)
+            matched = ious > iou_threshold
+            if matched.sum() == 0:
+                continue  # no match
+            if matched.sum() > 1:
+                # multiple match: select one with smallest area
+                selected_mask = sam_masks[matched][np.argmin(sam_areas[matched])]
+            else:
+                selected_mask = sam_masks[matched][0]
+
+            final_label_mask = np.bitwise_or(final_label_mask, selected_mask)
+        # put the final label mask into final result mask
+        final_mask[final_label_mask.astype(bool)] = class_label
+
+    return final_mask
