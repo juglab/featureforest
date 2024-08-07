@@ -35,7 +35,8 @@ from .utils import (
 from .postprocess import (
     postprocess,
     postprocess_with_sam,
-    postprocess_with_sam_auto
+    postprocess_with_sam_auto,
+    get_sam_auto_masks
 )
 
 
@@ -50,6 +51,7 @@ class SegmentationWidget(QWidget):
         self.storage = None
         self.rf_model = None
         self.model_adapter = None
+        self.sam_auto_masks = None
         self.patch_size = 512  # default values
         self.overlap = 384
         self.stride = self.patch_size - self.overlap
@@ -98,6 +100,7 @@ class SegmentationWidget(QWidget):
         # input layer
         input_label = QLabel("Input Layer:")
         self.image_combo = QComboBox()
+        self.image_combo.currentIndexChanged.connect(self.clear_sam_auto_masks)
         # sam storage
         storage_label = QLabel("SAM Embeddings Storage:")
         self.storage_textbox = QLineEdit()
@@ -415,6 +418,9 @@ class SegmentationWidget(QWidget):
             )
             if index > -1:
                 self.prediction_layer_combo.setCurrentIndex(index)
+
+    def clear_sam_auto_masks(self):
+        self.sam_auto_masks = None
 
     def postprocess_layer_removed(self, event: Event):
         """Fires when current postprocess layer is removed."""
@@ -782,9 +788,12 @@ class SegmentationWidget(QWidget):
                 if num_slices > 1:
                     input_image = self.image_layer.data[slice_index]
                 iou_threshold = float(self.sam_auto_threshold_textbox.text())
+                # get sam auto-segmentation masks
+                if self.sam_auto_masks is None:
+                    self.sam_auto_masks = get_sam_auto_masks(input_image)
                 # postprocess
                 self.postprocess_layer.data[slice_index] = postprocess_with_sam_auto(
-                    input_image,
+                    self.sam_auto_masks,
                     prediction,
                     smoothing_iterations, iou_threshold,
                     area_threshold, area_is_absolute
