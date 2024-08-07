@@ -46,8 +46,7 @@ class SegmentationWidget(QWidget):
         self.image_layer = None
         self.gt_layer = None
         self.segmentation_layer = None
-        self.segmentation_result = None
-        self.postprocess_result = None
+        self.postprocess_layer = None
         self.storage = None
         self.rf_model = None
         self.model_adapter = None
@@ -65,6 +64,8 @@ class SegmentationWidget(QWidget):
 
         self.viewer.layers.events.inserted.disconnect(self.check_label_layers)
         self.viewer.layers.events.removed.disconnect(self.check_label_layers)
+
+        self.viewer.layers.events.removed.disconnect(self.postprocess_layer_removed)
 
     def prepare_widget(self):
         self.base_layout = QVBoxLayout()
@@ -90,6 +91,8 @@ class SegmentationWidget(QWidget):
         self.viewer.layers.events.inserted.connect(self.check_label_layers)
         self.viewer.layers.events.removed.connect(self.check_label_layers)
         self.check_label_layers(None)
+
+        self.viewer.layers.events.removed.connect(self.postprocess_layer_removed)
 
     def create_input_ui(self):
         # input layer
@@ -325,13 +328,8 @@ class SegmentationWidget(QWidget):
         )
         sam_auto_label.setWordWrap(True)
 
-        postprocess_button = QPushButton("Apply")
+        postprocess_button = QPushButton("Apply to Slice")
         postprocess_button.setMinimumWidth(150)
-        self.toggle_postprocess_button = QPushButton("Toggle Off")
-        self.toggle_postprocess_button.setMinimumWidth(150)
-        self.toggle_postprocess_button.setCheckable(True)
-        self.toggle_postprocess_button.setChecked(True)
-        self.toggle_postprocess_button.clicked.connect(self.toggle_postprocess)
         postprocess_button.clicked.connect(self.postprocess_segmentation)
         postprocess_all_button = QPushButton("Apply to Stack")
         postprocess_all_button.setMinimumWidth(150)
@@ -362,9 +360,8 @@ class SegmentationWidget(QWidget):
         hbox = QHBoxLayout()
         hbox.setContentsMargins(0, 0, 0, 0)
         hbox.addWidget(postprocess_button)
-        hbox.addWidget(self.toggle_postprocess_button)
+        hbox.addWidget(postprocess_all_button)
         vbox.addLayout(hbox)
-        vbox.addWidget(postprocess_all_button, alignment=Qt.AlignLeft)
         # vbox.addSpacing(20)
         layout.addLayout(vbox)
 
@@ -418,6 +415,14 @@ class SegmentationWidget(QWidget):
             )
             if index > -1:
                 self.prediction_layer_combo.setCurrentIndex(index)
+
+    def postprocess_layer_removed(self, event: Event):
+        """Fires when current postprocess layer is removed."""
+        if (
+            self.postprocess_layer is not None and
+            self.postprocess_layer not in self.viewer.layers
+        ):
+            self.postprocess_layer = None
 
     def sam_post_checked(self, checked: bool):
         if checked:
@@ -676,8 +681,6 @@ class SegmentationWidget(QWidget):
             cm, _ = colormaps.create_colormap(len(np.unique(segmentation_image)))
             self.segmentation_layer.colormap = cm
         self.segmentation_layer.refresh()
-        # keep the segmentations before applying postprocessing
-        self.segmentation_result = self.segmentation_layer.data.copy()
 
     def predict_slice(self, rf_model, slice_index, img_height, img_width):
         """Predict a slice patch by patch"""
@@ -757,13 +760,19 @@ class SegmentationWidget(QWidget):
         else:
             slice_indices = range(num_slices)
 
-        self.postprocess_result = np.zeros(
-            (num_slices, img_height, img_width), dtype=np.uint8
-        )
+        if self.postprocess_layer is None:
+            self.postprocess_layer = self.viewer.add_labels(
+                data=np.zeros_like(self.segmentation_layer.data),
+                name="Postprocessing"
+            )
+        self.postprocess_layer.colormap = self.segmentation_layer.colormap
+
         for slice_index in np_progress(slice_indices):
+            prediction = self.segmentation_layer.data[slice_index]
+
             if self.sam_post_checkbox.isChecked():
-                self.postprocess_result[slice_index] = postprocess_with_sam(
-                    self.segmentation_result[slice_index],
+                self.postprocess_layer.data[slice_index] = postprocess_with_sam(
+                    prediction,
                     smoothing_iterations, area_threshold, area_is_absolute
                 )
             elif self.sam_auto_post_checkbox.isChecked():
@@ -774,49 +783,19 @@ class SegmentationWidget(QWidget):
                     input_image = self.image_layer.data[slice_index]
                 iou_threshold = float(self.sam_auto_threshold_textbox.text())
                 # postprocess
-                self.postprocess_result[slice_index] = postprocess_with_sam_auto(
+                self.postprocess_layer.data[slice_index] = postprocess_with_sam_auto(
                     input_image,
-                    self.segmentation_result[slice_index],
+                    prediction,
                     smoothing_iterations, iou_threshold,
                     area_threshold, area_is_absolute
                 )
             else:
-                self.postprocess_result[slice_index] = postprocess(
-                    self.segmentation_result[slice_index],
+                self.postprocess_layer.data[slice_index] = postprocess(
+                    prediction,
                     smoothing_iterations, area_threshold, area_is_absolute
                 )
 
-        if self.toggle_postprocess_button.isChecked():
-            if whole_stack:
-                self.segmentation_layer.data = self.postprocess_result
-            else:
-                curr_slice = self.viewer.dims.current_step[0]
-                self.segmentation_layer.data[curr_slice] = self.postprocess_result[
-                    curr_slice
-                ]
-            self.segmentation_layer.refresh()
-
-    def toggle_postprocess(self):
-        self.segmentation_layer = get_layer(
-            self.viewer,
-            self.prediction_layer_combo.currentText(), config.NAPARI_LABELS_LAYER
-        )
-        if self.segmentation_layer is None:
-            notif.show_error("No segmentation layer is selected!")
-            return
-        if self.postprocess_result is None or self.segmentation_result is None:
-            notif.show_warning("No postprocessing is done yet!")
-            return
-
-        if self.toggle_postprocess_button.isChecked():
-            # show the post-processing result
-            self.toggle_postprocess_button.setText("Toggle Off")
-            self.segmentation_layer.data = self.postprocess_result
-        else:
-            # turn off the post-processing result
-            self.toggle_postprocess_button.setText("Toggle On")
-            self.segmentation_layer.data = self.segmentation_result
-        self.segmentation_layer.refresh()
+        self.postprocess_layer.refresh()
 
     def export_segmentation(self, out_format="nrrd"):
         if self.segmentation_layer is None:
