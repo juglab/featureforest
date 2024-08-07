@@ -791,7 +791,7 @@ class SegmentationWidget(QWidget):
                     input_image = self.image_layer.data[slice_index]
                 iou_threshold = float(self.sam_auto_threshold_textbox.text())
                 # get sam auto-segmentation masks
-                if self.sam_auto_masks is None:
+                if self.sam_auto_masks is None or whole_stack:
                     self.sam_auto_masks = get_sam_auto_masks(input_image)
                 # postprocess
                 self.postprocess_layer.data[slice_index] = postprocess_with_sam_auto(
