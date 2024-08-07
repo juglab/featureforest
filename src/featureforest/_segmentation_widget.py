@@ -298,9 +298,9 @@ class SegmentationWidget(QWidget):
         self.area_threshold_textbox.setToolTip(
             "Keeps only regions with area above the threshold."
         )
-        self.area_percent_radiobutton = QRadioButton("percentage")
-        self.area_percent_radiobutton.setChecked(True)
         self.area_abs_radiobutton = QRadioButton("absolute")
+        self.area_abs_radiobutton.setChecked(True)
+        self.area_percent_radiobutton = QRadioButton("percentage")
 
         self.sam_post_checkbox = QCheckBox("Use SAM Predictor")
         self.sam_post_checkbox.clicked.connect(self.sam_post_checked)
@@ -344,8 +344,8 @@ class SegmentationWidget(QWidget):
         vbox.addWidget(self.smoothing_iteration_textbox)
         vbox.addWidget(area_label)
         hbox = QHBoxLayout()
-        hbox.addWidget(self.area_percent_radiobutton)
         hbox.addWidget(self.area_abs_radiobutton)
+        hbox.addWidget(self.area_percent_radiobutton)
         vbox.addLayout(hbox)
         vbox.addWidget(self.area_threshold_textbox)
         vbox.addSpacing(15)
