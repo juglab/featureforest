@@ -294,7 +294,7 @@ class SegmentationWidget(QWidget):
 
         area_label = QLabel("Area Threshold:")
         self.area_threshold_textbox = QLineEdit()
-        self.area_threshold_textbox.setText("15")
+        self.area_threshold_textbox.setText("50")
         self.area_threshold_textbox.setValidator(
             QIntValidator(0, 2147483647)
         )
