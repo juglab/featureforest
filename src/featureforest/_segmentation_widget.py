@@ -96,6 +96,8 @@ class SegmentationWidget(QWidget):
 
         self.viewer.layers.events.removed.connect(self.postprocess_layer_removed)
 
+        self.viewer.dims.events.current_step.connect(self.clear_sam_auto_masks)
+
     def create_input_ui(self):
         # input layer
         input_label = QLabel("Input Layer:")
