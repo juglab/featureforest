@@ -273,7 +273,7 @@ def postprocess_with_sam_auto(
     """Post-processes segmentations using SAM auto-segmentation instances' masks.
 
     Args:
-        input_image (np.ndarray): input image
+        sam_auto_masks (Tuple[np.ndarray, np.ndarray): a tuple of (masks, areas)
         segmentation_image (np.ndarray): input segmentation image
         smoothing_iterations (int, optional): number of smoothing iterations.
         Defaults to 25.
