@@ -1,3 +1,4 @@
+import os
 import pickle
 
 import napari
@@ -535,7 +536,7 @@ class SegmentationWidget(QWidget):
             n_estimators=num_trees,
             max_depth=max_depth,
             min_samples_leaf=1,
-            n_jobs=2,
+            n_jobs=2 if os.cpu_count() < 5 else os.cpu_count() - 3,
             verbose=1
         )
         rf_classifier.fit(train_data, labels)
