@@ -4,7 +4,7 @@ from .base import (
 
 
 EXPORTERS = {
-    "tiff": TiffExporter,
-    "nrrd": NRRDExporter,
-    "numpy": NumpyExporter,
+    "tiff": TiffExporter(),
+    "nrrd": NRRDExporter(),
+    "numpy": NumpyExporter(),
 }

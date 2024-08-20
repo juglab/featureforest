@@ -850,8 +850,8 @@ class SegmentationWidget(QWidget):
         if selected_file is None or len(selected_file) == 0:
             return  # user canceled export
 
-        # if not selected_file.endswith(f".{exporter.extension}"):
-        #     selected_file += f".{exporter.extension}"
+        if not selected_file.endswith(f".{exporter.extension}"):
+            selected_file += f".{exporter.extension}"
         layer_to_export = self.segmentation_layer
         if (
             self.export_postprocess_checkbox.isChecked() and
@@ -860,9 +860,5 @@ class SegmentationWidget(QWidget):
             layer_to_export = self.postprocess_layer
 
         exporter.export(layer_to_export, selected_file)
-        # if export_format == "nrrd":
-        #     nrrd.write(selected_file, np.transpose(layer_to_export.data))
-        # elif export_format == "tiff":
-        #     layer_to_export.save(selected_file)
 
         notif.show_info("Selected layer was exported successfully.")
