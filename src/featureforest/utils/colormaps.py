@@ -6,7 +6,7 @@ import matplotlib as mpl
 
 def is_new_napari():
     version = napari.__version__.split(".")
-    return int(version[2]) > 18
+    return int(version[1]) > 4 or int(version[2]) > 18
 
 
 def bit_get(val, idx):
