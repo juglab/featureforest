@@ -172,25 +172,18 @@ class SegmentationWidget(QWidget):
     def create_train_ui(self):
         tree_label = QLabel("Number of trees:")
         self.num_trees_textbox = QLineEdit()
-        self.num_trees_textbox.setText("300")
+        self.num_trees_textbox.setText("450")
         self.num_trees_textbox.setValidator(QIntValidator(1, 99999))
 
         depth_label = QLabel("Max depth:")
         self.max_depth_textbox = QLineEdit()
-        self.max_depth_textbox.setText("7")
+        self.max_depth_textbox.setText("9")
         self.max_depth_textbox.setValidator(QIntValidator(0, 99999))
         self.max_depth_textbox.setToolTip("set to 0 for unlimited depth.")
 
         train_button = QPushButton("Train RF Model")
         train_button.clicked.connect(self.train_model)
         train_button.setMinimumWidth(150)
-
-        # self.sam_progress = QProgressBar()
-        # self.save_storage_button = QPushButton("Save SAM Embeddings")
-        # self.save_storage_button.clicked.connect(self.save_embeddings)
-        # self.save_storage_button.setMinimumWidth(150)
-        # self.save_storage_button.setMaximumWidth(150)
-        # self.save_storage_button.setEnabled(False)
 
         self.model_status_label = QLabel("Model status:")
 
@@ -609,7 +602,10 @@ class SegmentationWidget(QWidget):
         rf_classifier = RandomForestClassifier(
             n_estimators=num_trees,
             max_depth=max_depth,
-            min_samples_leaf=1,
+            class_weight="balanced",
+            min_samples_split=15,
+            min_samples_leaf=3,
+            max_features=25,
             n_jobs=2 if os.cpu_count() < 5 else os.cpu_count() - 3,
             verbose=1
         )
