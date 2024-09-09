@@ -1,11 +1,11 @@
 # Feature Forest
 
-[![License BSD-3](https://img.shields.io/pypi/l/napari-sam-labeling-tools.svg?color=green)](https://github.com/juglab/napari-sam-labeling-tools/raw/main/LICENSE)
-[![PyPI](https://img.shields.io/pypi/v/napari-sam-labeling-tools.svg?color=green)](https://pypi.org/project/napari-sam-labeling-tools)
-[![Python Version](https://img.shields.io/pypi/pyversions/napari-sam-labeling-tools.svg?color=green)](https://python.org)
-[![tests](https://github.com/juglab/napari-sam-labeling-tools/workflows/tests/badge.svg)](https://github.com/juglab/napari-sam-labeling-tools/actions)
-[![codecov](https://codecov.io/gh/juglab/napari-sam-labeling-tools/branch/main/graph/badge.svg)](https://codecov.io/gh/juglab/napari-sam-labeling-tools)
-[![napari hub](https://img.shields.io/endpoint?url=https://api.napari-hub.org/shields/napari-sam-labeling-tools)](https://napari-hub.org/plugins/napari-sam-labeling-tools)
+[![License BSD-3](https://img.shields.io/pypi/l/featureforest.svg?color=green)](https://github.com/juglab/featureforest/raw/main/LICENSE)
+[![PyPI](https://img.shields.io/pypi/v/featureforest.svg?color=green)](https://pypi.org/project/featureforest)
+[![Python Version](https://img.shields.io/pypi/pyversions/featureforest.svg?color=green)](https://python.org)
+[![tests](https://github.com/juglab/featureforest/workflows/tests/badge.svg)](https://github.com/juglab/featureforest/actions)
+[![codecov](https://codecov.io/gh/juglab/featureforest/branch/main/graph/badge.svg)](https://codecov.io/gh/juglab/featureforest)
+[![napari hub](https://img.shields.io/endpoint?url=https://api.napari-hub.org/shields/featureforest)](https://napari-hub.org/plugins/featureforest)
 
 A napari plugin for segmentation using vision transformers' features.  
 We developed a *napari* plugin to train a *Random Forest* model using extracted embeddings of ViT models for input and just a few scribble labels provided by the user. This approach can do the segmentation of desired objects almost as well as manual segmentations but in a much shorter time with less manual effort.
@@ -54,9 +54,9 @@ cd ./featureforest
 pip install .
 ```
 
-<!-- You can install `napari-sam-labeling-tools` via [pip]:
+<!-- You can install `featureforest` via [pip]:
 
-    pip install napari-sam-labeling-tools -->
+    pip install featureforest -->
 
 
 
