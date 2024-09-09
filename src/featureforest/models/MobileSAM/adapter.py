@@ -51,7 +51,7 @@ class MobileSAMAdapter(BaseModelAdapter):
 
     def _set_patch_size(self) -> None:
         self.patch_size = get_patch_size(self.img_height, self.img_width)
-        self.overlap = 3 * self.patch_size // 4
+        self.overlap = self.patch_size // 2
 
     def get_features_patches(
         self, in_patches: Tensor
