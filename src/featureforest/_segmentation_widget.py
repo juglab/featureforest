@@ -17,7 +17,6 @@ from qtpy.QtCore import Qt
 from qtpy.QtGui import QIntValidator, QDoubleValidator
 
 import h5py
-import nrrd
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 
@@ -39,6 +38,7 @@ from .postprocess import (
     postprocess_with_sam_auto,
     get_sam_auto_masks
 )
+from .exports import EXPORTERS
 
 
 class SegmentationWidget(QWidget):
@@ -77,6 +77,7 @@ class SegmentationWidget(QWidget):
         self.create_train_ui()
         self.create_prediction_ui()
         self.create_postprocessing_ui()
+        self.create_export_ui()
 
         scroll_content = QWidget()
         scroll_content.setLayout(self.base_layout)
@@ -252,10 +253,6 @@ class SegmentationWidget(QWidget):
         self.predict_stop_button.setEnabled(False)
         self.prediction_progress = QProgressBar()
 
-        export_nrrd_button = QPushButton("Export To nrrd")
-        export_nrrd_button.setMinimumWidth(150)
-        export_nrrd_button.clicked.connect(lambda: self.export_segmentation("nrrd"))
-
         # layout
         layout = QVBoxLayout()
         vbox = QVBoxLayout()
@@ -275,10 +272,6 @@ class SegmentationWidget(QWidget):
         hbox.addWidget(self.predict_stop_button, alignment=Qt.AlignLeft)
         vbox.addLayout(hbox)
         vbox.addWidget(self.prediction_progress)
-        hbox = QHBoxLayout()
-        hbox.setContentsMargins(0, 15, 0, 0)
-        hbox.addWidget(export_nrrd_button, alignment=Qt.AlignLeft)
-        vbox.addLayout(hbox)
         layout.addLayout(vbox)
 
         gbox = QGroupBox()
@@ -365,14 +358,49 @@ class SegmentationWidget(QWidget):
         vbox.addSpacing(7)
         hbox = QHBoxLayout()
         hbox.setContentsMargins(0, 0, 0, 0)
-        hbox.addWidget(postprocess_button)
-        hbox.addWidget(postprocess_all_button)
+        hbox.addWidget(postprocess_button, alignment=Qt.AlignLeft)
+        hbox.addWidget(postprocess_all_button, alignment=Qt.AlignLeft)
         vbox.addLayout(hbox)
         # vbox.addSpacing(20)
         layout.addLayout(vbox)
 
         gbox = QGroupBox()
         gbox.setTitle("Post-processing")
+        gbox.setMinimumWidth(100)
+        gbox.setLayout(layout)
+        self.base_layout.addWidget(gbox)
+
+    def create_export_ui(self):
+        export_label = QLabel("Export Format:")
+        self.export_format_combo = QComboBox()
+        for exporter in EXPORTERS:
+            self.export_format_combo.addItem(exporter)
+
+        self.export_postprocess_checkbox = QCheckBox("Export with Post-processing")
+        self.export_postprocess_checkbox.setChecked(True)
+        self.export_postprocess_checkbox.setToolTip(
+            "Export segmentation result with applied post-processing, if available."
+        )
+
+        export_button = QPushButton("Export")
+        export_button.setMinimumWidth(150)
+        export_button.clicked.connect(self.export_segmentation)
+
+        # layout
+        layout = QVBoxLayout()
+        vbox = QVBoxLayout()
+        vbox.setContentsMargins(0, 0, 0, 0)
+        hbox = QHBoxLayout()
+        hbox.setContentsMargins(0, 0, 0, 0)
+        hbox.addWidget(export_label)
+        hbox.addWidget(self.export_format_combo)
+        vbox.addLayout(hbox)
+        vbox.addWidget(self.export_postprocess_checkbox)
+        vbox.addWidget(export_button, alignment=Qt.AlignLeft)
+        layout.addLayout(vbox)
+
+        gbox = QGroupBox()
+        gbox.setTitle("Export")
         gbox.setMinimumWidth(100)
         gbox.setLayout(layout)
         self.base_layout.addWidget(gbox)
@@ -809,16 +837,28 @@ class SegmentationWidget(QWidget):
 
         self.postprocess_layer.refresh()
 
-    def export_segmentation(self, out_format="nrrd"):
+    def export_segmentation(self):
         if self.segmentation_layer is None:
             notif.show_error("No segmentation layer is selected!")
             return
 
+        exporter = EXPORTERS[self.export_format_combo.currentText()]
+        # export_format = self.export_format_combo.currentText()
         selected_file, _filter = QFileDialog.getSaveFileName(
-            self, "Jug Lab", ".", "Segmentation(*.nrrd)"
+            self, "Jug Lab", ".", f"Segmentation(*.{exporter.extension})"
         )
-        if selected_file is not None and len(selected_file) > 0:
-            if not selected_file.endswith(".nrrd"):
-                selected_file += ".nrrd"
-            nrrd.write(selected_file, np.transpose(self.segmentation_layer.data))
-            notif.show_info("Selected segmentation was exported successfully.")
+        if selected_file is None or len(selected_file) == 0:
+            return  # user canceled export
+
+        if not selected_file.endswith(f".{exporter.extension}"):
+            selected_file += f".{exporter.extension}"
+        layer_to_export = self.segmentation_layer
+        if (
+            self.export_postprocess_checkbox.isChecked() and
+            self.postprocess_layer is not None
+        ):
+            layer_to_export = self.postprocess_layer
+
+        exporter.export(layer_to_export, selected_file)
+
+        notif.show_info("Selected layer was exported successfully.")
