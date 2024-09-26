@@ -154,7 +154,7 @@ class SegmentationWidget(QWidget):
         self.each_class_label = QLabel("Labels per class:")
         analyze_button = QPushButton("Analyze")
         analyze_button.setMinimumWidth(150)
-        analyze_button.clicked.connect(self.analyze_labels)
+        analyze_button.clicked.connect(lambda: self.analyze_labels())
         # layout
         layout = QVBoxLayout()
         vbox = QVBoxLayout()
@@ -519,8 +519,9 @@ class SegmentationWidget(QWidget):
 
         return labels_dict
 
-    def analyze_labels(self):
-        labels_dict = self.get_class_labels()
+    def analyze_labels(self, labels_dict: dict = None):
+        if labels_dict is None:
+            labels_dict = self.get_class_labels()
         num_labels = [len(v) for v in labels_dict.values()]
         self.num_class_label.setText(f"Number of classes: {len(num_labels)}")
         each_class = "\n".join([
@@ -531,11 +532,13 @@ class SegmentationWidget(QWidget):
     def get_train_data(self):
         # get ground truth class labels
         labels_dict = self.get_class_labels()
-        if not labels_dict:
+        if len(labels_dict) == 0:
             return None
         if self.storage is None:
             notif.show_error("No embeddings storage file is selected!")
             return None
+        # update labels stats
+        self.analyze_labels(labels_dict)
 
         num_slices, img_height, img_width = get_stack_dims(self.image_layer.data)
         num_labels = sum([len(v) for v in labels_dict.values()])
