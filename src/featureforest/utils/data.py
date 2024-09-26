@@ -58,9 +58,10 @@ def get_stride_margin(patch_size: int, overlap: int) -> Tuple[int, int]:
 
 
 def get_paddings(
-    patch_size: int, margin: int, img_height: float, img_width: float
+    patch_size: int, stride: int, margin: int,
+    img_height: float, img_width: float
 ) -> Tuple[int, int]:
-    """Calculate the image paddings.
+    """Calculate the image paddings (right and bottom).
 
     Args:
         patch_size (int): patch (sliding window) size
@@ -71,10 +72,13 @@ def get_paddings(
     Returns:
         Tuple[int, int]: right and bottom padding
     """
-    new_width = img_width + (2 * margin)
-    new_height = img_height + (2 * margin)
-    pad_right = patch_size - (new_width % patch_size)
-    pad_bottom = patch_size - (new_height % patch_size)
+    # pad amount should be enough to make the
+    # (final size - patch_size) / stride an integer number.
+    # see https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html
+    new_width = img_width + 2 * margin
+    pad_right = stride - ((new_width - patch_size) % stride)
+    new_height = img_height + 2 * margin
+    pad_bottom = stride - ((new_height - patch_size) % stride)
 
     return pad_right, pad_bottom
 
@@ -104,7 +108,7 @@ def patchify(
         overlap = patch_size // 2
 
     stride, margin = get_stride_margin(patch_size, overlap)
-    pad_right, pad_bottom = get_paddings(patch_size, margin, img_height, img_width)
+    pad_right, pad_bottom = get_paddings(patch_size, stride, margin, img_height, img_width)
     pad = (margin, pad_right + margin, margin, pad_bottom + margin)
     padded_imgs = F.pad(images, pad=pad, mode="reflect")
     # making patches using torch unfold method
@@ -133,11 +137,13 @@ def get_num_patches(
         Tuple[int, int]: number of patches for height and width of image
     """
     stride, margin = get_stride_margin(patch_size, overlap)
-    pad_right, pad_bottom = get_paddings(patch_size, margin, img_height, img_width)
-    num_patches_w = (img_width + pad_right) / stride
+    pad_right, pad_bottom = get_paddings(patch_size, stride, margin, img_height, img_width)
+    new_width = img_width + pad_right + 2 * margin
+    num_patches_w = ((new_width - patch_size) / stride) + 1
     assert int(num_patches_w) == num_patches_w, \
         f"number of patches in width {num_patches_w} is not an integer!"
-    num_patches_h = (img_height + pad_bottom) / stride
+    new_height = img_height + pad_bottom + 2 * margin
+    num_patches_h = ((new_height - patch_size) / stride) + 1
     assert int(num_patches_h) == num_patches_h, \
         f"number of patches in height {num_patches_h} is not an integer!"
 
