@@ -42,7 +42,7 @@ def get_patch_size(
 
 
 def get_stride_margin(patch_size: int, overlap: int) -> Tuple[int, int]:
-    """Calculate the sliding stride (step), and the margin needs to be added to image
+    """Calculate the patching stride (step), and the margin pad needed to be added to image
         to have complete patches covering all pixels.
 
     Args:
@@ -53,7 +53,7 @@ def get_stride_margin(patch_size: int, overlap: int) -> Tuple[int, int]:
         Tuple[int, int]: sliding stride and margin
     """
     stride = patch_size - overlap
-    margin = (patch_size - stride) // 2
+    margin = overlap // 2
     return stride, margin
 
 
@@ -99,9 +99,9 @@ def patchify(
     _, c, img_height, img_width = images.shape
     if patch_size is None:
         patch_size = get_patch_size(img_height, img_width)
-        overlap = 3 * patch_size // 4
+        overlap = patch_size // 2
     if overlap is None:
-        overlap = 3 * patch_size // 4
+        overlap = patch_size // 2
 
     stride, margin = get_stride_margin(patch_size, overlap)
     pad_right, pad_bottom = get_paddings(patch_size, margin, img_height, img_width)
@@ -136,10 +136,10 @@ def get_num_patches(
     pad_right, pad_bottom = get_paddings(patch_size, margin, img_height, img_width)
     num_patches_w = (img_width + pad_right) / stride
     assert int(num_patches_w) == num_patches_w, \
-        f"number of width patches {num_patches_w} is not integer!"
+        f"number of patches in width {num_patches_w} is not an integer!"
     num_patches_h = (img_height + pad_bottom) / stride
     assert int(num_patches_h) == num_patches_h, \
-        f"number of height patches {num_patches_h} is not integer!"
+        f"number of patches in height {num_patches_h} is not an integer!"
 
     return int(num_patches_h), int(num_patches_w)
 
