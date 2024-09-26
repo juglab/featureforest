@@ -46,7 +46,7 @@ class DinoV2Adapter(BaseModelAdapter):
 
     def _set_patch_size(self) -> None:
         self.patch_size = self.dino_patch_size * 5
-        self.overlap = self.dino_patch_size * 3
+        self.overlap = self.dino_patch_size * 2
 
     def get_features_patches(
         self, in_patches: Tensor
