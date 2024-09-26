@@ -309,7 +309,7 @@ class SegmentationWidget(QWidget):
         validator = QDoubleValidator(0.0, 1.0, 2)
         validator.setNotation(QDoubleValidator.StandardNotation)
         self.sam_auto_threshold_textbox.setValidator(validator)
-        self.sam_auto_threshold_textbox.setText("0.45")
+        self.sam_auto_threshold_textbox.setText("0.35")
         self.sam_auto_threshold_textbox.setToolTip(
             "Keeps prediction mask regions with having IOU against SAM generated masks"
             " above the threshold (should be between [0, 1])."
