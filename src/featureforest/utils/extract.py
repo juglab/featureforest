@@ -56,7 +56,8 @@ def get_slice_features(
     total_channels = model_adapter.get_total_output_channels()
     stride, _ = get_stride_margin(patch_size, overlap)
     dataset = storage_group.create_dataset(
-        model_adapter.name, shape=(num_patches, stride, stride, total_channels)
+        model_adapter.name, shape=(num_patches, stride, stride, total_channels),
+        dtype=np.float16
     )
 
     # get sam encoder output for image patches
@@ -71,14 +72,14 @@ def get_slice_features(
         if not isinstance(slice_features, tuple):
             # model has only one output
             num_out = slice_features.shape[0]  # to take care of the last batch size
-            dataset[start : start + num_out] = slice_features
+            dataset[start : start + num_out] = slice_features.to(torch.float16)
         else:
             # model has more than one output: put them into storage one by one
             ch_start = 0
             for feat in slice_features:
                 num_out = feat.shape[0]
                 ch_end = ch_start + feat.shape[-1]  # number of features
-                dataset[start : start + num_out, :, :, ch_start:ch_end] = feat
+                dataset[start : start + num_out, :, :, ch_start:ch_end] = feat.to(torch.float16)
                 ch_start = ch_end
         yield b_idx
 
@@ -104,9 +105,9 @@ def extract_embeddings_to_file(
         for slice_index in np_progress(
             range(num_slices), desc="extract features for slices"
         ):
-            slice = image[slice_index] if num_slices > 1 else image
+            slice_img = image[slice_index] if num_slices > 1 else image
             slice_grp = storage.create_group(str(slice_index))
             for _ in get_slice_features(
-                slice, patch_size, overlap, model_adapter, slice_grp
+                slice_img, patch_size, overlap, model_adapter, slice_grp
             ):
                 yield slice_index, num_slices
