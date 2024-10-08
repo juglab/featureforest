@@ -105,9 +105,9 @@ def extract_embeddings_to_file(
         for slice_index in np_progress(
             range(num_slices), desc="extract features for slices"
         ):
-            slice = image[slice_index] if num_slices > 1 else image
+            slice_img = image[slice_index] if num_slices > 1 else image
             slice_grp = storage.create_group(str(slice_index))
             for _ in get_slice_features(
-                slice, patch_size, overlap, model_adapter, slice_grp
+                slice_img, patch_size, overlap, model_adapter, slice_grp
             ):
                 yield slice_index, num_slices
