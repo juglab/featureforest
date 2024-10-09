@@ -1,0 +1,31 @@
+name: featureforest
+channels:
+  - pytorch
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.9
+  - pyqt=5.15.10
+  - qtpy
+  - magicgui
+  - scikit-learn
+  - scikit-image
+  - scipy
+  - napari
+  - napari-console
+  - napari-plugin-engine
+  - napari-svg
+  - h5py
+  - pytorch=2.1.2
+  - torchvision=0.16.2
+  - pooch
+  - pip
+  - pip:
+    - numpy==1.23.5    # timm drops deprecation warnings with newer versions
+    - matplotlib
+    - opencv-python
+    - timm
+    - pynrrd
+    - git+https://github.com/facebookresearch/segment-anything.git
+    - segment-anything-hq
+    - git+https://github.com/juglab/featureforest.git
