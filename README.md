@@ -1,11 +1,11 @@
 # Feature Forest
 
-[![License BSD-3](https://img.shields.io/pypi/l/featureforest.svg?color=green)](https://github.com/juglab/featureforest/raw/main/LICENSE)
-[![PyPI](https://img.shields.io/pypi/v/featureforest.svg?color=green)](https://pypi.org/project/featureforest)
-[![Python Version](https://img.shields.io/pypi/pyversions/featureforest.svg?color=green)](https://python.org)
-[![tests](https://github.com/juglab/featureforest/workflows/tests/badge.svg)](https://github.com/juglab/featureforest/actions)
-[![codecov](https://codecov.io/gh/juglab/featureforest/branch/main/graph/badge.svg)](https://codecov.io/gh/juglab/featureforest)
-[![napari hub](https://img.shields.io/endpoint?url=https://api.napari-hub.org/shields/featureforest)](https://napari-hub.org/plugins/featureforest)
+<!-- [![License BSD-3](https://img.shields.io/pypi/l/featureforest.svg?color=green)](https://github.com/juglab/featureforest/blob/main/LICENSE) -->
+<!-- [![PyPI](https://img.shields.io/pypi/v/featureforest.svg?color=green)](https://pypi.org/project/featureforest) -->
+<!-- [![Python Version](https://img.shields.io/pypi/pyversions/featureforest.svg?color=green)](https://python.org) -->
+<!-- [![tests](https://github.com/juglab/featureforest/workflows/tests/badge.svg)](https://github.com/juglab/featureforest/actions) -->
+<!-- [![codecov](https://codecov.io/gh/juglab/featureforest/branch/main/graph/badge.svg)](https://codecov.io/gh/juglab/featureforest)
+[![napari hub](https://img.shields.io/endpoint?url=https://api.napari-hub.org/shields/featureforest)](https://napari-hub.org/plugins/featureforest) -->
 
 A napari plugin for segmentation using vision transformers' features.  
 We developed a *napari* plugin to train a *Random Forest* model using extracted embeddings of ViT models for input and just a few scribble labels provided by the user. This approach can do the segmentation of desired objects almost as well as manual segmentations but in a much shorter time with less manual effort.
@@ -17,9 +17,14 @@ The plugin documentation is [here](docs/index.md).
 
 ## Installation
 It is highly recommended to use a python environment manager like [conda] to create a clean environment for installation.  
-You can install all the requirements using provided environment config file ([`env.yml`](env.yml)):  
+You can install all the requirements using provided environment config files:  
 ```bash
-conda env create -f ./env.yml
+# for GPU
+conda env create -f ./env_gpu.yml
+```
+```bash
+# if you don't have a GPU
+conda env create -f ./env_cpu.yml
 ```
 
 ### Requirements
@@ -34,12 +39,12 @@ conda env create -f ./env.yml
 - `qtpy`
 - `napari`
 - `h5py`
-- `pytorch`
-- `torchvision`
+- `pytorch=2.1.2`
+- `torchvision=0.16.2`
 - `timm`
 - `pynrrd`
 
-If you want to use GPU, please follow the pytorch installation instruction [here](https://pytorch.org/get-started/locally/).  
+If you want to install the plugin manually using GPU, please follow the pytorch installation instruction [here](https://pytorch.org/get-started/locally/).  
 For detailed napari installation see [here](https://napari.org/stable/tutorials/fundamentals/installation).  
 
 ### Installing The Plugin
