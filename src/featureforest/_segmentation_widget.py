@@ -106,7 +106,7 @@ class SegmentationWidget(QWidget):
         self.image_combo = QComboBox()
         self.image_combo.currentIndexChanged.connect(self.clear_sam_auto_masks)
         # sam storage
-        storage_label = QLabel("SAM Embeddings Storage:")
+        storage_label = QLabel("Feature Storage:")
         self.storage_textbox = QLineEdit()
         self.storage_textbox.setReadOnly(True)
         storage_button = QPushButton("Select...")
