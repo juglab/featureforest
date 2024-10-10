@@ -65,6 +65,8 @@ dev = [
     "pre-commit",
     "pytest",
     "pytest-cov",
+    "tox",
+    "tox-gh-actions",
     "sybil",      # doctesting
 ]
 [project.urls]
