@@ -68,10 +68,10 @@ def test_mock_adapter(test_patch: np.ndarray):
 @pytest.mark.parametrize(
     "test_image, expected_output_shape, expected_slices",
     [
-        (np.ones((256, 256)), (25, 64, 64, 320), 1),  # 2D
-        (np.ones((256, 256, 3)), (25, 64, 64, 320), 1),  # 2D RGB
-        (np.ones((2, 256, 256)), (25, 64, 64, 320), 2),  # 3D
-        (np.ones((2, 256, 256, 3)), (25, 64, 64, 320), 2)  # 3D RGB
+        (np.ones((256, 256)), (9, 128, 128, 320), 1),  # 2D
+        (np.ones((256, 256, 3)), (9, 128, 128, 320), 1),  # 2D RGB
+        (np.ones((2, 256, 256)), (9, 128, 128, 320), 2),  # 3D
+        (np.ones((2, 256, 256, 3)), (9, 128, 128, 320), 2)  # 3D RGB
     ],
 )
 def test_mobilesam_embedding_extraction(

@@ -10,12 +10,12 @@ markers = [
 
 
 [tool.black]
-line-length = 88
+line-length = 90
 target-version = ['py38', 'py39', 'py310']
 
 
 [tool.ruff]
-line-length = 88
+line-length = 90
 select = [
     "E", "F", "W", #flake8
     "UP", # pyupgrade

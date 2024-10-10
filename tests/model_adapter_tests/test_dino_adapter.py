@@ -61,10 +61,10 @@ def test_mock_adapter(test_patch: np.ndarray):
 @pytest.mark.parametrize(
     "test_image, expected_output_shape, expected_slices",
     [
-        (np.ones((256, 256)), (121, 28, 28, 384), 1),  # 2D
-        (np.ones((256, 256, 3)), (121, 28, 28, 384), 1),  # 2D RGB
-        (np.ones((2, 256, 256)), (121, 28, 28, 384), 2),  # 3D
-        (np.ones((2, 256, 256, 3)), (121, 28, 28, 384), 2),  # 3D RGB
+        (np.ones((256, 256)), (49, 42, 42, 384), 1),  # 2D
+        (np.ones((256, 256, 3)), (49, 42, 42, 384), 1),  # 2D RGB
+        (np.ones((2, 256, 256)), (49, 42, 42, 384), 2),  # 3D
+        (np.ones((2, 256, 256, 3)), (49, 42, 42, 384), 2),  # 3D RGB
     ],
 )
 def test_dino_embedding_extraction(
