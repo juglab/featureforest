@@ -1,11 +1,11 @@
 # Feature Forest
 
-<!-- [![License BSD-3](https://img.shields.io/pypi/l/featureforest.svg?color=green)](https://github.com/juglab/featureforest/blob/main/LICENSE) -->
-<!-- [![PyPI](https://img.shields.io/pypi/v/featureforest.svg?color=green)](https://pypi.org/project/featureforest) -->
-<!-- [![Python Version](https://img.shields.io/pypi/pyversions/featureforest.svg?color=green)](https://python.org) -->
-<!-- [![tests](https://github.com/juglab/featureforest/workflows/tests/badge.svg)](https://github.com/juglab/featureforest/actions) -->
-<!-- [![codecov](https://codecov.io/gh/juglab/featureforest/branch/main/graph/badge.svg)](https://codecov.io/gh/juglab/featureforest)
-[![napari hub](https://img.shields.io/endpoint?url=https://api.napari-hub.org/shields/featureforest)](https://napari-hub.org/plugins/featureforest) -->
+[![License BSD-3](https://img.shields.io/pypi/l/featureforest.svg?color=green)](https://github.com/juglab/featureforest/blob/main/LICENSE)
+[![PyPI](https://img.shields.io/pypi/v/featureforest.svg?color=green)](https://pypi.org/project/featureforest)
+[![Python Version](https://img.shields.io/pypi/pyversions/featureforest.svg?color=green)](https://python.org)
+[![tests](https://github.com/juglab/featureforest/workflows/tests/badge.svg)](https://github.com/juglab/featureforest/actions)
+[![codecov](https://codecov.io/gh/juglab/featureforest/branch/main/graph/badge.svg)](https://codecov.io/gh/juglab/featureforest)
+[![napari hub](https://img.shields.io/endpoint?url=https://api.napari-hub.org/shields/featureforest)](https://napari-hub.org/plugins/featureforest)
 
 A napari plugin for segmentation using vision transformers' features.  
 We developed a *napari* plugin to train a *Random Forest* model using extracted embeddings of ViT models for input and just a few scribble labels provided by the user. This approach can do the segmentation of desired objects almost as well as manual segmentations but in a much shorter time with less manual effort.
