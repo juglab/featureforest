@@ -57,7 +57,7 @@ dependencies = [
     "h5py",
     "pooch",
     "timm",
-    "segment-anything@git+https://github.com/facebookresearch/segment-anything.git",
+    "segment-anything-py",
     "segment-anything-hq",
 ]
 [project.optional-dependencies]
