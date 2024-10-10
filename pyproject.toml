@@ -1,6 +1,75 @@
+# https://peps.python.org/pep-0517/
+
 [build-system]
-requires = ["setuptools>=42.0.0", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+# read more about configuring hatch at:
+# https://hatch.pypa.io/latest/config/build/
+
+# https://hatch.pypa.io/latest/config/metadata/
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+only-include = ["src"]
+sources = ["src"]
+
+# https://peps.python.org/pep-0621/
+[project]
+name = "featureforest"
+dynamic = ["version"]
+description = "A napari plugin for segmentation using vision transformer models' features"
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "BSD-3-Clause" }
+authors = [
+    { name = "Mehdi Seifi", email = "mehdi.seifi@fht.org" },
+    { name = "Vera Galinova", email = "vera.galinova@fht.org" },
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Framework :: napari",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: BSD License",
+    "Topic :: Scientific/Engineering :: Image Processing",
+]
+dependencies = [
+    "numpy==1.23.5",
+    "torch==2.1.2",
+    "torchvision==0.16.2",
+    "opencv-python",
+    "scikit-learn",
+    "scikit-image",
+    "matplotlib",
+    "pynrrd",
+    "napari",
+    "magicgui",
+    "qtpy",
+    "h5py",
+    "pooch",
+    "timm",
+    "segment-anything @ git+https://github.com/facebookresearch/segment-anything.git",
+    "segment-anything-hq",
+]
+[project.optional-dependencies]
+# development dependencies and tooling
+dev = [
+    "pre-commit",
+    "pytest",
+    "pytest-cov",
+    "sybil",      # doctesting
+]
+[project.urls]
+homepage = "https://featureforest.github.io/"
+repository = "https://github.com/juglab/featureforest"
 
 
 [tool.pytest.ini_options]
@@ -16,6 +85,8 @@ target-version = ['py38', 'py39', 'py310']
 
 [tool.ruff]
 line-length = 90
+target-version = "py38"
+src = ["src"]
 select = [
     "E", "F", "W", #flake8
     "UP", # pyupgrade
@@ -57,5 +128,4 @@ exclude = [
     "*_vendor*",
 ]
 
-target-version = "py38"
-fix = true
+show-fixes = true
