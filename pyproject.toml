@@ -50,7 +50,7 @@ dependencies = [
     "scikit-image",
     "matplotlib",
     "pynrrd",
-    "pyqt==5.15.10",
+    "PyQt5",
     "magicgui",
     "qtpy",
     "napari",
