@@ -34,7 +34,7 @@ class BaseModelAdapter:
         self.device = device
         # set patch size and overlap
         self.patch_size = 512
-        self.overlap = 3 * self.patch_size // 4
+        self.overlap = self.patch_size // 2
         # input image transforms
         self.input_transforms = tv_transforms2.Compose([
             tv_transforms2.Resize(
@@ -53,15 +53,16 @@ class BaseModelAdapter:
         ])
 
     def _set_patch_size(self) -> None:
-        """Sets the proper patch size and patch overlap with respect to the model
+        """Sets the proper patch size and patch overlap
+        with respect to the model & image resolution.
         """
         raise NotImplementedError
 
     def get_features_patches(
         self, in_patches: Tensor
     ) -> Tensor:
-        """Returns a tensor of model's extracted features.
-        This function is more like an abstract function, and should be overridden.
+        """Returns model's extracted features.
+        This is an abstract function, and should be overridden.
 
         Args:
             in_patches (Tensor): input patches
@@ -83,7 +84,7 @@ class BaseModelAdapter:
         return feature_patches
 
     def get_total_output_channels(self) -> int:
-        """Returns total number of model output channels (a.k.a. number of feature maps).
+        """Returns total number of model output channels (number of feature maps).
 
         Returns:
             int: total number of output channels
