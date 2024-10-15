@@ -1,5 +1,6 @@
 import os
 import pickle
+from pathlib import Path
 
 import napari
 import napari.utils.notifications as notif
@@ -18,6 +19,7 @@ from qtpy.QtGui import QIntValidator, QDoubleValidator
 
 import h5py
 import numpy as np
+from tifffile import TiffFile
 from sklearn.ensemble import RandomForestClassifier
 
 from .models import get_model
@@ -78,6 +80,7 @@ class SegmentationWidget(QWidget):
         self.create_prediction_ui()
         self.create_postprocessing_ui()
         self.create_export_ui()
+        self.create_large_stack_prediction_ui()
 
         scroll_content = QWidget()
         scroll_content.setLayout(self.base_layout)
@@ -394,6 +397,53 @@ class SegmentationWidget(QWidget):
 
         gbox = QGroupBox()
         gbox.setTitle("Export")
+        gbox.setMinimumWidth(100)
+        gbox.setLayout(layout)
+        self.base_layout.addWidget(gbox)
+
+    def create_large_stack_prediction_ui(self):
+        stack_label = QLabel("Select your stack:")
+        self.large_stack_textbox = QLineEdit()
+        self.large_stack_textbox.setReadOnly(True)
+        stack_button = QPushButton("Select...")
+        stack_button.clicked.connect(self.select_stack)
+
+        result_label = QLabel("Result Directory:")
+        self.result_dir_textbox = QLineEdit()
+        self.result_dir_textbox.setReadOnly(True)
+        result_dir_button = QPushButton("Select...")
+        result_dir_button.clicked.connect(self.select_result_dir)
+
+        self.large_stack_info = QLabel("stack info")
+
+        run_pipeline_button = QPushButton("Run Prediction")
+        run_pipeline_button.clicked.connect(self.run_pipeline_over_large_stack)
+
+        self.pipeline_progressbar = QProgressBar()
+
+        # layout
+        layout = QVBoxLayout()
+        vbox = QVBoxLayout()
+        vbox.setContentsMargins(0, 0, 0, 0)
+        vbox.addWidget(stack_label)
+        hbox = QHBoxLayout()
+        hbox.setContentsMargins(0, 0, 0, 0)
+        hbox.addWidget(self.large_stack_textbox)
+        hbox.addWidget(stack_button)
+        vbox.addLayout(hbox)
+        vbox.addWidget(result_label)
+        hbox = QHBoxLayout()
+        hbox.setContentsMargins(0, 0, 0, 0)
+        hbox.addWidget(self.result_dir_textbox)
+        hbox.addWidget(result_dir_button)
+        vbox.addLayout(hbox)
+        vbox.addWidget(self.large_stack_info)
+        vbox.addWidget(run_pipeline_button, alignment=Qt.AlignLeft)
+        vbox.addWidget(self.pipeline_progressbar)
+        layout.addLayout(vbox)
+
+        gbox = QGroupBox()
+        gbox.setTitle("Run Prediction Pipeline")
         gbox.setMinimumWidth(100)
         gbox.setLayout(layout)
         self.base_layout.addWidget(gbox)
@@ -861,3 +911,47 @@ class SegmentationWidget(QWidget):
         exporter.export(layer_to_export, selected_file)
 
         notif.show_info("Selected layer was exported successfully.")
+
+    def select_stack(self):
+        selected_file, _filter = QFileDialog.getOpenFileName(
+            self, "Jug Lab", ".", "TIFF stack (*.tiff *.tif)"
+        )
+        if selected_file is not None and len(selected_file) > 0:
+            # get stack info
+            with TiffFile(selected_file) as tiff_stack:
+                axes = tiff_stack.series[0].axes
+                assert ("Y" in axes) and ("X" in axes), "Could not find YX in the stack axes!"
+                stack_dims = tiff_stack.series[0].shape
+            stack_height = stack_dims[axes.index("Y")]
+            stack_width = stack_dims[axes.index("X")]
+            # selected stack image dimensions should be as the same as the current image
+            self.image_layer = get_layer(
+                self.viewer,
+                self.image_combo.currentText(), config.NAPARI_IMAGE_LAYER
+            )
+            if self.image_layer is not None:
+                _, img_height, img_width = get_stack_dims(self.image_layer.data)
+            else:
+                img_height, img_width = 0, 0
+            if img_height != stack_height or img_width != stack_width:
+                notif.show_error("Stack image dimensions do not match the current image!")
+                return
+            # tutto bene!
+            self.large_stack_textbox.setText(selected_file)
+            self.large_stack_info.setText(
+                f"Axes: {axes}, Dims: {stack_dims}, DType: {tiff_stack.series[0].dtype}"
+            )
+            # set default result directory
+            res_dir = Path(selected_file).parent
+            self.result_dir_textbox.setText(str(res_dir.absolute()))
+
+    def select_result_dir(self):
+        selected_dir = QFileDialog.getExistingDirectory(
+            self, "Select a directory", self.large_stack_textbox.text(),
+            QFileDialog.ShowDirsOnly | QFileDialog.DontResolveSymlinks
+        )
+        if selected_dir is not None and len(selected_dir) > 0:
+            self.result_dir_textbox.setText(selected_dir)
+
+    def run_pipeline_over_large_stack(self):
+        pass
