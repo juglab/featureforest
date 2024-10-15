@@ -75,6 +75,9 @@ homepage = "https://featureforest.github.io/"
 repository = "https://github.com/juglab/featureforest"
 
 
+[project.entry-points."napari.manifest"]
+featureforest = "featureforest:napari.yaml"
+
 [tool.pytest.ini_options]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
