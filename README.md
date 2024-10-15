@@ -41,7 +41,7 @@ conda env create -f ./env_cpu.yml
 - `h5py`
 - `pytorch=2.1.2`
 - `torchvision=0.16.2`
-- `timm`
+- `timm=1.0.9`
 - `pynrrd`
 
 If you want to install the plugin manually using GPU, please follow the pytorch installation instruction [here](https://pytorch.org/get-started/locally/).  
