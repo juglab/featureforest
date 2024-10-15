@@ -24,7 +24,7 @@ dependencies:
     - numpy==1.23.5    # timm drops deprecation warnings with newer versions
     - matplotlib
     - opencv-python
-    - timm
+    - timm==1.0.9
     - pynrrd
     - git+https://github.com/facebookresearch/segment-anything.git
     - segment-anything-hq
