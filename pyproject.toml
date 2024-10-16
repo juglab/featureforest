@@ -56,7 +56,7 @@ dependencies = [
     "napari",
     "h5py",
     "pooch",
-    "timm",
+    "timm==1.0.9",
     "segment-anything-py",
     "segment-anything-hq",
 ]
