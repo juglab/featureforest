@@ -61,8 +61,8 @@ def get_slice_features(
     )
 
     # get sam encoder output for image patches
-    print("\nextracting slice features:")
-    for b_idx in np_progress(range(num_batches), desc="extracting slice feature:"):
+    print("\nextracting features:")
+    for b_idx in np_progress(range(num_batches), desc="extracting feature:"):
         print(f"batch #{b_idx + 1} of {num_batches}")
         start = b_idx * batch_size
         end = start + batch_size
@@ -105,9 +105,12 @@ def extract_embeddings_to_file(
         for slice_index in np_progress(
             range(num_slices), desc="extract features for slices"
         ):
+            print(f"slice index: {slice_index}")
             slice_img = image[slice_index] if num_slices > 1 else image
             slice_grp = storage.create_group(str(slice_index))
             for _ in get_slice_features(
                 slice_img, patch_size, overlap, model_adapter, slice_grp
             ):
-                yield slice_index, num_slices
+                pass
+
+            yield slice_index, num_slices

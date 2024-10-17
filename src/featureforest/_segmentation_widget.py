@@ -1,5 +1,7 @@
 import os
 import pickle
+import warnings
+from pathlib import Path
 
 import napari
 import napari.utils.notifications as notif
@@ -18,6 +20,8 @@ from qtpy.QtGui import QIntValidator, QDoubleValidator
 
 import h5py
 import numpy as np
+import tifffile
+from tifffile import TiffFile
 from sklearn.ensemble import RandomForestClassifier
 
 from .models import get_model
@@ -39,6 +43,9 @@ from .postprocess import (
     get_sam_auto_masks
 )
 from .exports import EXPORTERS
+from .utils.pipeline_prediction import (
+    extract_predict
+)
 
 
 class SegmentationWidget(QWidget):
@@ -78,6 +85,7 @@ class SegmentationWidget(QWidget):
         self.create_prediction_ui()
         self.create_postprocessing_ui()
         self.create_export_ui()
+        self.create_large_stack_prediction_ui()
 
         scroll_content = QWidget()
         scroll_content.setLayout(self.base_layout)
@@ -398,6 +406,63 @@ class SegmentationWidget(QWidget):
         gbox.setLayout(layout)
         self.base_layout.addWidget(gbox)
 
+    def create_large_stack_prediction_ui(self):
+        stack_label = QLabel("Select your stack:")
+        self.large_stack_textbox = QLineEdit()
+        self.large_stack_textbox.setReadOnly(True)
+        stack_button = QPushButton("Select...")
+        stack_button.clicked.connect(self.select_stack)
+
+        result_label = QLabel("Result Directory:")
+        self.result_dir_textbox = QLineEdit()
+        self.result_dir_textbox.setReadOnly(True)
+        result_dir_button = QPushButton("Select...")
+        result_dir_button.clicked.connect(self.select_result_dir)
+
+        self.large_stack_info = QLabel("stack info")
+
+        self.run_pipeline_button = QPushButton("Run Prediction")
+        self.run_pipeline_button.setMinimumWidth(150)
+        self.run_pipeline_button.clicked.connect(self.run_pipeline_over_large_stack)
+        self.stop_pipeline_button = QPushButton("Stop")
+        self.stop_pipeline_button.setMinimumWidth(150)
+        self.stop_pipeline_button.setEnabled(False)
+        self.stop_pipeline_button.clicked.connect(self.stop_pipeline)
+
+
+        self.pipeline_progressbar = QProgressBar()
+
+        # layout
+        layout = QVBoxLayout()
+        vbox = QVBoxLayout()
+        vbox.setContentsMargins(0, 0, 0, 0)
+        vbox.addWidget(stack_label)
+        hbox = QHBoxLayout()
+        hbox.setContentsMargins(0, 0, 0, 0)
+        hbox.addWidget(self.large_stack_textbox)
+        hbox.addWidget(stack_button)
+        vbox.addLayout(hbox)
+        vbox.addWidget(result_label)
+        hbox = QHBoxLayout()
+        hbox.setContentsMargins(0, 0, 0, 0)
+        hbox.addWidget(self.result_dir_textbox)
+        hbox.addWidget(result_dir_button)
+        vbox.addLayout(hbox)
+        vbox.addWidget(self.large_stack_info)
+        hbox = QHBoxLayout()
+        hbox.setContentsMargins(0, 0, 0, 0)
+        hbox.addWidget(self.run_pipeline_button, alignment=Qt.AlignLeft)
+        hbox.addWidget(self.stop_pipeline_button, alignment=Qt.AlignLeft)
+        vbox.addLayout(hbox)
+        vbox.addWidget(self.pipeline_progressbar)
+        layout.addLayout(vbox)
+
+        gbox = QGroupBox()
+        gbox.setTitle("Run Prediction Pipeline")
+        gbox.setMinimumWidth(100)
+        gbox.setLayout(layout)
+        self.base_layout.addWidget(gbox)
+
     def new_layer_checkbox_changed(self):
         state = self.new_layer_checkbox.checkState()
         self.prediction_layer_combo.setEnabled(state == Qt.Unchecked)
@@ -623,10 +688,34 @@ class SegmentationWidget(QWidget):
             self, "Jug Lab", ".", "model(*.bin)"
         )
         if len(selected_file) > 0:
-            with open(selected_file, mode="rb") as f:
-                self.rf_model = pickle.load(f)
-            notif.show_info("Model was loaded successfully.")
-            self.model_status_label.setText("Model status: Ready!")
+            # to suppress the sklearn InconsistentVersionWarning
+            # which stops the napari (probably a napari bug).
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                # load the rf model
+                with open(selected_file, mode="rb") as f:
+                    model_data = pickle.load(f)
+                # compatibility check for old format rf model
+                if isinstance(model_data, dict):
+                    # new format
+                    self.rf_model = model_data["rf_model"]
+                    # if there is no model_adapter loaded already
+                    # (users can just load the rf model)
+                    if self.model_adapter is None:
+                        model_name = model_data["model_name"]
+                        self.patch_size = model_data["patch_size"]
+                        self.overlap = model_data["overlap"]
+                        img_height = model_data["img_height"]
+                        img_width = model_data["img_width"]
+                        # init the model adapter
+                        self.model_adapter = get_model(model_name, img_height, img_width)
+                else:
+                    # old format
+                    self.rf_model = model_data
+
+                notif.show_info("Model was loaded successfully.")
+                self.model_status_label.setText("Model status: Ready!")
+                self.model_save_button.setEnabled(True)
 
     def save_rf_model(self):
         if self.rf_model is None:
@@ -638,8 +727,17 @@ class SegmentationWidget(QWidget):
         if len(selected_file) > 0:
             if not selected_file.endswith(".bin"):
                 selected_file += ".bin"
+            # save rf model along with metadata
+            model_data = {
+                "rf_model": self.rf_model,
+                "model_name": self.model_adapter.name,
+                "img_height": self.storage.attrs["img_height"],
+                "img_width": self.storage.attrs["img_width"],
+                "patch_size": self.patch_size,
+                "overlap": self.overlap
+            }
             with open(selected_file, mode="wb") as f:
-                pickle.dump(self.rf_model, f)
+                pickle.dump(model_data, f)
             notif.show_info("Model was saved successfully.")
 
     def predict(self, whole_stack=False):
@@ -686,12 +784,12 @@ class SegmentationWidget(QWidget):
         if whole_stack:
             self.predict_stop_button.setEnabled(True)
         # run prediction in another thread
-        self.prediction_worker = create_worker(
+        self.predict_worker = create_worker(
             self.run_prediction, slice_indices, img_height, img_width
         )
-        self.prediction_worker.yielded.connect(self.update_prediction_progress)
-        self.prediction_worker.finished.connect(self.prediction_is_done)
-        self.prediction_worker.run()
+        self.predict_worker.yielded.connect(self.update_prediction_progress)
+        self.predict_worker.finished.connect(self.prediction_is_done)
+        self.predict_worker.run()
 
     def run_prediction(self, slice_indices, img_height, img_width):
         for slice_index in np_progress(slice_indices):
@@ -750,9 +848,9 @@ class SegmentationWidget(QWidget):
         return segmentation_image
 
     def stop_predict(self):
-        if self.prediction_worker is not None:
-            self.prediction_worker.quit()
-            self.prediction_worker = None
+        if self.predict_worker is not None:
+            self.predict_worker.quit()
+            self.predict_worker = None
         self.predict_stop_button.setEnabled(False)
 
     def update_prediction_progress(self, values):
@@ -768,15 +866,7 @@ class SegmentationWidget(QWidget):
         print("Prediction is done!")
         notif.show_info("Prediction is done!")
 
-    def postprocess_segmentation(self, whole_stack=False):
-        self.segmentation_layer = get_layer(
-            self.viewer,
-            self.prediction_layer_combo.currentText(), config.NAPARI_LABELS_LAYER
-        )
-        if self.segmentation_layer is None:
-            notif.show_error("No segmentation layer is selected!")
-            return
-
+    def get_postprocess_params(self):
         smoothing_iterations = 25
         if len(self.smoothing_iteration_textbox.text()) > 0:
             smoothing_iterations = int(self.smoothing_iteration_textbox.text())
@@ -787,6 +877,19 @@ class SegmentationWidget(QWidget):
         area_is_absolute = False
         if self.area_abs_radiobutton.isChecked():
             area_is_absolute = True
+
+        return smoothing_iterations, area_threshold, area_is_absolute
+
+    def postprocess_segmentation(self, whole_stack=False):
+        self.segmentation_layer = get_layer(
+            self.viewer,
+            self.prediction_layer_combo.currentText(), config.NAPARI_LABELS_LAYER
+        )
+        if self.segmentation_layer is None:
+            notif.show_error("No segmentation layer is selected!")
+            return
+
+        smoothing_iterations, area_threshold, area_is_absolute = self.get_postprocess_params()
 
         num_slices, img_height, img_width = get_stack_dims(self.image_layer.data)
         slice_indices = []
@@ -861,3 +964,146 @@ class SegmentationWidget(QWidget):
         exporter.export(layer_to_export, selected_file)
 
         notif.show_info("Selected layer was exported successfully.")
+
+    def select_stack(self):
+        selected_file, _filter = QFileDialog.getOpenFileName(
+            self, "Jug Lab", ".", "TIFF stack (*.tiff *.tif)"
+        )
+        if selected_file is not None and len(selected_file) > 0:
+            # get stack info
+            with TiffFile(selected_file) as tiff_stack:
+                axes = tiff_stack.series[0].axes
+                assert ("Y" in axes) and ("X" in axes), "Could not find YX in the stack axes!"
+                stack_dims = tiff_stack.series[0].shape
+            stack_height = stack_dims[axes.index("Y")]
+            stack_width = stack_dims[axes.index("X")]
+            # selected stack image dimensions should be as the same as the current image
+            self.image_layer = get_layer(
+                self.viewer,
+                self.image_combo.currentText(), config.NAPARI_IMAGE_LAYER
+            )
+            if self.image_layer is not None:
+                _, img_height, img_width = get_stack_dims(self.image_layer.data)
+            else:
+                img_height, img_width = 0, 0
+            if img_height != stack_height or img_width != stack_width:
+                notif.show_error("Stack image dimensions do not match the current image!")
+                return
+            # tutto bene!
+            self.large_stack_textbox.setText(selected_file)
+            self.large_stack_info.setText(
+                f"Axes: {axes}, Dims: {stack_dims}, DType: {tiff_stack.series[0].dtype}"
+            )
+            # set default result directory
+            res_dir = Path(selected_file).parent
+            self.result_dir_textbox.setText(str(res_dir.absolute()))
+
+    def select_result_dir(self):
+        selected_dir = QFileDialog.getExistingDirectory(
+            self, "Select a directory", self.large_stack_textbox.text(),
+            QFileDialog.ShowDirsOnly | QFileDialog.DontResolveSymlinks
+        )
+        if selected_dir is not None and len(selected_dir) > 0:
+            self.result_dir_textbox.setText(selected_dir)
+
+    def run_pipeline_over_large_stack(self):
+        if self.large_stack_textbox.text() == "":
+            notif.show_error("No TIFF Stack is selected!")
+            return
+        if self.rf_model is None:
+            notif.show_error("No RF model is trained!")
+            return
+
+        self.pipeline_progressbar.setValue(0)
+        self.run_pipeline_button.setEnabled(False)
+        self.stop_pipeline_button.setEnabled(True)
+        # create the slice temporary storage
+        tmp_storage_path = Path.home().joinpath(".featureforest", "tmp_storage.h5")
+        storage = h5py.File(tmp_storage_path, "w")
+        storage_group = storage.create_group("slice")
+        # run pipeline prediction in another thread
+        self.pipeline_worker = create_worker(
+            self.run_pipeline,
+            Path(self.large_stack_textbox.text()),
+            Path(self.result_dir_textbox.text()),
+            storage_group
+        )
+        self.pipeline_worker.yielded.connect(self.update_pipeline_progress)
+        self.pipeline_worker.finished.connect(self.pipeline_is_done)
+        self.pipeline_worker.run()
+
+    def run_pipeline(
+            self, tiff_stack_file: str, result_dir: Path, storage_group: h5py.Group
+    ):
+        prediction_dir = result_dir.joinpath("predictions")
+        prediction_dir.mkdir(parents=True, exist_ok=True)
+        simple_post_dir = result_dir.joinpath("post_simple")
+        simple_post_dir.mkdir(parents=True, exist_ok=True)
+        sam_post_dir = result_dir.joinpath("post_sam")
+        sam_post_dir.mkdir(parents=True, exist_ok=True)
+
+        with TiffFile(tiff_stack_file) as tiff_stack:
+            for page_idx, page in np_progress(
+                enumerate(tiff_stack.pages),
+                desc="runing the pipeline", total=len(tiff_stack.pages)
+            ):
+                image = page.asarray()
+                prediction_mask = extract_predict(
+                    image, self.model_adapter, storage_group, self.rf_model
+                )
+                # save the prediction
+                tifffile.imwrite(
+                    prediction_dir.joinpath(f"slice_{page_idx:04}_prediction.tiff"),
+                    prediction_mask
+                )
+                # post-processing
+                smoothing_iterations, area_threshold, area_is_absolute = self.get_postprocess_params()
+                post_mask = postprocess(
+                    prediction_mask, smoothing_iterations,
+                    area_threshold, area_is_absolute
+                )
+                tifffile.imwrite(
+                    simple_post_dir.joinpath(f"slice_{page_idx:04}_post_simple.tiff"),
+                    post_mask
+                )
+                post_sam_mask = postprocess_with_sam(
+                    prediction_mask,
+                    smoothing_iterations, area_threshold, area_is_absolute
+                )
+                tifffile.imwrite(
+                    sam_post_dir.joinpath(f"slice_{page_idx:04}_post_sam.tiff"),
+                    post_sam_mask
+                )
+
+                yield page_idx, len(tiff_stack.pages)
+        # closing the h5 storage & remove the file
+        try:
+            storage_group.file.close()
+            self.remove_temp_storage()
+        except Exception:  # noqa: BLE001
+            pass
+
+    def stop_pipeline(self):
+        if self.pipeline_worker is not None:
+            self.pipeline_worker.quit()
+            self.pipeline_worker = None
+        self.stop_pipeline_button.setEnabled(False)
+
+    def update_pipeline_progress(self, values):
+        curr, total = values
+        self.pipeline_progressbar.setMinimum(0)
+        self.pipeline_progressbar.setMaximum(total)
+        self.pipeline_progressbar.setValue(curr + 1)
+        self.pipeline_progressbar.setFormat("slice %v of %m (%p%)")
+
+    def pipeline_is_done(self):
+        self.run_pipeline_button.setEnabled(True)
+        self.stop_pipeline_button.setEnabled(False)
+        self.remove_temp_storage()
+        print("Prediction is done!")
+        notif.show_info("Prediction is done!")
+
+    def remove_temp_storage(self):
+        tmp_storage_path = Path.home().joinpath(".featureforest", "tmp_storage.h5")
+        if tmp_storage_path.exists():
+            tmp_storage_path.unlink()
