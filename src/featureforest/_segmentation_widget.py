@@ -694,9 +694,28 @@ class SegmentationWidget(QWidget):
                 warnings.simplefilter("ignore")
                 # load the rf model
                 with open(selected_file, mode="rb") as f:
-                    self.rf_model = pickle.load(f)
+                    model_data = pickle.load(f)
+                # compatibility check for old format rf model
+                if isinstance(model_data, dict):
+                    # new format
+                    self.rf_model = model_data["rf_model"]
+                    # if there is no model_adapter loaded already
+                    # (users can just load the rf model)
+                    if self.model_adapter is None:
+                        model_name = model_data["model_name"]
+                        self.patch_size = model_data["patch_size"]
+                        self.overlap = model_data["overlap"]
+                        img_height = model_data["img_height"]
+                        img_width = model_data["img_width"]
+                        # init the model adapter
+                        self.model_adapter = get_model(model_name, img_height, img_width)
+                else:
+                    # old format
+                    self.rf_model = model_data
+
                 notif.show_info("Model was loaded successfully.")
                 self.model_status_label.setText("Model status: Ready!")
+                self.model_save_button.setEnabled(True)
 
     def save_rf_model(self):
         if self.rf_model is None:
@@ -708,8 +727,17 @@ class SegmentationWidget(QWidget):
         if len(selected_file) > 0:
             if not selected_file.endswith(".bin"):
                 selected_file += ".bin"
+            # save rf model along with metadata
+            model_data = {
+                "rf_model": self.rf_model,
+                "model_name": self.model_adapter.name,
+                "img_height": self.storage.attrs["img_height"],
+                "img_width": self.storage.attrs["img_width"],
+                "patch_size": self.patch_size,
+                "overlap": self.overlap
+            }
             with open(selected_file, mode="wb") as f:
-                pickle.dump(self.rf_model, f)
+                pickle.dump(model_data, f)
             notif.show_info("Model was saved successfully.")
 
     def predict(self, whole_stack=False):
