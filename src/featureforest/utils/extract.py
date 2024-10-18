@@ -32,7 +32,11 @@ def get_slice_features(
         storage_group (h5py.Group): _description_
     """
     # image to torch tensor
-    img_data = torch.from_numpy(image).to(torch.float32) / 255.0
+    img_data = torch.from_numpy(image.copy()).to(torch.float32)
+    # normalize in [0, 1]
+    _min = img_data.min()
+    _max = img_data.max()
+    img_data = (img_data - _min) / (_max - _min)
     # for sam the input image should be 4D: BxCxHxW ; an RGB image.
     if is_image_rgb(image):
         # it's already RGB, put the channels first and add a batch dim.
@@ -61,7 +65,7 @@ def get_slice_features(
     )
 
     # get sam encoder output for image patches
-    print("\nextracting features:")
+    print("extracting features:")
     for b_idx in np_progress(range(num_batches), desc="extracting feature:"):
         print(f"batch #{b_idx + 1} of {num_batches}")
         start = b_idx * batch_size
@@ -105,7 +109,7 @@ def extract_embeddings_to_file(
         for slice_index in np_progress(
             range(num_slices), desc="extract features for slices"
         ):
-            print(f"slice index: {slice_index}")
+            print(f"\nslice index: {slice_index}")
             slice_img = image[slice_index] if num_slices > 1 else image
             slice_grp = storage.create_group(str(slice_index))
             for _ in get_slice_features(

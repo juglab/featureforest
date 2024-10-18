@@ -222,6 +222,11 @@ def get_sam_auto_masks(input_image: np.ndarray) -> Tuple[np.ndarray, np.ndarray]
             3, axis=-1
         )
     assert is_image_rgb(input_image)
+    # normalize the image in [0, 255] uint8
+    image = input_image.copy()
+    _min = image.min()
+    _max = image.max()
+    image = ((image - _min) * (255 / (_max - _min))).astype(np.uint8)
     # init a sam auto-segmentation mask generator
     mask_generator = SamAutomaticMaskGenerator(
         model=get_light_hq_sam(),
@@ -237,7 +242,7 @@ def get_sam_auto_masks(input_image: np.ndarray) -> Tuple[np.ndarray, np.ndarray]
     # generate SAM masks
     print("generating masks using SamAutomaticMaskGenerator...")
     with np_progress(range(1), desc="Generating masks using SamAutomaticMaskGenerator"):
-        sam_generated_masks = mask_generator.generate(input_image)
+        sam_generated_masks = mask_generator.generate(image)
     sam_masks = np.array([mask["segmentation"] for mask in sam_generated_masks])
     sam_areas = np.array([mask["area"] for mask in sam_generated_masks])
 
