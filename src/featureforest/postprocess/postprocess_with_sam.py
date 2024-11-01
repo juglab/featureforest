@@ -13,7 +13,7 @@ from segment_anything_hq.build_sam import build_sam_vit_t
 from segment_anything_hq import SamPredictor, SamAutomaticMaskGenerator
 
 from featureforest.utils.downloader import download_model
-from featureforest.utils.data import is_image_rgb
+from featureforest.utils.data import is_image_rgb, image_to_uint8
 from .postprocess import postprocess_label_mask
 
 
@@ -222,11 +222,8 @@ def get_sam_auto_masks(input_image: np.ndarray) -> Tuple[np.ndarray, np.ndarray]
             3, axis=-1
         )
     assert is_image_rgb(input_image)
-    # normalize the image in [0, 255] uint8
-    image = input_image.copy()
-    _min = image.min()
-    _max = image.max()
-    image = ((image - _min) * (255 / (_max - _min))).astype(np.uint8)
+    # normalize the image in [0, 255] as uint8
+    image = image_to_uint8(input_image.copy())
     # init a sam auto-segmentation mask generator
     mask_generator = SamAutomaticMaskGenerator(
         model=get_light_hq_sam(),

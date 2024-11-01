@@ -12,6 +12,7 @@ from featureforest.utils.data import (
     patchify,
     get_stride_margin,
     is_image_rgb,
+    image_to_uint8
 )
 
 
@@ -110,7 +111,8 @@ def extract_embeddings_to_file(
             range(num_slices), desc="extract features for slices"
         ):
             print(f"\nslice index: {slice_index}")
-            slice_img = image[slice_index] if num_slices > 1 else image
+            slice_img = image[slice_index].copy() if num_slices > 1 else image.copy()
+            slice_img = image_to_uint8(slice_img)  # image must be an uint8 array
             slice_grp = storage.create_group(str(slice_index))
             for _ in get_slice_features(
                 slice_img, patch_size, overlap, model_adapter, slice_grp

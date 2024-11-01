@@ -289,3 +289,19 @@ def get_stack_dims(image_data: ndarray) -> Tuple[int, int, int]:
         img_width = image_data.shape[2]
 
     return num_slices, img_height, img_width
+
+
+def image_to_uint8(image: np.ndarray) -> np.ndarray:
+    """Normalizes an image into [0, 255] as uint8 arrays
+
+    Args:
+        image (np.ndarray): input image
+
+    Returns:
+        np.ndarray: normalized uint8 image
+    """
+    _min = image.min()
+    _max = image.max()
+    normalized_image = ((image - _min) * (255 / (_max - _min))).astype(np.uint8)
+
+    return normalized_image
