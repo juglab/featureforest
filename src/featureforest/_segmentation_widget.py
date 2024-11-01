@@ -42,7 +42,7 @@ from .postprocess import (
     postprocess_with_sam_auto,
     get_sam_auto_masks
 )
-from .exports import EXPORTERS
+from .exports import EXPORTERS, reset_mask_labels
 from .utils.pipeline_prediction import (
     extract_predict
 )
@@ -529,7 +529,7 @@ class SegmentationWidget(QWidget):
 
     def select_storage(self):
         selected_file, _filter = QFileDialog.getOpenFileName(
-            self, "Jug Lab", ".", "Feature Storage(*.hdf5)"
+            self, "FeatureForest", ".", "Feature Storage(*.hdf5)"
         )
         if selected_file is not None and len(selected_file) > 0:
             self.storage_textbox.setText(selected_file)
@@ -685,7 +685,7 @@ class SegmentationWidget(QWidget):
 
     def load_rf_model(self):
         selected_file, _filter = QFileDialog.getOpenFileName(
-            self, "Jug Lab", ".", "model(*.bin)"
+            self, "FeatureForest", ".", "model(*.bin)"
         )
         if len(selected_file) > 0:
             # to suppress the sklearn InconsistentVersionWarning
@@ -722,7 +722,7 @@ class SegmentationWidget(QWidget):
             notif.show_info("There is no trained model!")
             return
         selected_file, _filter = QFileDialog.getSaveFileName(
-            self, "Jug Lab", ".", "model(*.bin)"
+            self, "FeatureForest", ".", "model(*.bin)"
         )
         if len(selected_file) > 0:
             if not selected_file.endswith(".bin"):
@@ -947,7 +947,7 @@ class SegmentationWidget(QWidget):
         exporter = EXPORTERS[self.export_format_combo.currentText()]
         # export_format = self.export_format_combo.currentText()
         selected_file, _filter = QFileDialog.getSaveFileName(
-            self, "Jug Lab", ".", f"Segmentation(*.{exporter.extension})"
+            self, "FeatureForest", ".", f"Segmentation(*.{exporter.extension})"
         )
         if selected_file is None or len(selected_file) == 0:
             return  # user canceled export
@@ -967,7 +967,7 @@ class SegmentationWidget(QWidget):
 
     def select_stack(self):
         selected_file, _filter = QFileDialog.getOpenFileName(
-            self, "Jug Lab", ".", "TIFF stack (*.tiff *.tif)"
+            self, "FeatureForest", ".", "TIFF stack (*.tiff *.tif)"
         )
         if selected_file is not None and len(selected_file) > 0:
             # get stack info

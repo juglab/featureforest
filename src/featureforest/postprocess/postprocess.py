@@ -74,7 +74,7 @@ def postprocess(
         np.ndarray: post-processed segmentation image
     """
     final_mask = np.zeros_like(segmentation_image, dtype=np.uint8)
-    # postprocessing gets done for each label's segments.
+    # postprocessing gets done for each label's mask separately.
     class_labels = [c for c in np.unique(segmentation_image) if c > 0]
     for label in class_labels:
         # make a binary image for the label

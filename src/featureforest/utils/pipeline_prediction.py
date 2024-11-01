@@ -51,7 +51,6 @@ def extract_predict(
         model_adapter: BaseModelAdapter,
         storage_group: h5py.Group,
         rf_model: RandomForestClassifier,
-        # result_dir: Path
 ) -> np.ndarray:
     img_height, img_width = image.shape[:2]
     patch_size = model_adapter.patch_size

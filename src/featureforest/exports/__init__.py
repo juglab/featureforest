@@ -1,5 +1,6 @@
 from .base import (
-    TiffExporter, NRRDExporter, NumpyExporter
+    TiffExporter, NRRDExporter, NumpyExporter,
+    reset_mask_labels
 )
 
 
@@ -8,3 +9,8 @@ EXPORTERS = {
     "nrrd": NRRDExporter(),
     "numpy": NumpyExporter(),
 }
+
+__all__ = [
+    reset_mask_labels,
+    EXPORTERS
+]

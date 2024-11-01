@@ -184,7 +184,7 @@ def postprocess_with_sam(
     predictor = SamPredictor(get_light_hq_sam())
 
     final_mask = np.zeros_like(segmentation_image, dtype=np.uint8)
-    # postprocessing gets done for each class segmentation.
+    # postprocessing gets done for each label's mask separately.
     bg_label = 0
     class_labels = [c for c in np.unique(segmentation_image) if c > bg_label]
     for label in np_progress(
