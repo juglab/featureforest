@@ -17,6 +17,9 @@ allow-direct-references = true
 only-include = ["src"]
 sources = ["src"]
 
+[tool.hatch.envs.default.env-vars]
+SAM2_BUILD_CUDA="0"
+
 # https://peps.python.org/pep-0621/
 [project]
 name = "featureforest"
@@ -56,6 +59,7 @@ dependencies = [
     "pooch",
     "timm==1.0.9",
     "segment-anything-py",
+    "sam2 @ git+https://github.com/facebookresearch/sam2.git"
 ]
 [project.optional-dependencies]
 # development dependencies and tooling
