@@ -193,6 +193,10 @@ def postprocess_with_sam(
         # put the final label mask into final result mask
         final_mask[sam_label_mask] = label
 
+    # clean-up
+    del predictor
+    torch.cuda.empty_cache()
+
     return final_mask
 
 
@@ -231,6 +235,10 @@ def get_sam_auto_masks(input_image: np.ndarray) -> Tuple[np.ndarray, np.ndarray]
         sam_generated_masks = mask_generator.generate(image)
     sam_masks = np.array([mask["segmentation"] for mask in sam_generated_masks])
     sam_areas = np.array([mask["area"] for mask in sam_generated_masks])
+
+    # clean-up
+    del mask_generator
+    torch.cuda.empty_cache()
 
     return sam_masks, sam_areas
 
