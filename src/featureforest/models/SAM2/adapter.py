@@ -13,21 +13,22 @@ from featureforest.utils.data import (
 
 
 class SAM2Adapter(BaseModelAdapter):
-    """SAM2 model adapter (hiera_large)
+    """SAM2 model adapter
     """
     def __init__(
         self,
         image_encoder: nn.Module,
         img_height: float,
         img_width: float,
-        device: torch.device
+        device: torch.device,
+        name: str = "SAM2_Large"
     ) -> None:
         super().__init__(image_encoder, img_height, img_width, device)
-        self.name = "SAM2"
+        # for different flavors of SAM2 only the name is different.
+        self.name = name
         # we need sam2 image encoder part
         self.encoder = image_encoder
         self.encoder_num_channels = 256
-        self.embed_layer_num_channels = 144
         self._set_patch_size()
         self.device = device
 
@@ -56,28 +57,23 @@ class SAM2Adapter(BaseModelAdapter):
     def get_features_patches(
         self, in_patches: Tensor
     ) -> Tuple[Tensor, Tensor]:
-        # get the mobile-sam encoder and embedding layer outputs
+        # get the image encoder outputs
         with torch.no_grad():
             output = self.encoder(
                 self.input_transforms(in_patches)
             )
-            vision_features = output["vision_features"]
-            # embed_output: b,256,256,144 -> b,144,256,256
-            embed_output = self.encoder.trunk.patch_embed(
-                self.input_transforms(in_patches)
-            ).permute(0, 3, 1, 2)
+        # backbone_fpn contains 3 levels of features from hight to low resolution.
+        # [b, 256, 256, 256]
+        # [b, 256, 128, 128]
+        # [b, 256, 64, 64]
+        features = [
+            self.embedding_transform(feat.cpu())
+            for feat in output["backbone_fpn"]
+        ]
+        features = torch.cat(features, dim=1)
+        out_feature_patches = get_nonoverlapped_patches(features, self.patch_size, self.overlap)
 
-        # get non-overlapped feature patches
-        out_feature_patches = get_nonoverlapped_patches(
-            self.embedding_transform(vision_features.cpu()),
-            self.patch_size, self.overlap
-        )
-        embed_feature_patches = get_nonoverlapped_patches(
-            self.embedding_transform(embed_output.cpu()),
-            self.patch_size, self.overlap
-        )
-
-        return out_feature_patches, embed_feature_patches
+        return out_feature_patches
 
     def get_total_output_channels(self) -> int:
-        return self.encoder_num_channels + self.embed_layer_num_channels
+        return 256 * 3

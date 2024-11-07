@@ -6,14 +6,16 @@ from .base import BaseModelAdapter
 from .MobileSAM import get_model as get_mobile_sam_model
 from .SAM import get_model as get_sam_model
 from .DinoV2 import get_model as get_dino_v2_model
-from .SAM2 import get_model as get_sam2_model
+from .SAM2 import get_large_model as get_sam2_large_model
+from .SAM2 import get_base_model as get_sam2_base_model
 
 
 _MODELS_DICT = {
+    "SAM2_Large": get_sam2_large_model,
+    "SAM2_Base": get_sam2_base_model,
     "MobileSAM": get_mobile_sam_model,
     "SAM": get_sam_model,
     "DinoV2": get_dino_v2_model,
-    "SAM2": get_sam2_model,
 }
 
 
