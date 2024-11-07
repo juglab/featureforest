@@ -57,6 +57,7 @@ dependencies = [
     "napari",
     "h5py",
     "pooch",
+    "iopath>=0.1.10",
     "timm==1.0.9",
     "segment-anything-py",
     "sam2 @ git+https://github.com/facebookresearch/sam2.git"
