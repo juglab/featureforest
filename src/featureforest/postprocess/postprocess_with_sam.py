@@ -8,44 +8,37 @@ import cv2
 import torch
 
 from cv2.typing import Rect
-from segment_anything_hq.modeling import Sam
-from segment_anything_hq.build_sam import build_sam_vit_t
-from segment_anything_hq import SamPredictor, SamAutomaticMaskGenerator
+from sam2.modeling.sam2_base import SAM2Base
+from sam2.build_sam import build_sam2
+from sam2.sam2_image_predictor import SAM2ImagePredictor
+from sam2.automatic_mask_generator import SAM2AutomaticMaskGenerator
 
 from featureforest.utils.downloader import download_model
 from featureforest.utils.data import is_image_rgb, image_to_uint8
 from .postprocess import postprocess_label_mask
 
 
-def get_light_hq_sam() -> Sam:
-    """Load the Light HQ SAM model instance. This model produces better masks.
-
-    Raises:
-        ValueError: if model's weights could not be downloaded.
-
-    Returns:
-        Sam: a Light HQ SAM model instance
-    """
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"running on {device}")
-    # download model's weights
+def get_sam2() -> SAM2Base:
     model_url = \
-        "https://huggingface.co/lkeab/hq-sam/resolve/main/sam_hq_vit_tiny.pth"
+        "https://dl.fbaipublicfiles.com/segment_anything_2/092824/sam2.1_hiera_base_plus.pt"
     model_file = download_model(
         model_url=model_url,
-        model_name="sam_hq_vit_tiny.pth"
+        model_name="sam2.1_hiera_base_plus.pt"
     )
     if model_file is None:
         raise ValueError(f"Could not download the model from {model_url}.")
 
-    # init & load the light hq sam model
-    lhq_sam = build_sam_vit_t().to(device)
-    lhq_sam.load_state_dict(
-        torch.load(model_file, map_location=device)
+    # init the model
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"running on {device}")
+    sam2_model: SAM2Base = build_sam2(
+        config_file= "configs/sam2.1/sam2.1_hiera_b+.yaml",
+        ckpt_path=model_file,
+        device=device
     )
-    lhq_sam.eval()
+    sam2_model.eval()
 
-    return lhq_sam
+    return sam2_model
 
 
 def get_watershed_bboxes(image: np.ndarray) -> List[Rect]:
@@ -113,12 +106,12 @@ def get_bounding_boxes(image: np.ndarray) -> List[Rect]:
 
 
 def get_sam_mask(
-    predictor: SamPredictor, image: np.ndarray, bboxes: List[Rect]
+    predictor: SAM2ImagePredictor, image: np.ndarray, bboxes: List[Rect]
 ) -> np.ndarray:
     """Returns a mask aggregated by sam predictor masks for each given bounding box.
 
     Args:
-        predictor (SamPredictor): the sam predictor instance
+        predictor (SAM2ImagePredictor): the sam predictor instance
         image (np.ndarray): input binary image
         bboxes (List[Rect]): bounding boxes
 
@@ -128,33 +121,29 @@ def get_sam_mask(
     # sam needs an RGB image
     image = np.repeat(image[:, :, np.newaxis], 3, axis=2)
     predictor.set_image(image)
-    # get sam-ready bounding boxes: x,y,w,h
-    input_boxes = torch.tensor([
+    # get sam-ready bounding boxes: x,y,w,h -> x1,y1,x2,y2
+    input_boxes = np.array([
         (box[0], box[1], box[0] + box[2], box[1] + box[3])
         for box in bboxes
-    ]).to(predictor.device)
-    transformed_boxes = predictor.transform.apply_boxes_torch(
-        input_boxes, image.shape[:2]
-    )
+    ])
     # get sam predictor masks
     bs = 16
-    num_batches = np.ceil(len(transformed_boxes) / bs).astype(int)
+    num_batches = np.ceil(len(bboxes) / bs).astype(int)
     final_mask = np.zeros((image.shape[0], image.shape[1]), dtype=bool)
     for i in np_progress(
         range(num_batches), desc="Generating masks using SAM predictor"
     ):
         start = i * bs
         end = start + bs
-        masks, _, _ = predictor.predict_torch(
+        masks, _, _ = predictor.predict(
             point_coords=None,
             point_labels=None,
-            boxes=transformed_boxes[start:end],
+            box=input_boxes[start:end],
             multimask_output=True,
         )
-        masks_np = masks.squeeze(1).cpu().numpy()
         final_mask = np.bitwise_or(
             final_mask,
-            np.bitwise_or.reduce(masks_np, axis=0)
+            np.bitwise_or.reduce(masks.astype(bool), axis=(0, 1))
         )
 
     return final_mask
@@ -180,8 +169,8 @@ def postprocess_with_sam(
     Returns:
         np.ndarray: post-processed segmentation image
     """
-    # init a sam predictor using light hq sam
-    predictor = SamPredictor(get_light_hq_sam())
+    # init a sam predictor using SAM2 Base Plus
+    predictor = SAM2ImagePredictor(get_sam2())
 
     final_mask = np.zeros_like(segmentation_image, dtype=np.uint8)
     # postprocessing gets done for each label's mask separately.
@@ -225,20 +214,20 @@ def get_sam_auto_masks(input_image: np.ndarray) -> Tuple[np.ndarray, np.ndarray]
     # normalize the image in [0, 255] as uint8
     image = image_to_uint8(input_image.copy())
     # init a sam auto-segmentation mask generator
-    mask_generator = SamAutomaticMaskGenerator(
-        model=get_light_hq_sam(),
-        points_per_side=64,
+    mask_generator = SAM2AutomaticMaskGenerator(
+        model=get_sam2(),
+        points_per_side=50,
         pred_iou_thresh=0.8,
-        stability_score_thresh=0.85,
+        stability_score_thresh=0.88,
         stability_score_offset=0.9,
         crop_n_layers=1,
-        crop_n_points_downscale_factor=2,
-        # crop_nms_thresh=0.7,
-        min_mask_region_area=20
+        crop_n_points_downscale_factor=8,
+        min_mask_region_area=20,
+        use_m2m=True
     )
-    # generate SAM masks
-    print("generating masks using SamAutomaticMaskGenerator...")
-    with np_progress(range(1), desc="Generating masks using SamAutomaticMaskGenerator"):
+    # generate SAM2 masks
+    print("generating masks using SAM2AutomaticMaskGenerator...")
+    with np_progress(range(1), desc="Generating masks using SAM2AutomaticMaskGenerator"):
         sam_generated_masks = mask_generator.generate(image)
     sam_masks = np.array([mask["segmentation"] for mask in sam_generated_masks])
     sam_areas = np.array([mask["area"] for mask in sam_generated_masks])
