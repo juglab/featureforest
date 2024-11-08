@@ -58,6 +58,7 @@ jobs:
       - name: Install Windows OpenGL
         if: runner.os == 'Windows'
         run: |
+          micromamba shell reinit --shell
           micromamba activate ff
           git clone --depth 1 https://github.com/pyvista/gl-ci-helpers.git
           powershell gl-ci-helpers/appveyor/install_opengl.ps1
@@ -66,7 +67,6 @@ jobs:
         uses: aganders3/headless-gui@v2.2
         with:
           run: |
-            micromamba shell init --shell  --root-prefix=~/micromamba
             micromamba shell reinit --shell
             micromamba activate ff
             python -m pip install .[dev]
