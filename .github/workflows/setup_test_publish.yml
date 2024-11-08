@@ -1,0 +1,120 @@
+name: Test and Publish
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*" # Push events to matching v*, i.e. v1.0, v20.15.10
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  setup:
+    name: Setup and Test
+    runs-on: ${{ matrix.platform }}
+
+    defaults:
+      run:
+        shell: bash -el {0}
+
+    strategy:
+      fail-fast: true
+      matrix:
+        platform: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.10"]
+
+    steps:
+      - uses: actions/checkout@v4
+      # these libraries enable testing on Qt on linux
+      - uses: tlambert03/setup-qt-libs@v1
+      - uses: mamba-org/setup-micromamba@v1
+        env:
+          ACTIONS_STEP_DEBUG: true
+        with:
+          auto-update-conda: true
+          auto-activate-base: false
+          python-version: ${{ matrix.python-version }}
+          environment-name: ff
+          environment-file: env_cpu.yml
+          condarc: |
+            channels:
+              - pytorch
+              - conda-forge
+              - defaults
+          init-shell: bash powershell
+          cache-downloads: true
+          post-cleanup: 'all'
+          log-level: debug
+
+      - name: mamba info
+        run: micromamba info
+
+      - name: more info
+        run: |
+          echo $PATH
+          echo "$(which micromamba)"
+          echo "$(which python)"
+
+      # strategy borrowed from vispy for installing opengl libs on windows
+      - name: Install Windows OpenGL
+        if: runner.os == 'Windows'
+        run: |
+          micromamba activate ff
+          git clone --depth 1 https://github.com/pyvista/gl-ci-helpers.git
+          powershell gl-ci-helpers/appveyor/install_opengl.ps1
+  
+      - name: Run Tests
+        uses: aganders3/headless-gui@v2.2
+        with:
+          run: |
+            micromamba activate ff
+            python -m pip install .[dev]
+            pytest -v --color=yes --cov=featureforest --cov-report=xml -m "not slow"
+          
+      - name: Coverage
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }} # required
+          version: v0.7.3
+          verbose: true # optional (default = false)
+
+  publish:
+    # this will run when you have tagged a commit, starting with "v*"
+    # and requires that you have put your twine API key in your
+    # github secrets (see readme for details)
+    needs: [setup]
+    runs-on: ubuntu-latest
+
+    if: contains(github.ref, 'tags')
+
+    permissions:
+      # IMPORTANT: this permission is mandatory for trusted publishing
+      id-token: write
+
+      # This permission allows writing releases
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Build
+        run: |
+          python -m pip install build
+          python -m build
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+  
