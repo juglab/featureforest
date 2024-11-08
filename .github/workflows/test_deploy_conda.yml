@@ -56,10 +56,11 @@ jobs:
   
       - name: Run Tests
         uses: aganders3/headless-gui@v1
-        run: |
-          conda activate ff
-          python -m pip install .[dev]
-          pytest -v --color=yes --cov=featureforest --cov-report=xml -m "not slow"
+        with:
+          run: |
+            conda activate ff
+            python -m pip install .[dev]
+            pytest -v --color=yes --cov=featureforest --cov-report=xml -m "not slow"
           
       - name: Coverage
         uses: codecov/codecov-action@v4
