@@ -58,18 +58,18 @@ jobs:
       - name: Install Windows OpenGL
         if: runner.os == 'Windows'
         run: |
-          eval "$(micromamba shell hook --shell )"
           micromamba activate ff
           git clone --depth 1 https://github.com/pyvista/gl-ci-helpers.git
           powershell gl-ci-helpers/appveyor/install_opengl.ps1
   
       - name: Run Tests
-        uses: aganders3/headless-gui@v2.2
-        with:
-          shell: bash
-          run: |
-            python -m pip install .[dev]
-            pytest -v --color=yes --cov=featureforest --cov-report=xml -m "not slow"
+        # uses: aganders3/headless-gui@v2.2
+        # with:
+        #   shell: bash
+        run: |
+          micromamba activate ff
+          python -m pip install .[dev]
+          pytest -v --color=yes --cov=featureforest --cov-report=xml -m "not slow"
           
       - name: Coverage
         uses: codecov/codecov-action@v4
