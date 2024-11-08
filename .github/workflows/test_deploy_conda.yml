@@ -51,6 +51,7 @@ jobs:
         if: runner.os == 'Windows'
         run: |
           # conda init
+          source ~/.bash_profile
           $CONDA/bin/activate ff
           git clone --depth 1 https://github.com/pyvista/gl-ci-helpers.git
           powershell gl-ci-helpers/appveyor/install_opengl.ps1
@@ -60,7 +61,7 @@ jobs:
         with:
           run: |
             # conda init
-            # source ~/.bash_profile
+            source ~/.bash_profile
             $CONDA/bin/activate ff
             python -m pip install .[dev]
             pytest -v --color=yes --cov=featureforest --cov-report=xml -m "not slow"
