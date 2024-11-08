@@ -58,6 +58,7 @@ jobs:
         uses: aganders3/headless-gui@v1
         with:
           run: |
+            conda init
             conda activate ff
             python -m pip install .[dev]
             pytest -v --color=yes --cov=featureforest --cov-report=xml -m "not slow"
