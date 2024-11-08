@@ -31,15 +31,20 @@ jobs:
         with:
           auto-update-conda: true
           auto-activate-base: true
-          activate-environment: ff
+          # activate-environment: ff
           python-version: ${{ matrix.python-version }}
-          channels: pytorch, conda-forge, defaults
+          # channels: pytorch, conda-forge, defaults
           channel-priority: true
           use-only-tar-bz2: true
-          environment-file: env_cpu.yml
+          #environment-file: env_cpu.yml
 
       - name: Conda info
         run: conda info
 
-      - name: Jupyter
-        run: conda install jupyterlab
+      - name: Setup
+        run: conda env create --name ff --file env_cpu.yml
+
+      - name: Run Tests
+        run: |
+          conda activate ff
+          conda list
