@@ -32,9 +32,9 @@ jobs:
       - uses: conda-incubator/setup-miniconda@v3.1.0
         with:
           auto-update-conda: true
-          auto-activate-base: true
-          # activate-environment: ff
+          auto-activate-base: false
           python-version: ${{ matrix.python-version }}
+          # activate-environment: ff
           # channels: pytorch, conda-forge, defaults
           channel-priority: true
           use-only-tar-bz2: true
@@ -50,8 +50,7 @@ jobs:
       - name: Install Windows OpenGL
         if: runner.os == 'Windows'
         run: |
-          source ~/.bash_profile
-          $CONDA/bin/activate ff
+          /Users/runner/miniconda3/bin/activate ff
           git clone --depth 1 https://github.com/pyvista/gl-ci-helpers.git
           powershell gl-ci-helpers/appveyor/install_opengl.ps1
   
@@ -59,7 +58,7 @@ jobs:
         uses: aganders3/headless-gui@v2.2
         with:
           run: |
-            $CONDA/bin/activate ff
+            /Users/runner/miniconda3/bin/activate ff
             python -m pip install .[dev]
             pytest -v --color=yes --cov=featureforest --cov-report=xml -m "not slow"
           
