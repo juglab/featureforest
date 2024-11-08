@@ -13,23 +13,32 @@ on:
 jobs:
   example-6:
     name: Ex6 Mamba
-    runs-on: "ubuntu-latest"
+    runs-on: ${{ matrix.platform }}
+    defaults:
+      run:
+        shell: bash -el {0}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu-latest", "macos-latest", "windows-latest"]
+        python-version: ["3.10"]
+
     steps:
       - uses: actions/checkout@v4
       - uses: conda-incubator/setup-miniconda@v3.1.0
         with:
-          python-version: 3.10
-          mamba-version: "*"
-          channels: conda-forge, defaults
+          auto-update-conda: true
+          auto-activate-base: true
+          activate-environment: ff
+          python-version: ${{ matrix.python-version }}
+          channels: pytorch, conda-forge, defaults
           channel-priority: true
-          activate-environment: anaconda-client-env
-          # environment-file: etc/example-environment.yml
-      - shell: bash -el {0}
-        run: |
-          conda info
-          conda list
-          conda config --show-sources
-          conda config --show
-          printenv | sort
-      - shell: bash -el {0}
-        run: mamba install jupyterlab
+          use-only-tar-bz2: true
+          environment-file: env_cpu.yml
+  
+      - name: Conda info
+        run: conda info
+
+      - name: Jupyter
+        run: conda install jupyterlab
