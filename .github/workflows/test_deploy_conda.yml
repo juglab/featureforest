@@ -48,7 +48,7 @@ jobs:
 
       # strategy borrowed from vispy for installing opengl libs on windows
       - name: Install Windows OpenGL
-        if: runner.os == "Windows"
+        if: runner.os == 'Windows'
         run: |
           conda activate ff
           git clone --depth 1 https://github.com/pyvista/gl-ci-helpers.git
@@ -76,7 +76,7 @@ jobs:
     needs: [setup]
     runs-on: ubuntu-latest
 
-    if: contains(github.ref, "tags")
+    if: contains(github.ref, 'tags')
 
     permissions:
       # IMPORTANT: this permission is mandatory for trusted publishing
