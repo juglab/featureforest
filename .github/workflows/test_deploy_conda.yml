@@ -56,7 +56,7 @@ jobs:
           powershell gl-ci-helpers/appveyor/install_opengl.ps1
   
       - name: Run Tests
-      - uses: aganders3/headless-gui@v2.2
+        uses: aganders3/headless-gui@v2.2
         with:
           run: |
             conda init
