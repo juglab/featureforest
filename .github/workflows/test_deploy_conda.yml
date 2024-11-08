@@ -62,7 +62,7 @@ jobs:
           run: |
             # conda init
             source ~/.bash_profile
-            $CONDA/bin/activate ff
+            conda activate ff
             python -m pip install .[dev]
             pytest -v --color=yes --cov=featureforest --cov-report=xml -m "not slow"
           
