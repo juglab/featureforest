@@ -1,0 +1,23 @@
+jobs:
+  example-6:
+    name: Ex6 Mamba
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: conda-incubator/setup-miniconda@v3.1.0
+        with:
+          python-version: 3.10
+          mamba-version: "*"
+          channels: conda-forge, defaults
+          channel-priority: true
+          activate-environment: anaconda-client-env
+          # environment-file: etc/example-environment.yml
+      - shell: bash -el {0}
+        run: |
+          conda info
+          conda list
+          conda config --show-sources
+          conda config --show
+          printenv | sort
+      - shell: bash -el {0}
+        run: mamba install jupyterlab
