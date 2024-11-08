@@ -29,6 +29,7 @@ jobs:
       - uses: actions/checkout@v4
       # these libraries enable testing on Qt on linux
       - uses: tlambert03/setup-qt-libs@v1
+      - uses: aganders3/headless-gui@v1
       - uses: conda-incubator/setup-miniconda@v3.1.0
         with:
           auto-update-conda: true
@@ -50,18 +51,17 @@ jobs:
       - name: Install Windows OpenGL
         if: runner.os == 'Windows'
         run: |
+          conda init
           conda activate ff
           git clone --depth 1 https://github.com/pyvista/gl-ci-helpers.git
           powershell gl-ci-helpers/appveyor/install_opengl.ps1
   
       - name: Run Tests
-        uses: aganders3/headless-gui@v1
-        with:
-          run: |
-            conda init
-            conda activate ff
-            python -m pip install .[dev]
-            pytest -v --color=yes --cov=featureforest --cov-report=xml -m "not slow"
+        run: |
+          conda init
+          conda activate ff
+          python -m pip install .[dev]
+          pytest -v --color=yes --cov=featureforest --cov-report=xml -m "not slow"
           
       - name: Coverage
         uses: codecov/codecov-action@v4
