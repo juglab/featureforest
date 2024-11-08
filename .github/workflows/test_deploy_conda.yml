@@ -11,8 +11,8 @@ on:
       - main
 
 jobs:
-  example-6:
-    name: Ex6 Mamba
+  setup:
+    name: Setup
     runs-on: ${{ matrix.platform }}
     defaults:
       run:
