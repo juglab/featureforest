@@ -31,11 +31,8 @@ jobs:
       - uses: tlambert03/setup-qt-libs@v1
       - uses: mamba-org/setup-micromamba@v1
         env:
-          ACTIONS_STEP_DEBUG: true
+          ACTIONS_STEP_DEBUG: false
         with:
-          auto-update-conda: true
-          auto-activate-base: false
-          python-version: ${{ matrix.python-version }}
           environment-name: ff
           environment-file: env_cpu.yml
           condarc: |
@@ -46,7 +43,7 @@ jobs:
           init-shell: bash powershell
           cache-downloads: true
           post-cleanup: 'all'
-          log-level: debug
+          # log-level: debug
 
       - name: mamba info
         run: micromamba info
@@ -69,6 +66,8 @@ jobs:
         uses: aganders3/headless-gui@v2.2
         with:
           run: |
+            micromamba shell init --shell  --root-prefix=~/micromamba
+            micromamba shell reinit --shell
             micromamba activate ff
             python -m pip install .[dev]
             pytest -v --color=yes --cov=featureforest --cov-report=xml -m "not slow"
