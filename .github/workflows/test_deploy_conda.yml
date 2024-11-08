@@ -50,7 +50,6 @@ jobs:
       - name: Install Windows OpenGL
         if: runner.os == 'Windows'
         run: |
-          # conda init
           source ~/.bash_profile
           $CONDA/bin/activate ff
           git clone --depth 1 https://github.com/pyvista/gl-ci-helpers.git
@@ -60,9 +59,7 @@ jobs:
         uses: aganders3/headless-gui@v2.2
         with:
           run: |
-            # conda init
-            source ~/.bash_profile
-            conda activate ff
+            $CONDA/bin/activate ff
             python -m pip install .[dev]
             pytest -v --color=yes --cov=featureforest --cov-report=xml -m "not slow"
           
