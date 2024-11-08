@@ -65,6 +65,7 @@ jobs:
   
       - name: Run Tests
         uses: aganders3/headless-gui@v2.2
+        shell: bash
         with:
           run: |
             eval "$(micromamba shell hook --shell )"
