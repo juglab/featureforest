@@ -30,7 +30,7 @@ conda env create -f ./env_cpu.yml
 
 ### Requirements
 - `python >= 3.10`
-- `numpy==1.23.5`
+- `numpy==1.24.4`
 - `opencv-python`
 - `scikit-learn`
 - `scikit-image`
