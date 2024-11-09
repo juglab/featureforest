@@ -4,7 +4,7 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - python=3.9
+  - python=3.10
   - pyqt=5.15.10
   - qtpy
   - magicgui
@@ -16,16 +16,17 @@ dependencies:
   - napari-plugin-engine
   - napari-svg
   - h5py
-  - pytorch=2.1.2
-  - torchvision=0.16.2
+  - pytorch=2.3.1
+  - torchvision=0.18.1
+  - sam-2
   - pooch
   - pip
   - pip:
-    - numpy==1.23.5    # timm drops deprecation warnings with newer versions
+    - numpy==1.24.4    # timm drops deprecation warnings with newer versions
     - matplotlib
     - opencv-python
     - timm==1.0.9
     - pynrrd
+    - iopath>=0.1.10
     - git+https://github.com/facebookresearch/segment-anything.git
-    - segment-anything-hq
     - git+https://github.com/juglab/featureforest.git

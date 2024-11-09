@@ -1,5 +1,3 @@
-from typing import Tuple
-
 import torch
 
 from segment_anything.modeling import Sam

@@ -7,8 +7,8 @@
 [![codecov](https://codecov.io/gh/juglab/featureforest/branch/main/graph/badge.svg)](https://codecov.io/gh/juglab/featureforest)
 [![napari hub](https://img.shields.io/endpoint?url=https://api.napari-hub.org/shields/featureforest)](https://napari-hub.org/plugins/featureforest)
 
-A napari plugin for segmentation using vision transformers' features.  
-We developed a *napari* plugin to train a *Random Forest* model using extracted embeddings of ViT models for input and just a few scribble labels provided by the user. This approach can do the segmentation of desired objects almost as well as manual segmentations but in a much shorter time with less manual effort.
+**A napari plugin for making image annotation using feature space of vision transformers and random forest classifier.**  
+We developed a *napari* plugin to train a *Random Forest* model using extracted features of vision foundation models and just a few scribble labels provided by the user as input. This approach can do the segmentation of desired objects almost as well as manual segmentations but in a much shorter time with less manual effort.
 
 ----------------------------------
 
@@ -16,8 +16,7 @@ We developed a *napari* plugin to train a *Random Forest* model using extracted 
 The plugin documentation is [here](docs/index.md).
 
 ## Installation
-It is highly recommended to use a python environment manager like [conda] to create a clean environment for installation.  
-You can install all the requirements using provided environment config files:  
+To install this plugin you need to use [conda] or [mamba] to create a environment and install the requirements. Use the commands below to create the environment and install the plugin:
 ```bash
 # for GPU
 conda env create -f ./env_gpu.yml
@@ -27,9 +26,11 @@ conda env create -f ./env_gpu.yml
 conda env create -f ./env_cpu.yml
 ```
 
+#### Note: You need to install `sam-2` which can be install easily using conda. To install `sam-2` using `pip` please refer to the official [sam-2](https://github.com/facebookresearch/sam2) repository.
+
 ### Requirements
-- `python >= 3.9`
-- `numpy`
+- `python >= 3.10`
+- `numpy==1.24.4`
 - `opencv-python`
 - `scikit-learn`
 - `scikit-image`
@@ -39,16 +40,18 @@ conda env create -f ./env_cpu.yml
 - `qtpy`
 - `napari`
 - `h5py`
-- `pytorch=2.1.2`
-- `torchvision=0.16.2`
+- `pytorch=2.3.1`
+- `torchvision=0.18.1`
 - `timm=1.0.9`
 - `pynrrd`
+- `segment-anything`
+- `sam-2`
 
 If you want to install the plugin manually using GPU, please follow the pytorch installation instruction [here](https://pytorch.org/get-started/locally/).  
 For detailed napari installation see [here](https://napari.org/stable/tutorials/fundamentals/installation).  
 
 ### Installing The Plugin
-If you use the conda `env.yml` file, the plugin will be installed automatically. But in case you already have the environment setup, 
+If you use the provided conda environment yaml files, the plugin will be installed automatically. But in case you already have the environment setup, 
 you can just install the plugin. First clone the repository:
 ```bash
 git clone https://github.com/juglab/featureforest
@@ -59,17 +62,6 @@ cd ./featureforest
 pip install .
 ```
 
-<!-- You can install `featureforest` via [pip]:
-
-    pip install featureforest -->
-
-
-
-
-<!-- ## Contributing
-
-Contributions are very welcome. Tests can be run with [tox], please ensure
-the coverage at least stays the same before you submit a pull request. -->
 
 ## License
 
@@ -96,3 +88,4 @@ If you encounter any problems, please [file an issue] along with a detailed desc
 [pip]: https://pypi.org/project/pip/
 [PyPI]: https://pypi.org/
 [conda]: https://conda.io/projects/conda/en/latest/index.html
+[mamba]: https://mamba.readthedocs.io/en/latest/installation/mamba-installation.html
