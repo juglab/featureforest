@@ -26,7 +26,7 @@ conda env create -f ./env_gpu.yml
 conda env create -f ./env_cpu.yml
 ```
 
-#### Note: You need to install `sam-2` which can be install easily using conda. To install `sam-2` using `pip` please refer to the official [sam-2](https://github.com/facebookresearch/sam2) repository.
+#### Note: You need to install `sam-2` which can be installed easily using conda. To install `sam-2` using `pip` please refer to the official [sam-2](https://github.com/facebookresearch/sam2) repository.
 
 ### Requirements
 - `python >= 3.10`
