@@ -141,9 +141,10 @@ def get_sam_mask(
             box=input_boxes[start:end],
             multimask_output=True,
         )
+        reduced_axis = (0, 1) if masks.ndim == 4 else 0
         final_mask = np.bitwise_or(
             final_mask,
-            np.bitwise_or.reduce(masks.astype(bool), axis=(0, 1))
+            np.bitwise_or.reduce(masks.astype(bool), axis=reduced_axis)
         )
 
     return final_mask
