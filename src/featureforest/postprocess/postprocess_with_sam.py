@@ -139,7 +139,7 @@ def get_sam_mask(
             point_coords=None,
             point_labels=None,
             box=input_boxes[start:end],
-            multimask_output=True,
+            multimask_output=False,
         )
         reduced_axis = (0, 1) if masks.ndim == 4 else 0
         final_mask = np.bitwise_or(
