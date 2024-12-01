@@ -1,5 +1,5 @@
 site_name: Feature Forest Documents
-site_url: https://mydomain.org/mysite
+site_url: https://juglab.github.io/featureforest
 extra_css:
   - stylesheets/extra.css
 theme:
