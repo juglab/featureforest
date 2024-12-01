@@ -1,18 +1,16 @@
-# Documentation
+---
+title: Welcome
 ---
 
-## How to use the plugin
-This plugin provides four widgets; one for extracting the SAM embeddings and three for segmentation using different methods:
-- [SAM Embedding Extractor](./widgets.md#sam-embedding-extractor-widget)
-- [SAM-RF Widget](./widgets.md#sam-rf-widget)
-    - [Notes](./widgets.md#notes)
-- [SAM Prompt Segmentation Widget](./widgets.md#sam-prompt-segmentation-widget)
-- [SAM Predictor Widget](./widgets.md#sam-predictor-widget)
-<br><br>
+# Welcome to Feature Forest Documentation
 
-## Overview of SAM-RF Segmentation
-![extraction process](images/extract_process.jpg)
+Feature Forest (**FF**) is a *[napari]* plugin for creating image annotations with less manual work, utilizing image embeddings (*features*) of vision transformer models like *[SAM2]* and training a *Random Forest* model using a little scribble labels provided by the user.
 
-![training process](images/training_process.jpg)
+### Overview
+![figure 1](assets/fig1.png)
 
-![prediction process](images/prediction_process.jpg)
+
+
+
+[napari]: https://napari.org/
+[SAM2]: https://ai.meta.com/sam2/
