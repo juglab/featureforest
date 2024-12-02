@@ -4,12 +4,21 @@ title: Welcome
 
 # Welcome to Feature Forest Documentation
 
-Feature Forest (**FF**) is a *[napari]* plugin for creating image annotations with less manual work, utilizing image embeddings (*features*) of vision transformer models like *[SAM2]* and training a *Random Forest* model using a little scribble labels provided by the user.
+Feature Forest (**FF**) is a [napari] plugin for creating image annotations with less manual work, utilizing image embeddings (*features*) of vision transformer models like [SAM2], and training a *Random Forest* model using a little scribble labels provided by the user.
 
 ### Overview
-![figure 1](assets/fig1.png)
+FF plugin includes two widgets: **Feature Extractor** and **Segmentation** widgets.
 
+![Feature Extractor](assets/extractor_1.png){width="300"}
+/// caption
+Feature Extractor Widget
+///
 
+![Feature Extractor](assets/segmentation_1.png){width="300" align=left}
+![Feature Extractor](assets/segmentation_2.png){width="300" align=right}
+/// caption
+Segmentation Widget
+///
 
 
 [napari]: https://napari.org/

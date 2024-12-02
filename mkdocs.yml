@@ -1,15 +1,9 @@
-site_name: Feature Forest Documents
+site_name: Feature Forest Documentation
 site_url: https://juglab.github.io/featureforest
 extra_css:
   - stylesheets/extra.css
 theme:
   name: material
-  features:
-    - navigation.footer
-    - navigation.sections
-    - navigation.instant
-    - navigation.instant.progress
-    - content.code.copy
   # logo: assets/logo.png
   # favicon: images/favicon.png
   icon:
@@ -34,6 +28,21 @@ theme:
         icon: material/brightness-7 
         name: Switch to dark mode
 
+  features:
+    - navigation.footer
+    - navigation.indexes
+    - navigation.sections
+    - navigation.instant
+    - navigation.instant.progress
+    - navigation.path
+    - navigation.top
+    - content.code.copy
+
+nav:
+  - Welcome: index.md
+  - Installation: install.md
+  - How to use the plugin: howto.md
+
 extra:
   version:
       provider: mike
@@ -49,6 +58,14 @@ markdown_extensions:
       anchor_linenums: true
       line_spans: __span
       pygments_lang_class: true
+  - admonition
+  - attr_list
+  - md_in_html
   - pymdownx.inlinehilite
   - pymdownx.snippets
   - pymdownx.superfences
+  - pymdownx.details
+  - pymdownx.blocks.caption
+  - def_list
+  - pymdownx.tasklist:
+      custom_checkbox: true

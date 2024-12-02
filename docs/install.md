@@ -1,7 +1,3 @@
----
-title: Installation
----
-
 ## Easy Way!
 To install this plugin you need to use [mamba] or [conda] to create a environment and install the requirements. Use the commands below to create the environment and install the plugin:
 ```bash
@@ -50,6 +46,11 @@ cd ./featureforest
 pip install .
 ```
 
-[PyPI]: https://pypi.org/
+There is also a [pypi package](https://pypi.org/project/featureforest/) available that you can install using `pip`:
+```bash
+pip install featureforest
+```
+
+
 [conda]: https://conda.io/projects/conda/en/latest/index.html
 [mamba]: https://mamba.readthedocs.io/en/latest/installation/mamba-installation.html
