@@ -47,11 +47,12 @@ class FeatureExtractorWidget(QWidget):
         input_label = QLabel("Image Layer:")
         self.image_combo = QComboBox()
         # model selection
+        model_label = QLabel("Encoder Model:")
         self.model_combo = QComboBox()
         self.model_combo.setEditable(False)
         self.model_combo.addItems(get_available_models())
         self.model_combo.setCurrentIndex(0)
-        # sam storage
+        # storage
         storage_label = QLabel("Features Storage File:")
         self.storage_textbox = QLineEdit()
         self.storage_textbox.setReadOnly(True)
@@ -81,6 +82,7 @@ class FeatureExtractorWidget(QWidget):
         vbox.setContentsMargins(0, 0, 0, 0)
         vbox.addWidget(input_label)
         vbox.addWidget(self.image_combo)
+        vbox.addWidget(model_label)
         vbox.addWidget(self.model_combo)
         layout.addLayout(vbox)
 
