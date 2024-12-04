@@ -14,8 +14,8 @@ FF plugin includes two widgets: **Feature Extractor** and **Segmentation** widge
 Feature Extractor Widget
 ///
 
-![Feature Extractor](assets/segmentation_1.png){width="300" align=left}
-![Feature Extractor](assets/segmentation_2.png){width="300" align=right}
+![Segmentation](assets/segmentation_1.png){width="300" align=left}
+![Segmentation](assets/segmentation_2.png){width="300" align=right}
 /// caption
 Segmentation Widget
 ///

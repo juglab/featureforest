@@ -11,7 +11,7 @@ There are two ways to utilize this plugin over a large stack:
 As for the first step, we recommend making a small sub-stack to train a Random Forest (RF) model using our plugin. This sub-stack can have about 20 slices selected across the whole stack (not just the beginning or last few slices). This way, when you extract and save the sub-stack's features, the storage file won't occupy too much space on the hard drive.  
 
 !!! tip
-    If the image resolution is high, it's better to down-scale the images into a resolution of below 1200 pixels for the largest dimension.
+    If the image resolution is high, it's better to down-scale images into a resolution of below 1200 pixels for the largest dimension.
 
 After the training, you can save the RF model, and later apply it on the entire stack.  
 

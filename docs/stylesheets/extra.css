@@ -1,5 +1,13 @@
+.md-typeset {
+    font-weight: 500;
+}
+
+.md-typeset p, ol, ul{
+    text-align: justify;
+}
+
 .md-typeset code {
-    font-size: 91%;
+    font-size: 94%;
     font-weight: 600;
 }
 
