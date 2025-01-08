@@ -19,3 +19,8 @@
 .admonition>:last-child, html .md-typeset details>:last-child {
     font-size: 0.72rem;
 }
+
+
+.clear {
+    clear: both;
+}

@@ -1,5 +1,9 @@
 ## Easy Way!
-To install this plugin you need to use [mamba] or [conda] to create a environment and install the requirements. Use the commands below to create the environment and install the plugin:
+To install this plugin you need to use [mamba] or [conda] to create a environment and install the requirements. Use commands below to create the environment and install the plugin:
+```bash
+git clone https://github.com/juglab/featureforest
+cd ./featureforest
+```
 ```bash
 # for GPU
 mamba env create -f ./env_gpu.yml
@@ -31,9 +35,6 @@ You need to install `sam-2` which can be installed easily using mamba (or conda)
 - `segment-anything`
 - `sam-2`
 
-If you want to install the plugin manually using GPU, please follow the pytorch installation instruction [here](https://pytorch.org/get-started/locally/).  
-For detailed napari installation see [here](https://napari.org/stable/tutorials/fundamentals/installation).  
-
 ## Installing Only The Plugin
 If you use the provided conda environment yaml files, the plugin will be installed automatically. But in case you already have the environment setup, 
 you can just install the plugin. First clone the repository:
@@ -50,6 +51,8 @@ There is also a [pypi package](https://pypi.org/project/featureforest/) availabl
 ```bash
 pip install featureforest
 ```
+
+If you want to install the plugin manually using GPU, please follow the pytorch installation instruction [here](https://pytorch.org/get-started/locally/). For detailed napari installation see [here](https://napari.org/stable/tutorials/fundamentals/installation).  
 
 
 [conda]: https://conda.io/projects/conda/en/latest/index.html

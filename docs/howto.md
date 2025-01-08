@@ -16,5 +16,5 @@ As for the first step, we recommend making a small sub-stack to train a Random F
 After the training, you can save the RF model, and later apply it on the entire stack.  
 
 ## Divide And Conquer
-Extracted features saved as an `HDF5` file can take a very large space on disk. In this method, to prevent the disk space overflow, you can divide your large stack into several sub-stacks. Then use the plugin for each, separately.  
-Although, you can try one trained model over another sub-stack, Random Forest model can not be fine-tuned. By using this method, you can achieve better annotations with the expense of spending more time on training several models.
+Extracted features saved as an `HDF5` file can take up a huge space on the disk. In this method, to prevent disk space overflow, you can divide your large stack into several sub-stacks. Then use the plugin for each, separately.   
+Although, you can try one trained model over another sub-stack, Random Forest model can not be fine-tuned. By using this method, you can achieve better annotations at the expense of spending more time on training several models.

@@ -13,10 +13,14 @@ We developed a *napari* plugin to train a *Random Forest* model using extracted 
 ----------------------------------
 
 ## Documentation
-The plugin documentation is [here](docs/index.md).
+You can check the documentation [here](https://juglab.github.io/featureforest/) (⚠️ work in progress!).
 
 ## Installation
-To install this plugin you need to use [conda] or [mamba] to create a environment and install the requirements. Use the commands below to create the environment and install the plugin:
+To install this plugin you need to use [conda] or [mamba] to create an environment and install the requirements. Use commands below to create the environment and install the plugin:
+```bash
+git clone https://github.com/juglab/featureforest
+cd ./featureforest
+```
 ```bash
 # for GPU
 conda env create -f ./env_gpu.yml
@@ -26,41 +30,7 @@ conda env create -f ./env_gpu.yml
 conda env create -f ./env_cpu.yml
 ```
 
-#### Note: You need to install `sam-2` which can be installed easily using conda. To install `sam-2` using `pip` please refer to the official [sam-2](https://github.com/facebookresearch/sam2) repository.
-
-### Requirements
-- `python >= 3.10`
-- `numpy==1.24.4`
-- `opencv-python`
-- `scikit-learn`
-- `scikit-image`
-- `matplotlib`
-- `pyqt`
-- `magicgui`
-- `qtpy`
-- `napari`
-- `h5py`
-- `pytorch=2.3.1`
-- `torchvision=0.18.1`
-- `timm=1.0.9`
-- `pynrrd`
-- `segment-anything`
-- `sam-2`
-
-If you want to install the plugin manually using GPU, please follow the pytorch installation instruction [here](https://pytorch.org/get-started/locally/).  
-For detailed napari installation see [here](https://napari.org/stable/tutorials/fundamentals/installation).  
-
-### Installing The Plugin
-If you use the provided conda environment yaml files, the plugin will be installed automatically. But in case you already have the environment setup, 
-you can just install the plugin. First clone the repository:
-```bash
-git clone https://github.com/juglab/featureforest
-```
-Then run the following commands:
-```bash
-cd ./featureforest
-pip install .
-```
+For more detailed installation guide, check out [here](https://juglab.github.io/featureforest/install/).
 
 
 ## License
