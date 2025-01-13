@@ -28,7 +28,7 @@ class SAM2Adapter(BaseModelAdapter):
         self.name = name
         # we need sam2 image encoder part
         self.encoder = image_encoder
-        self.encoder_num_channels = 256
+        self.encoder_num_channels = 256 * 3
         self._set_patch_size()
         self.device = device
 
