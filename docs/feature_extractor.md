@@ -13,7 +13,7 @@ You can bring up the *Feature Extractor widget* from the napari **Plugins** menu
 
 1. **Image Layer**: To select your current image stack.
 2. **Encode Model**: Sets which model you want to use for feature extraction.  
-    The **FF** plugins, by default, comes with `MobileSAM`, `SAM (huge)`, `DINOv2`, `SAM2 (large)`, and `SAM2 (base)` models. It is also possible to introduce a new model by adding the [*model adapter*](link here) class.
+    The **FF** plugins, by default, comes with `MobileSAM`, `SAM (huge)`, `DINOv2`, `SAM2 (large)`, and `SAM2 (base)` models. It is also possible to introduce a new model by adding a new [*model adapter*](./model_adapter.md) class.
 3. **Features Storage File**: Where you want to save the features as an `HDF5` file.
 4. **Extract Features** button: Will run the feature extraction process.
 5. **Stop** button: To stop the extraction process!
