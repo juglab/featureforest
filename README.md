@@ -33,6 +33,11 @@ conda env create -f ./env_cpu.yml
 For more detailed installation guide, check out [here](https://juglab.github.io/featureforest/install/).
 
 
+## Cite us
+
+Seifi, Mehdi, Damian Dalle Nogare, Juan Battagliotti, Vera Galinova, Ananya Kediga Rao, AI4Life Horizon Europe Programme Consortium, Johan Decelle, Florian Jug, and Joran Deschamps. "FeatureForest: the power of foundation models, the usability of random forests." bioRxiv (2024): 2024-12. [DOI: 10.1101/2024.12.12.628025](https://www.biorxiv.org/content/10.1101/2024.12.12.628025v1.full)
+
+
 ## License
 
 Distributed under the terms of the [BSD-3] license,
