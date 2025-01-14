@@ -1,4 +1,4 @@
-__version__ = "0.0.6"
+__version__ = "0.0.7"
 
 from ._feature_extractor_widget import FeatureExtractorWidget
 from ._segmentation_widget import SegmentationWidget

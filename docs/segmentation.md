@@ -61,7 +61,7 @@ The Segmentation widget is a long widget with several panels, but don't worry we
 6. **Apply to Stack** button: To apply the post-processing to the whole loaded stack, please push this button!
 
 !!! info
-    **RF** prediction is pixel based, so the mask will have holes, fuzzy edges and it's not smooth. To make the predicted mask smooth, we are using the *min-curvature smoothing* algorhitm which is a edge-preserving iterative algorithm. It means, this algorithm will not reshape the overall shape of the mask components while smoothing them, and you have the power to run it enough times to get your desired results.
+    **RF** prediction is pixel based, so the mask will have holes, fuzzy edges and it's not smooth. To make the predicted mask smooth, we are using the *min-curvature smoothing* algorhitm which is a edge-preserving iterative algorithm. It means, this algorithm will not change the overall shape of the mask components while smoothing them, and you have the power to run it enough times to get your desired results.
 
 !!! tip
     Using SAM for the post-processing usually generate a decent mask. If your image has small number of almost well-separated objects, then we recommend using the **SAM Auto-Segmentation** option. Otherwise, use the **SAM Predictor**. It will be faster as well.
@@ -73,7 +73,7 @@ The Segmentation widget is a long widget with several panels, but don't worry we
 ![Inputs](assets/segmentation_widget/seg_5.png){width="360" align=right}
 With this panel, you can export the predicted mask into provided formats.  
 
-1. **Export Format**: To select the export file format. Currently *TIFF*, *NRRRD*, *NUMPY* are supported.
+1. **Export Format**: To select the export file format. Currently *TIFF*, *NRRD*, *NUMPY* are supported.
 2. **Export with Post-processing**: If checked you'll export the post-processed mask.
 3. **Export** button: Open up a save dialog to get where to save the file.
 

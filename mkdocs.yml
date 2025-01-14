@@ -44,7 +44,7 @@ nav:
   - How to use the plugin: howto.md
   - Feature Extractor Widget: feature_extractor.md
   - Segmentation Widget: segmentation.md
-  - Models: model_adapter.md
+  - Adapting New Models: model_adapter.md
 
 extra:
   version:
