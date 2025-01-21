@@ -1,3 +1,7 @@
+import time
+import csv
+from pathlib import Path
+
 import napari
 import napari.utils.notifications as notif
 import torch
@@ -32,6 +36,10 @@ class FeatureExtractorWidget(QWidget):
         self.viewer = napari_viewer
         self.extract_worker = None
         self.model_adapter = None
+        self.timing = {
+            "start": 0,
+            "avg_per_slice": 0
+        }
         self.prepare_widget()
 
     def prepare_widget(self):
@@ -70,6 +78,8 @@ class FeatureExtractorWidget(QWidget):
         self.stop_button.setMinimumWidth(150)
         # progress
         self.stack_progress = QProgressBar()
+        # time label
+        self.time_label = QLabel()
 
         self.viewer.layers.events.inserted.connect(self.check_input_layers)
         self.viewer.layers.events.removed.connect(self.check_input_layers)
@@ -104,6 +114,7 @@ class FeatureExtractorWidget(QWidget):
         vbox = QVBoxLayout()
         vbox.setContentsMargins(0, 5, 0, 0)
         vbox.addWidget(self.stack_progress)
+        vbox.addWidget(self.time_label)
         layout.addLayout(vbox)
 
         gbox = QGroupBox()
@@ -162,6 +173,7 @@ class FeatureExtractorWidget(QWidget):
 
         self.extract_button.setEnabled(False)
         self.stop_button.setEnabled(True)
+        self.timing["start"] = time.perf_counter()
         self.extract_worker = create_worker(
             extract_embeddings_to_file,
             image=image_layer.data,
@@ -181,17 +193,37 @@ class FeatureExtractorWidget(QWidget):
 
     def update_extract_progress(self, values):
         curr, total = values
+        elapsed_time = time.perf_counter() - self.timing["start"]
         self.stack_progress.setMinimum(0)
         self.stack_progress.setMaximum(total)
         self.stack_progress.setValue(curr + 1)
         self.stack_progress.setFormat("slice %v of %m (%p%)")
+        self.timing["avg_per_slice"] = elapsed_time / (curr + 1)
+        remaining_time = (self.timing["avg_per_slice"] * (total - curr + 1)) / 60
+        self.time_label.setText(f"Estimated remaining time: {remaining_time: .2f} minutes")
 
     def extract_is_done(self):
+        elapsed_time = time.perf_counter() - self.timing["start"]
+        minutes, seconds = divmod(elapsed_time, 60)
         self.extract_button.setEnabled(True)
         self.stop_button.setEnabled(False)
+        self.free_resource()
+
         print("Extracting is done!")
         notif.show_info("Extracting is done!")
-        self.free_resource()
+        print(f"Total Elapsed Time: {int(minutes)} minutes and {int(seconds)} seconds")
+        self.time_label.setText(f"Extraction Time: {int(minutes)} minutes and {int(seconds)} seconds")
+        # save the stats
+        storage_path = Path(self.storage_textbox.text())
+        csv_path = storage_path.parent.joinpath(f"{storage_path.stem}.csv")
+        with open(csv_path, mode="w") as f:
+            writer = csv.DictWriter(f, fieldnames=["total", "avg_per_slice"])
+            writer.writeheader()
+            writer.writerow({
+                "total": f"{int(minutes)} minutes and {int(seconds)} seconds",
+                "avg_per_slice": f"{int(self.timing['avg_per_slice'])} seconds"
+            })
+
 
     def free_resource(self):
         if self.model_adapter is not None:

@@ -43,9 +43,8 @@ from .postprocess import (
     get_sam_auto_masks
 )
 from .exports import EXPORTERS, reset_mask_labels
-from .utils.pipeline_prediction import (
-    extract_predict
-)
+from .utils.pipeline_prediction import extract_predict
+from .utils.usage_stats import SegmentationUsageStats
 
 
 class SegmentationWidget(QWidget):
@@ -63,6 +62,7 @@ class SegmentationWidget(QWidget):
         self.patch_size = 512  # default values
         self.overlap = 384
         self.stride = self.patch_size - self.overlap
+        self.stats = SegmentationUsageStats()
 
         self.prepare_widget()
 
@@ -122,6 +122,7 @@ class SegmentationWidget(QWidget):
         # ground truth layers
         gt_label = QLabel("Ground Truth Layer:")
         self.gt_combo = QComboBox()
+        self.gt_combo.currentIndexChanged.connect(self.set_stats_label_layer)
         add_labels_button = QPushButton("Add Layer")
         add_labels_button.clicked.connect(self.add_labels_layer)
         # layout
@@ -508,6 +509,14 @@ class SegmentationWidget(QWidget):
             if index > -1:
                 self.prediction_layer_combo.setCurrentIndex(index)
 
+    def set_stats_label_layer(self):
+        layer = get_layer(
+            self.viewer,
+            self.gt_combo.currentText(), config.NAPARI_LABELS_LAYER
+        )
+        if layer is not None:
+            self.stats.set_label_layer(layer)
+
     def clear_sam_auto_masks(self):
         self.sam_auto_masks = None
 
@@ -653,6 +662,8 @@ class SegmentationWidget(QWidget):
             notif.show_error("No Image layer is selected!")
             return None
 
+        self.stats.training_started()  # stats
+
         # get the train data and labels
         dataset = self.get_train_data()
         if dataset is None:
@@ -679,6 +690,8 @@ class SegmentationWidget(QWidget):
         )
         rf_classifier.fit(train_data, labels)
         self.rf_model = rf_classifier
+
+        self.stats.count_training()
         self.model_status_label.setText("Model status: Ready!")
         notif.show_info("Model status: Training is Done!")
         self.model_save_button.setEnabled(True)
@@ -793,9 +806,13 @@ class SegmentationWidget(QWidget):
 
     def run_prediction(self, slice_indices, img_height, img_width):
         for slice_index in np_progress(slice_indices):
+            self.stats.prediction_started()
+
             segmentation_image = self.predict_slice(
                 self.rf_model, slice_index, img_height, img_width
             )
+
+            self.stats.count_prediction()
             # add/update segmentation result layer
             if (
                 self.new_layer_checkbox.checkState() == Qt.Checked or
