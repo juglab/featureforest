@@ -27,6 +27,7 @@ from sklearn.ensemble import RandomForestClassifier
 from .models import get_model
 from .widgets import (
     ScrollWidgetWrapper,
+    UsageStats,
     get_layer,
 )
 from .utils.data import (
@@ -36,6 +37,7 @@ from .utils.data import (
 from .utils import (
     colormaps, config
 )
+from .utils.usage_stats import SegmentationUsageStats
 from .postprocess import (
     postprocess,
     postprocess_with_sam,
@@ -44,7 +46,6 @@ from .postprocess import (
 )
 from .exports import EXPORTERS, reset_mask_labels
 from .utils.pipeline_prediction import extract_predict
-from .utils.usage_stats import SegmentationUsageStats
 
 
 class SegmentationWidget(QWidget):
@@ -164,16 +165,23 @@ class SegmentationWidget(QWidget):
         analyze_button = QPushButton("Analyze")
         analyze_button.setMinimumWidth(150)
         analyze_button.clicked.connect(lambda: self.analyze_labels())
+        #
+        usage_stats_button = QPushButton("Plugin Usage Stats")
+        usage_stats_button.setMinimumWidth(150)
+        usage_stats_button.clicked.connect(self.show_usage_stats)
         # layout
         layout = QVBoxLayout()
         vbox = QVBoxLayout()
         vbox.setContentsMargins(0, 0, 0, 0)
         vbox.addWidget(self.num_class_label)
         vbox.addWidget(self.each_class_label)
-        vbox.addWidget(analyze_button, alignment=Qt.AlignLeft)
+        hbox = QHBoxLayout()
+        hbox.addWidget(analyze_button, alignment=Qt.AlignLeft)
+        hbox.addWidget(usage_stats_button, alignment=Qt.AlignLeft)
+        vbox.addLayout(hbox)
         layout.addLayout(vbox)
         gbox = QGroupBox()
-        gbox.setTitle("Labeling Statistics")
+        gbox.setTitle("Statistics")
         gbox.setMinimumWidth(100)
         gbox.setLayout(layout)
         self.base_layout.addWidget(gbox)
@@ -509,14 +517,6 @@ class SegmentationWidget(QWidget):
             if index > -1:
                 self.prediction_layer_combo.setCurrentIndex(index)
 
-    def set_stats_label_layer(self):
-        layer = get_layer(
-            self.viewer,
-            self.gt_combo.currentText(), config.NAPARI_LABELS_LAYER
-        )
-        if layer is not None:
-            self.stats.set_label_layer(layer)
-
     def clear_sam_auto_masks(self):
         self.sam_auto_masks = None
 
@@ -558,6 +558,11 @@ class SegmentationWidget(QWidget):
             self.model_adapter = get_model(model_name, img_height, img_width)
             print(model_name, self.patch_size, self.overlap)
 
+            # set the plugin usage stats csv file
+            storage_path = Path(selected_file)
+            csv_path = storage_path.parent.joinpath(f"{storage_path.stem}_seg_stats.csv")
+            self.stats.set_file_path(csv_path)
+
     def add_labels_layer(self):
         self.image_layer = get_layer(
             self.viewer,
@@ -573,6 +578,14 @@ class SegmentationWidget(QWidget):
         )
         layer.colormap = colormaps.create_colormap(10)[0]
         layer.brush_size = 1
+
+    def set_stats_label_layer(self):
+        layer = get_layer(
+            self.viewer,
+            self.gt_combo.currentText(), config.NAPARI_LABELS_LAYER
+        )
+        if layer is not None:
+            self.stats.set_label_layer(layer)
 
     def get_class_labels(self):
         labels_dict = {}
@@ -602,6 +615,10 @@ class SegmentationWidget(QWidget):
             f"class {i + 1}: {num_labels[i]:,d}" for i in range(len(num_labels))
         ])
         self.each_class_label.setText("Labels per class:\n" + each_class)
+
+    def show_usage_stats(self):
+        stats_widget = UsageStats(self.stats)
+        stats_widget.exec()
 
     def get_train_data(self):
         # get ground truth class labels

@@ -215,7 +215,7 @@ class FeatureExtractorWidget(QWidget):
         self.time_label.setText(f"Extraction Time: {int(minutes)} minutes and {int(seconds)} seconds")
         # save the stats
         storage_path = Path(self.storage_textbox.text())
-        csv_path = storage_path.parent.joinpath(f"{storage_path.stem}.csv")
+        csv_path = storage_path.parent.joinpath(f"{storage_path.stem}_ext_stats.csv")
         with open(csv_path, mode="w") as f:
             writer = csv.DictWriter(f, fieldnames=["total", "avg_per_slice"])
             writer.writeheader()
