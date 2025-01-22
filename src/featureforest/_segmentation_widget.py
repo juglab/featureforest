@@ -1,6 +1,9 @@
 import os
 import pickle
 import warnings
+import datetime as dt
+import time
+import csv
 from pathlib import Path
 
 import napari
@@ -27,6 +30,7 @@ from sklearn.ensemble import RandomForestClassifier
 from .models import get_model
 from .widgets import (
     ScrollWidgetWrapper,
+    UsageStats,
     get_layer,
 )
 from .utils.data import (
@@ -36,6 +40,7 @@ from .utils.data import (
 from .utils import (
     colormaps, config
 )
+from .utils.usage_stats import SegmentationUsageStats
 from .postprocess import (
     postprocess,
     postprocess_with_sam,
@@ -43,9 +48,7 @@ from .postprocess import (
     get_sam_auto_masks
 )
 from .exports import EXPORTERS, reset_mask_labels
-from .utils.pipeline_prediction import (
-    extract_predict
-)
+from .utils.pipeline_prediction import extract_predict
 
 
 class SegmentationWidget(QWidget):
@@ -63,6 +66,7 @@ class SegmentationWidget(QWidget):
         self.patch_size = 512  # default values
         self.overlap = 384
         self.stride = self.patch_size - self.overlap
+        self.stats = SegmentationUsageStats()
 
         self.prepare_widget()
 
@@ -122,6 +126,7 @@ class SegmentationWidget(QWidget):
         # ground truth layers
         gt_label = QLabel("Ground Truth Layer:")
         self.gt_combo = QComboBox()
+        self.gt_combo.currentIndexChanged.connect(self.set_stats_label_layer)
         add_labels_button = QPushButton("Add Layer")
         add_labels_button.clicked.connect(self.add_labels_layer)
         # layout
@@ -163,16 +168,23 @@ class SegmentationWidget(QWidget):
         analyze_button = QPushButton("Analyze")
         analyze_button.setMinimumWidth(150)
         analyze_button.clicked.connect(lambda: self.analyze_labels())
+        #
+        usage_stats_button = QPushButton("Plugin Usage Stats")
+        usage_stats_button.setMinimumWidth(150)
+        usage_stats_button.clicked.connect(self.show_usage_stats)
         # layout
         layout = QVBoxLayout()
         vbox = QVBoxLayout()
         vbox.setContentsMargins(0, 0, 0, 0)
         vbox.addWidget(self.num_class_label)
         vbox.addWidget(self.each_class_label)
-        vbox.addWidget(analyze_button, alignment=Qt.AlignLeft)
+        hbox = QHBoxLayout()
+        hbox.addWidget(analyze_button, alignment=Qt.AlignLeft)
+        hbox.addWidget(usage_stats_button, alignment=Qt.AlignLeft)
+        vbox.addLayout(hbox)
         layout.addLayout(vbox)
         gbox = QGroupBox()
-        gbox.setTitle("Labeling Statistics")
+        gbox.setTitle("Statistics")
         gbox.setMinimumWidth(100)
         gbox.setLayout(layout)
         self.base_layout.addWidget(gbox)
@@ -429,8 +441,9 @@ class SegmentationWidget(QWidget):
         self.stop_pipeline_button.setEnabled(False)
         self.stop_pipeline_button.clicked.connect(self.stop_pipeline)
 
-
         self.pipeline_progressbar = QProgressBar()
+
+        self.timing_info = QLabel("")
 
         # layout
         layout = QVBoxLayout()
@@ -455,6 +468,7 @@ class SegmentationWidget(QWidget):
         hbox.addWidget(self.stop_pipeline_button, alignment=Qt.AlignLeft)
         vbox.addLayout(hbox)
         vbox.addWidget(self.pipeline_progressbar)
+        vbox.addWidget(self.timing_info)
         layout.addLayout(vbox)
 
         gbox = QGroupBox()
@@ -549,6 +563,11 @@ class SegmentationWidget(QWidget):
             self.model_adapter = get_model(model_name, img_height, img_width)
             print(model_name, self.patch_size, self.overlap)
 
+            # set the plugin usage stats csv file
+            storage_path = Path(selected_file)
+            csv_path = storage_path.parent.joinpath(f"{storage_path.stem}_seg_stats.csv")
+            self.stats.set_file_path(csv_path)
+
     def add_labels_layer(self):
         self.image_layer = get_layer(
             self.viewer,
@@ -564,6 +583,14 @@ class SegmentationWidget(QWidget):
         )
         layer.colormap = colormaps.create_colormap(10)[0]
         layer.brush_size = 1
+
+    def set_stats_label_layer(self):
+        layer = get_layer(
+            self.viewer,
+            self.gt_combo.currentText(), config.NAPARI_LABELS_LAYER
+        )
+        if layer is not None:
+            self.stats.set_label_layer(layer)
 
     def get_class_labels(self):
         labels_dict = {}
@@ -593,6 +620,10 @@ class SegmentationWidget(QWidget):
             f"class {i + 1}: {num_labels[i]:,d}" for i in range(len(num_labels))
         ])
         self.each_class_label.setText("Labels per class:\n" + each_class)
+
+    def show_usage_stats(self):
+        stats_widget = UsageStats(self.stats)
+        stats_widget.exec()
 
     def get_train_data(self):
         # get ground truth class labels
@@ -653,6 +684,8 @@ class SegmentationWidget(QWidget):
             notif.show_error("No Image layer is selected!")
             return None
 
+        self.stats.training_started()  # stats
+
         # get the train data and labels
         dataset = self.get_train_data()
         if dataset is None:
@@ -679,6 +712,8 @@ class SegmentationWidget(QWidget):
         )
         rf_classifier.fit(train_data, labels)
         self.rf_model = rf_classifier
+
+        self.stats.count_training()
         self.model_status_label.setText("Model status: Ready!")
         notif.show_info("Model status: Training is Done!")
         self.model_save_button.setEnabled(True)
@@ -793,9 +828,13 @@ class SegmentationWidget(QWidget):
 
     def run_prediction(self, slice_indices, img_height, img_width):
         for slice_index in np_progress(slice_indices):
+            self.stats.prediction_started()
+
             segmentation_image = self.predict_slice(
                 self.rf_model, slice_index, img_height, img_width
             )
+
+            self.stats.count_prediction()
             # add/update segmentation result layer
             if (
                 self.new_layer_checkbox.checkState() == Qt.Checked or
@@ -1035,6 +1074,9 @@ class SegmentationWidget(QWidget):
     def run_pipeline(
             self, tiff_stack_file: str, result_dir: Path, storage_group: h5py.Group
     ):
+        start = dt.datetime.now()
+        slices_total_time = 0
+        postprocess_total_time = 0
         prediction_dir = result_dir.joinpath("predictions")
         prediction_dir.mkdir(parents=True, exist_ok=True)
         simple_post_dir = result_dir.joinpath("post_simple")
@@ -1043,10 +1085,12 @@ class SegmentationWidget(QWidget):
         sam_post_dir.mkdir(parents=True, exist_ok=True)
 
         with TiffFile(tiff_stack_file) as tiff_stack:
+            total_pages = len(tiff_stack.pages)
             for page_idx, page in np_progress(
                 enumerate(tiff_stack.pages),
                 desc="runing the pipeline", total=len(tiff_stack.pages)
             ):
+                slice_start = time.perf_counter()
                 image = page.asarray()
                 prediction_mask = extract_predict(
                     image, self.model_adapter, storage_group, self.rf_model
@@ -1066,6 +1110,7 @@ class SegmentationWidget(QWidget):
                     simple_post_dir.joinpath(f"slice_{page_idx:04}_post_simple.tiff"),
                     post_mask
                 )
+                pp_start = time.perf_counter()
                 post_sam_mask = postprocess_with_sam(
                     prediction_mask,
                     smoothing_iterations, area_threshold, area_is_absolute
@@ -1074,8 +1119,21 @@ class SegmentationWidget(QWidget):
                     sam_post_dir.joinpath(f"slice_{page_idx:04}_post_sam.tiff"),
                     post_sam_mask
                 )
+                # slices timing
+                postprocess_total_time += round(time.perf_counter() - pp_start, 2)
+                slices_total_time += round(time.perf_counter() - slice_start, 2)
+                slice_avg = slices_total_time / (page_idx + 1)
+                rem_minutes, rem_seconds = divmod(slice_avg * (total_pages - page_idx + 1), 60)
+                rem_hour, rem_minutes = divmod(rem_minutes, 60)
+                self.timing_info.setText(
+                    f"Estimated remaining time: {int(rem_hour):02}:{int(rem_minutes):02}:{int(rem_seconds):02}"
+                )
+                print(f"slice average time(seconds): {slice_avg:.2f}")
 
-                yield page_idx, len(tiff_stack.pages)
+                yield page_idx, total_pages
+        # stack is done
+        end = dt.datetime.now()
+        self.save_pipeline_stats(result_dir, start, end, slices_total_time, postprocess_total_time, total_pages)
         # closing the h5 storage & remove the file
         try:
             storage_group.file.close()
@@ -1107,3 +1165,25 @@ class SegmentationWidget(QWidget):
         tmp_storage_path = Path.home().joinpath(".featureforest", "tmp_storage.h5")
         if tmp_storage_path.exists():
             tmp_storage_path.unlink()
+
+    def save_pipeline_stats(
+        self, save_dir : Path, start: dt.datetime, end: dt.datetime,
+        slice_total: float, pp_total: float, num_images: int
+    ):
+        total_time = (end - start).total_seconds()
+        total_min, total_sec = divmod(total_time, 60)
+        total_hour, total_min = divmod(total_min, 60)
+        csv_file = save_dir.joinpath("stats.csv")
+        with open(csv_file, mode="w") as f:
+            writer = csv.DictWriter(f, fieldnames=[
+                "num_images", "start", "end", "total", "slice_avg", "postprocess_avg"
+            ])
+            writer.writeheader()
+            writer.writerow({
+                "num_images": num_images,
+                "start": str(start),
+                "end": str(end),
+                "total": f"{int(total_hour):02}:{int(total_min):02}:{int(total_sec):02}",
+                "slice_avg": round(slice_total / num_images, 2),
+                "postprocess_avg": round(pp_total / num_images, 2)
+            })
