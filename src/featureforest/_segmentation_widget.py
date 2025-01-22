@@ -1,6 +1,9 @@
 import os
 import pickle
 import warnings
+import datetime as dt
+import time
+import csv
 from pathlib import Path
 
 import napari
@@ -438,8 +441,9 @@ class SegmentationWidget(QWidget):
         self.stop_pipeline_button.setEnabled(False)
         self.stop_pipeline_button.clicked.connect(self.stop_pipeline)
 
-
         self.pipeline_progressbar = QProgressBar()
+
+        self.timing_info = QLabel("")
 
         # layout
         layout = QVBoxLayout()
@@ -464,6 +468,7 @@ class SegmentationWidget(QWidget):
         hbox.addWidget(self.stop_pipeline_button, alignment=Qt.AlignLeft)
         vbox.addLayout(hbox)
         vbox.addWidget(self.pipeline_progressbar)
+        vbox.addWidget(self.timing_info)
         layout.addLayout(vbox)
 
         gbox = QGroupBox()
@@ -1069,6 +1074,9 @@ class SegmentationWidget(QWidget):
     def run_pipeline(
             self, tiff_stack_file: str, result_dir: Path, storage_group: h5py.Group
     ):
+        start = dt.datetime.now()
+        slices_total_time = 0
+        postprocess_total_time = 0
         prediction_dir = result_dir.joinpath("predictions")
         prediction_dir.mkdir(parents=True, exist_ok=True)
         simple_post_dir = result_dir.joinpath("post_simple")
@@ -1077,10 +1085,12 @@ class SegmentationWidget(QWidget):
         sam_post_dir.mkdir(parents=True, exist_ok=True)
 
         with TiffFile(tiff_stack_file) as tiff_stack:
+            total_pages = len(tiff_stack.pages)
             for page_idx, page in np_progress(
                 enumerate(tiff_stack.pages),
                 desc="runing the pipeline", total=len(tiff_stack.pages)
             ):
+                slice_start = time.perf_counter()
                 image = page.asarray()
                 prediction_mask = extract_predict(
                     image, self.model_adapter, storage_group, self.rf_model
@@ -1100,6 +1110,7 @@ class SegmentationWidget(QWidget):
                     simple_post_dir.joinpath(f"slice_{page_idx:04}_post_simple.tiff"),
                     post_mask
                 )
+                pp_start = time.perf_counter()
                 post_sam_mask = postprocess_with_sam(
                     prediction_mask,
                     smoothing_iterations, area_threshold, area_is_absolute
@@ -1108,8 +1119,21 @@ class SegmentationWidget(QWidget):
                     sam_post_dir.joinpath(f"slice_{page_idx:04}_post_sam.tiff"),
                     post_sam_mask
                 )
+                # slices timing
+                postprocess_total_time += round(time.perf_counter() - pp_start, 2)
+                slices_total_time += round(time.perf_counter() - slice_start, 2)
+                slice_avg = slices_total_time / (page_idx + 1)
+                rem_minutes, rem_seconds = divmod(slice_avg * (total_pages - page_idx + 1), 60)
+                rem_hour, rem_minutes = divmod(rem_minutes, 60)
+                self.timing_info.setText(
+                    f"Estimated remaining time: {int(rem_hour):02}:{int(rem_minutes):02}:{int(rem_seconds):02}"
+                )
+                print(f"slice average time(seconds): {slice_avg:.2f}")
 
-                yield page_idx, len(tiff_stack.pages)
+                yield page_idx, total_pages
+        # stack is done
+        end = dt.datetime.now()
+        self.save_pipeline_stats(result_dir, start, end, slices_total_time, postprocess_total_time, total_pages)
         # closing the h5 storage & remove the file
         try:
             storage_group.file.close()
@@ -1141,3 +1165,25 @@ class SegmentationWidget(QWidget):
         tmp_storage_path = Path.home().joinpath(".featureforest", "tmp_storage.h5")
         if tmp_storage_path.exists():
             tmp_storage_path.unlink()
+
+    def save_pipeline_stats(
+        self, save_dir : Path, start: dt.datetime, end: dt.datetime,
+        slice_total: float, pp_total: float, num_images: int
+    ):
+        total_time = (end - start).total_seconds()
+        total_min, total_sec = divmod(total_time, 60)
+        total_hour, total_min = divmod(total_min, 60)
+        csv_file = save_dir.joinpath("stats.csv")
+        with open(csv_file, mode="w") as f:
+            writer = csv.DictWriter(f, fieldnames=[
+                "num_images", "start", "end", "total", "slice_avg", "postprocess_avg"
+            ])
+            writer.writeheader()
+            writer.writerow({
+                "num_images": num_images,
+                "start": str(start),
+                "end": str(end),
+                "total": f"{int(total_hour):02}:{int(total_min):02}:{int(total_sec):02}",
+                "slice_avg": round(slice_total / num_images, 2),
+                "postprocess_avg": round(pp_total / num_images, 2)
+            })
