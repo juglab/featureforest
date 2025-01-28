@@ -82,10 +82,10 @@ class SegmentationUsageStats:
     def to_dataframe(self):
         data = {}
         data["labeling"] = format_seconds(self.last_label_on - self.labeling_start)[0]
-        data["last_training"] = round(self.last_training_time / 60, 2)
-        data["average_training"] = round(self.avg_training_time / 60, 2)
+        data["last_training"] = round(self.last_training_time, 2)
+        data["average_training"] = round(self.avg_training_time, 2)
         data["num_trainings"] = self.num_training
-        data["prediction_time"] = round(self.prediction_time / 60, 2)
+        data["prediction_time"] = round(self.prediction_time, 2)
         data["num_predictions"] = self.num_prediction
 
         return pd.DataFrame(data, index=[0])
