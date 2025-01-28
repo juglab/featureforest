@@ -30,7 +30,7 @@ class SegmentationUsageStats:
             return
         # release the old layer event
         if self.label_layer is not None:
-            self.label_layer.events.label_update.disconnect()
+            self.label_layer.events.labels_update.disconnect()
         # set the new one
         self.label_layer = layer
         self.label_layer.events.labels_update.connect(self._on_label_updated)
