@@ -16,7 +16,7 @@ from qtpy.QtWidgets import (
     QWidget, QHBoxLayout, QVBoxLayout,
     QGroupBox, QCheckBox, QRadioButton,
     QPushButton, QLabel, QComboBox, QLineEdit,
-    QFileDialog, QProgressBar,
+    QFileDialog, QProgressBar
 )
 from qtpy.QtCore import Qt
 from qtpy.QtGui import QIntValidator, QDoubleValidator
@@ -204,6 +204,7 @@ class SegmentationWidget(QWidget):
         train_button = QPushButton("Train RF Model")
         train_button.clicked.connect(self.train_model)
         train_button.setMinimumWidth(150)
+        train_button.setShortcut("CTRL+T")
 
         self.model_status_label = QLabel("Model status:")
 
@@ -257,6 +258,7 @@ class SegmentationWidget(QWidget):
         predict_button = QPushButton("Predict Slice")
         predict_button.setMinimumWidth(150)
         predict_button.clicked.connect(lambda: self.predict(whole_stack=False))
+        predict_button.setShortcut("CTRL+P")
         self.predict_all_button = QPushButton("Predict Whole Stack")
         self.predict_all_button.setMinimumWidth(150)
         self.predict_all_button.clicked.connect(lambda: self.predict(whole_stack=True))
