@@ -2,7 +2,8 @@
 
 [![License BSD-3](https://img.shields.io/pypi/l/featureforest.svg?color=green)](https://github.com/juglab/featureforest/blob/main/LICENSE)
 [![PyPI](https://img.shields.io/pypi/v/featureforest.svg?color=green)](https://pypi.org/project/featureforest)
-[![Downloads](https://pepy.tech/badge/featureforest)](https://pepy.tech/project/featureforest)
+![PyPI - Downloads](https://img.shields.io/pypi/dm/featureforest)
+<!--[![Downloads](https://pepy.tech/badge/featureforest)](https://pepy.tech/project/featureforest)-->
 [![Python Version](https://img.shields.io/pypi/pyversions/featureforest.svg?color=green)](https://python.org)
 [![tests](https://github.com/juglab/featureforest/workflows/tests/badge.svg)](https://github.com/juglab/featureforest/actions)
 [![codecov](https://codecov.io/gh/juglab/featureforest/branch/main/graph/badge.svg)](https://codecov.io/gh/juglab/featureforest)
