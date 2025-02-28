@@ -3,11 +3,11 @@
 [![License BSD-3](https://img.shields.io/pypi/l/featureforest.svg?color=green)](https://github.com/juglab/featureforest/blob/main/LICENSE)
 [![PyPI](https://img.shields.io/pypi/v/featureforest.svg?color=green)](https://pypi.org/project/featureforest)
 ![PyPI - Downloads](https://img.shields.io/pypi/dm/featureforest)
-<!--[![Downloads](https://pepy.tech/badge/featureforest)](https://pepy.tech/project/featureforest)-->
 [![Python Version](https://img.shields.io/pypi/pyversions/featureforest.svg?color=green)](https://python.org)
 [![tests](https://github.com/juglab/featureforest/workflows/tests/badge.svg)](https://github.com/juglab/featureforest/actions)
 [![codecov](https://codecov.io/gh/juglab/featureforest/branch/main/graph/badge.svg)](https://codecov.io/gh/juglab/featureforest)
 [![napari hub](https://img.shields.io/endpoint?url=https://api.napari-hub.org/shields/featureforest)](https://napari-hub.org/plugins/featureforest)
+<!--[![Downloads](https://pepy.tech/badge/featureforest)](https://pepy.tech/project/featureforest)-->
 
 **A napari plugin for making image annotation using feature space of vision transformers and random forest classifier.**  
 We developed a *napari* plugin to train a *Random Forest* model using extracted features of vision foundation models and just a few scribble labels provided by the user as input. This approach can do the segmentation of desired objects almost as well as manual segmentations but in a much shorter time with less manual effort.
