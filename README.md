@@ -23,6 +23,7 @@ To install this plugin you need to use [conda] or [mamba] to create an environme
 git clone https://github.com/juglab/featureforest
 cd ./featureforest
 ```
+
 ```bash
 conda env create -f environment.yaml
 ```
