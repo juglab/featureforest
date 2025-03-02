@@ -24,12 +24,7 @@ git clone https://github.com/juglab/featureforest
 cd ./featureforest
 ```
 ```bash
-# for GPU
-conda env create -f ./env_gpu.yml
-```
-```bash
-# if you don't have a GPU
-conda env create -f ./env_cpu.yml
+conda env create -f environment.yaml
 ```
 
 For more detailed installation guide, check out [here](https://juglab.github.io/featureforest/install/).

@@ -34,7 +34,7 @@ jobs:
           ACTIONS_STEP_DEBUG: false
         with:
           environment-name: ff
-          environment-file: env_cpu.yml
+          environment-file: environment.yaml
           condarc: |
             channels:
               - pytorch

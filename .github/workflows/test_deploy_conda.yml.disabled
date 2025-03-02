@@ -38,13 +38,13 @@ jobs:
           # channels: pytorch, conda-forge, defaults
           channel-priority: true
           use-only-tar-bz2: true
-          #environment-file: env_cpu.yml
+          #environment-file: environment.yaml
 
       - name: Conda info
         run: conda info
 
       - name: Setup
-        run: conda env create --name ff --file env_cpu.yml
+        run: conda env create --name ff --file environment.yaml
 
       # strategy borrowed from vispy for installing opengl libs on windows
       - name: Install Windows OpenGL
