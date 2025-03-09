@@ -1,5 +1,3 @@
-from typing import Tuple
-
 import torch
 
 from .tiny_vit_sam import TinyViT
@@ -13,12 +11,11 @@ def get_model(
     img_height: float, img_width: float, *args, **kwargs
 ) -> MobileSAMAdapter:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"running on {device}")
+    print(f"Running on '{device}'")
     # get the model
     model = setup_model().to(device)
     # download model's weights
-    model_url = \
-        "https://github.com/ChaoningZhang/MobileSAM/raw/master/weights/mobile_sam.pt"
+    model_url = "https://github.com/ChaoningZhang/MobileSAM/raw/master/weights/mobile_sam.pt"
     model_file = download_model(
         model_url=model_url,
         model_name="mobile_sam.pt"

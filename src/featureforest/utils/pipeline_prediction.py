@@ -13,8 +13,7 @@ from featureforest.utils.extract import get_slice_features
 
 
 def predict_slice(
-    rf_model, patch_dataset, model_adapter,
-    img_height, img_width, patch_size, overlap
+    rf_model, patch_dataset, model_adapter, img_height, img_width, patch_size, overlap,
 ):
     segmentation_image = []
     # shape: N x target_size x target_size x C
@@ -47,10 +46,10 @@ def predict_slice(
 
 
 def extract_predict(
-        image: np.ndarray,
-        model_adapter: BaseModelAdapter,
-        storage_group: h5py.Group,
-        rf_model: RandomForestClassifier,
+    image: np.ndarray,
+    model_adapter: BaseModelAdapter,
+    storage_group: h5py.Group,
+    rf_model: RandomForestClassifier,
 ) -> np.ndarray:
     img_height, img_width = image.shape[:2]
     patch_size = model_adapter.patch_size

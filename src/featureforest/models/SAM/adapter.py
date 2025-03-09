@@ -13,21 +13,27 @@ from featureforest.utils.data import (
 
 
 class SAMAdapter(BaseModelAdapter):
-    """SAM model adapter (vit_h)
+    """SAM model adapter (Supports all size of OG SAM models, i.e. `vit_b`, `vit_l` and `vit_h`.)
     """
     def __init__(
         self,
         image_encoder: nn.Module,
         img_height: float,
         img_width: float,
-        device: torch.device
+        device: torch.device,
+        name: str,
     ) -> None:
         super().__init__(image_encoder, img_height, img_width, device)
-        self.name = "SAM"
+
+        self.name = name
+
         # we need sam image encoder part
         self.encoder = image_encoder
         self.encoder_num_channels = 256
-        self.embed_layer_num_channels = 1280
+
+        # NOTE: The parameter below matches the SAM model's encoder embedding dimension.
+        self.embed_layer_num_channels = image_encoder.patch_embed.proj.out_channels
+
         self._set_patch_size()
         self.device = device
 
@@ -58,14 +64,11 @@ class SAMAdapter(BaseModelAdapter):
     ) -> Tuple[Tensor, Tensor]:
         # get the mobile-sam encoder and embedding layer outputs
         with torch.no_grad():
-            # output: b,256,64,64
-            output = self.encoder(
-                self.input_transforms(in_patches)
-            )
-            # embed_output: b,64,64,1280 -> b,1280,64,64
-            embed_output = self.encoder.patch_embed(
-                self.input_transforms(in_patches)
-            ).permute(0, 3, 1, 2)
+            # output: (b, 256, 64, 64)
+            output = self.encoder(self.input_transforms(in_patches))
+
+            # embed_output: (b, 64, 64, D) -> (b, D, 64, 64), where 'D' is the image encoder embed. dim.
+            embed_output = self.encoder.patch_embed(self.input_transforms(in_patches)).permute(0, 3, 1, 2)
 
         # get non-overlapped feature patches
         out_feature_patches = get_nonoverlapped_patches(

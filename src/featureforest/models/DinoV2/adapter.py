@@ -6,9 +6,7 @@ from torch import Tensor
 from torchvision.transforms import v2 as tv_transforms2
 
 from featureforest.models.base import BaseModelAdapter
-from featureforest.utils.data import (
-    get_nonoverlapped_patches,
-)
+from featureforest.utils.data import get_nonoverlapped_patches
 
 
 class DinoV2Adapter(BaseModelAdapter):

@@ -3,9 +3,7 @@ import torch.nn as nn
 from torch import Tensor
 from torchvision.transforms import v2 as tv_transforms2
 
-from ..utils.data import (
-    get_nonoverlapped_patches,
-)
+from ..utils.data import get_nonoverlapped_patches
 
 
 class BaseModelAdapter:

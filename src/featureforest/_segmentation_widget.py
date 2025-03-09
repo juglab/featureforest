@@ -47,7 +47,7 @@ from .postprocess import (
     postprocess_with_sam_auto,
     get_sam_auto_masks
 )
-from .exports import EXPORTERS, reset_mask_labels
+from .exports import EXPORTERS
 from .utils.pipeline_prediction import extract_predict
 
 
@@ -1074,7 +1074,7 @@ class SegmentationWidget(QWidget):
         self.pipeline_worker.run()
 
     def run_pipeline(
-            self, tiff_stack_file: str, result_dir: Path, storage_group: h5py.Group
+        self, tiff_stack_file: str, result_dir: Path, storage_group: h5py.Group
     ):
         start = dt.datetime.now()
         slices_total_time = 0
@@ -1169,7 +1169,7 @@ class SegmentationWidget(QWidget):
             tmp_storage_path.unlink()
 
     def save_pipeline_stats(
-        self, save_dir : Path, start: dt.datetime, end: dt.datetime,
+        self, save_dir: Path, start: dt.datetime, end: dt.datetime,
         slice_total: float, pp_total: float, num_images: int
     ):
         total_time = (end - start).total_seconds()

@@ -58,8 +58,7 @@ def get_stride_margin(patch_size: int, overlap: int) -> Tuple[int, int]:
 
 
 def get_paddings(
-    patch_size: int, stride: int, margin: int,
-    img_height: float, img_width: float
+    patch_size: int, stride: int, margin: int, img_height: float, img_width: float,
 ) -> Tuple[int, int]:
     """Calculate the image paddings (right and bottom).
 
@@ -84,9 +83,7 @@ def get_paddings(
 
 
 def patchify(
-    images: Tensor,
-    patch_size: Optional[int] = None,
-    overlap: Optional[int] = None
+    images: Tensor, patch_size: Optional[int] = None, overlap: Optional[int] = None,
 ) -> Tensor:
     """Divide images into patches.
     images: (B, C, H, W)

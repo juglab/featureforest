@@ -6,8 +6,7 @@ MODELS_CACHE_DIR = Path.home().joinpath(".featureforest", "models")
 
 
 def download_model(
-    model_url: str, model_name: str,
-    cache_dir: Path = MODELS_CACHE_DIR, is_archived: bool = False
+    model_url: str, model_name: str, cache_dir: Path = MODELS_CACHE_DIR, is_archived: bool = False,
 ) -> str:
     """Download a model weights from a given url.
 
@@ -15,7 +14,7 @@ def download_model(
         model_url (str): the model weights' url.
         model_name (str): model's name that will be saved in cache.
         cache_dir (Path, optional): download directory. Defaults to CACHE_DIR.
-        is_archived (bool, optional):   set to True to unzip the downloaded file.
+        is_archived (bool, optional): Set to True to unzip the downloaded file.
                                         Defaults to False.
 
     Returns:

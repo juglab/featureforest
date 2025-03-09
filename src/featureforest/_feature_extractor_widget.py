@@ -16,18 +16,11 @@ from qtpy.QtWidgets import (
     QFileDialog, QProgressBar,
 )
 
+from .utils import config
+from .utils.data import get_stack_dims
+from .widgets import ScrollWidgetWrapper, get_layer
 from .models import get_available_models, get_model
-from .utils import (
-    config
-)
-from .utils.data import (
-    get_stack_dims,
-)
 from .utils.extract import extract_embeddings_to_file
-from .widgets import (
-    ScrollWidgetWrapper,
-    get_layer,
-)
 
 
 class FeatureExtractorWidget(QWidget):
@@ -36,10 +29,7 @@ class FeatureExtractorWidget(QWidget):
         self.viewer = napari_viewer
         self.extract_worker = None
         self.model_adapter = None
-        self.timing = {
-            "start": 0,
-            "avg_per_slice": 0
-        }
+        self.timing = {"start": 0, "avg_per_slice": 0}
         self.prepare_widget()
 
     def prepare_widget(self):
@@ -161,11 +151,13 @@ class FeatureExtractorWidget(QWidget):
         if image_layer is None:
             notif.show_error("No Image layer is selected.")
             return
+
         # check storage
         storage_path = self.storage_textbox.text()
         if storage_path is None or len(storage_path) < 6:
             notif.show_error("No storage path was set.")
             return
+
         # initialize the selected model
         _, img_height, img_width = get_stack_dims(image_layer.data)
         model_name = self.model_combo.currentText()
@@ -223,7 +215,6 @@ class FeatureExtractorWidget(QWidget):
                 "total": f"{int(minutes)} minutes and {int(seconds)} seconds",
                 "avg_per_slice": f"{int(self.timing['avg_per_slice'])} seconds"
             })
-
 
     def free_resource(self):
         if self.model_adapter is not None:

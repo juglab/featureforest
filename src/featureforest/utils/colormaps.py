@@ -14,6 +14,7 @@ def bit_get(val, idx):
     Args:
         val: Input value, int or numpy int array.
         idx: Which bit of the input val.
+
     Returns:
         The "idx"-th bit of input val.
     """

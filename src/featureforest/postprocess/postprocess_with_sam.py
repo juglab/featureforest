@@ -30,9 +30,9 @@ def get_sam2() -> SAM2Base:
 
     # init the model
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"running on {device}")
+    print(f"Running on {device}")
     sam2_model: SAM2Base = build_sam2(
-        config_file= "configs/sam2.1/sam2.1_hiera_b+.yaml",
+        config_file="configs/sam2.1/sam2.1_hiera_b+.yaml",
         ckpt_path=model_file,
         device=device
     )

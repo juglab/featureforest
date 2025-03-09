@@ -6,10 +6,7 @@ from torch import Tensor
 from torchvision.transforms import v2 as tv_transforms2
 
 from featureforest.models.base import BaseModelAdapter
-from featureforest.utils.data import (
-    get_patch_size,
-    get_nonoverlapped_patches,
-)
+from featureforest.utils.data import get_patch_size, get_nonoverlapped_patches
 
 
 class SAM2Adapter(BaseModelAdapter):
@@ -24,8 +21,10 @@ class SAM2Adapter(BaseModelAdapter):
         name: str = "SAM2_Large"
     ) -> None:
         super().__init__(image_encoder, img_height, img_width, device)
+
         # for different flavors of SAM2 only the name is different.
         self.name = name
+
         # we need sam2 image encoder part
         self.encoder = image_encoder
         self.encoder_num_channels = 256 * 3
