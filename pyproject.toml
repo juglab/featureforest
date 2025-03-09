@@ -32,6 +32,7 @@ authors = [
     { name = "Mehdi Seifi", email = "mehdi.seifi@fht.org" },
     { name = "Vera Galinova", email = "vera.galinova@fht.org" },
 ]
+
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Framework :: napari",
@@ -42,6 +43,7 @@ classifiers = [
     "License :: OSI Approved :: BSD License",
     "Topic :: Scientific/Engineering :: Image Processing",
 ]
+
 dependencies = [
     "numpy==1.24.4",
     "opencv-python",
@@ -62,6 +64,7 @@ dependencies = [
     "segment-anything-py",
     # "sam-2 @ git+https://github.com/facebookresearch/sam2.git"
 ]
+
 [project.optional-dependencies]
 # development dependencies and tooling
 dev = [
@@ -72,19 +75,21 @@ dev = [
     "tox-gh-actions",
     "sybil",      # doctesting
 ]
+
 [project.urls]
 homepage = "https://featureforest.github.io/"
 repository = "https://github.com/juglab/featureforest"
 
-
 [project.entry-points."napari.manifest"]
 featureforest = "featureforest:napari.yaml"
+
+[project.scripts]
+"featureforest.feature_extractor" = "featureforest.models.util:main"
 
 [tool.pytest.ini_options]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
 ]
-
 
 [tool.black]
 line-length = 90
@@ -108,6 +113,7 @@ select = [
     "PIE", # flake8-pie
     "SIM", # flake8-simplify
 ]
+
 ignore = [
     "E501", # line too long. let black handle this
     "UP006", "UP007", # type annotation. As using magicgui require runtime type annotation then we disable this.

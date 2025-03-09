@@ -107,9 +107,9 @@ def extract_embeddings_to_file(
         storage.attrs["overlap"] = overlap
 
         for slice_index in np_progress(
-            range(num_slices), desc="extract features for slices"
+            range(num_slices), desc="Extract features for slices"
         ):
-            print(f"\nslice index: {slice_index}")
+            print(f"\nSlice index: {slice_index}")
             slice_img = image[slice_index].copy() if num_slices > 1 else image.copy()
             slice_img = image_to_uint8(slice_img)  # image must be an uint8 array
             slice_grp = storage.create_group(str(slice_index))
