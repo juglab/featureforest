@@ -3,7 +3,7 @@ channels:
   - conda-forge
 dependencies:
   - python =3.10
-  - pyqt
+  - pyqt =5.15
   - qtpy
   - magicgui
   - scikit-learn
