@@ -61,7 +61,7 @@ def get_slice_features(
         name=model_adapter.name,
         shape=(num_patches, stride, stride, total_channels),
         dtype=np.float16,
-        compression="gzip",
+        compression="lzf",
     )
 
     # get sam encoder output for image patches
