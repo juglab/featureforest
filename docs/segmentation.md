@@ -10,6 +10,13 @@ The Segmentation widget is a long widget with several panels, but don't worry we
 3. **Ground Truth Layer**: To select your *Labels* layer
 4. **Add Layer** button: To add a new GT layer to napari layers
 
+!!! note
+    For annotations, users are expected to label pixels in the `Labels` layer and provide annotations as scribbles for multiple classes.
+    This can be done by selecting the `paint brush` tool and choosing a specific `label` id for each class.
+    An example screenshot has been provided to show how to provide annotations for, eg. the background class and foreground (nuclei) class.
+
+![Labels](assets/segmentation_label_layer.png){width="360", align=right}
+
 ### Labeling Statistics
 5. **Analyze** button: To get info about number of classes and labels you've added so far.
 
