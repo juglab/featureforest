@@ -1,16 +1,13 @@
 ## Easy Way!
 To install this plugin you need to use [mamba] or [conda] to create a environment and install the requirements. Use commands below to create the environment and install the plugin:
+
 ```bash
 git clone https://github.com/juglab/featureforest
 cd ./featureforest
 ```
+
 ```bash
-# for GPU
-mamba env create -f ./env_gpu.yml
-```
-```bash
-# if you don't have a GPU
-mamba env create -f ./env_cpu.yml
+conda env create -f environment.yaml
 ```
 
 ### Note 
