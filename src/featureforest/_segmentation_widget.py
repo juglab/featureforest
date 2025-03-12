@@ -47,7 +47,7 @@ from .postprocess import (
     postprocess_with_sam_auto,
     get_sam_auto_masks
 )
-from .exports import EXPORTERS, reset_mask_labels
+from .exports import EXPORTERS
 from .utils.pipeline_prediction import extract_predict
 
 
@@ -930,7 +930,8 @@ class SegmentationWidget(QWidget):
             notif.show_error("No segmentation layer is selected!")
             return
 
-        smoothing_iterations, area_threshold, area_is_absolute = self.get_postprocess_params()
+        smoothing_iterations, area_threshold, area_is_absolute = \
+            self.get_postprocess_params()
 
         num_slices, img_height, img_width = get_stack_dims(self.image_layer.data)
         slice_indices = []
@@ -1014,7 +1015,8 @@ class SegmentationWidget(QWidget):
             # get stack info
             with TiffFile(selected_file) as tiff_stack:
                 axes = tiff_stack.series[0].axes
-                assert ("Y" in axes) and ("X" in axes), "Could not find YX in the stack axes!"
+                assert ("Y" in axes) and ("X" in axes), \
+                    "Could not find YX in the stack axes!"
                 stack_dims = tiff_stack.series[0].shape
             stack_height = stack_dims[axes.index("Y")]
             stack_width = stack_dims[axes.index("X")]
@@ -1103,7 +1105,8 @@ class SegmentationWidget(QWidget):
                     prediction_mask
                 )
                 # post-processing
-                smoothing_iterations, area_threshold, area_is_absolute = self.get_postprocess_params()
+                smoothing_iterations, area_threshold, area_is_absolute = \
+                    self.get_postprocess_params()
                 post_mask = postprocess(
                     prediction_mask, smoothing_iterations,
                     area_threshold, area_is_absolute
@@ -1125,17 +1128,23 @@ class SegmentationWidget(QWidget):
                 postprocess_total_time += round(time.perf_counter() - pp_start, 2)
                 slices_total_time += round(time.perf_counter() - slice_start, 2)
                 slice_avg = slices_total_time / (page_idx + 1)
-                rem_minutes, rem_seconds = divmod(slice_avg * (total_pages - page_idx + 1), 60)
+                rem_minutes, rem_seconds = divmod(
+                    slice_avg * (total_pages - page_idx + 1),
+                    60
+                )
                 rem_hour, rem_minutes = divmod(rem_minutes, 60)
                 self.timing_info.setText(
-                    f"Estimated remaining time: {int(rem_hour):02}:{int(rem_minutes):02}:{int(rem_seconds):02}"
+                    f"Estimated remaining time: "
+                    f"{int(rem_hour):02}:{int(rem_minutes):02}:{int(rem_seconds):02}"
                 )
                 print(f"slice average time(seconds): {slice_avg:.2f}")
 
                 yield page_idx, total_pages
         # stack is done
         end = dt.datetime.now()
-        self.save_pipeline_stats(result_dir, start, end, slices_total_time, postprocess_total_time, total_pages)
+        self.save_pipeline_stats(
+            result_dir, start, end, slices_total_time, postprocess_total_time, total_pages
+        )
         # closing the h5 storage & remove the file
         try:
             storage_group.file.close()
@@ -1169,7 +1178,7 @@ class SegmentationWidget(QWidget):
             tmp_storage_path.unlink()
 
     def save_pipeline_stats(
-        self, save_dir : Path, start: dt.datetime, end: dt.datetime,
+        self, save_dir: Path, start: dt.datetime, end: dt.datetime,
         slice_total: float, pp_total: float, num_images: int
     ):
         total_time = (end - start).total_seconds()
