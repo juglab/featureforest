@@ -250,19 +250,38 @@ def main(
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser("FeatureForest")
-    parser.add_argument("--data")
-    parser.add_argument("--model")
-    parser.add_argument("--outdir")
-    parser.add_argument("--storage", default="./temp_storage.hdf5")
-    parser.add_argument("--smoothing_iterations", default=25, type=int)
-    parser.add_argument("--area_threshold", default=50, type=int)
-    parser.add_argument("--use_sam_predictor", default=True, action="store_true")
+    parser = argparse.ArgumentParser(
+        description="\nFeatureForest run-pipeline script",
+    )
+    parser.add_argument("--data", help="Path to the input image", required=True)
+    parser.add_argument("--rf_model", help="Path to the trained RF model", required=True)
+    parser.add_argument("--outdir", help="Path to the output directory", required=True)
+    parser.add_argument(
+        "--feat_model", choices=get_available_models(),
+        help="Name of the model for feature extraction"
+    )
+    parser.add_argument(
+        "--storage", default="./temp_storage.hdf5", help="Temporary storage file path"
+    )
+    parser.add_argument(
+        "--smoothing_iterations", default=25, type=int,
+        help="Post-processing smoothing iterations; default=25"
+    )
+    parser.add_argument(
+        "--area_threshold", default=50, type=int,
+        help="Post-processing area threshold to remove small regions; default=50"
+    )
+    parser.add_argument(
+        "--use_sam_predictor", default=True, action="store_true",
+        help="To use SAM2 for generating final masks"
+    )
 
     args = parser.parse_args()
 
     main(
-        data_path=args.data, rf_model_path=args.model, result_dir=args.outdir,
-        storage_path=args.storage, smoothing_iterations=args.smoothing_iterations,
-        area_threshold=args.area_threshold, use_sam_predictor=args.use_sam_predictor
+        data_path=args.data, rf_model_path=args.rf_model, model_name=args.feat_model,
+        result_dir=args.outdir, storage_path=args.storage,
+        smoothing_iterations=args.smoothing_iterations,
+        area_threshold=args.area_threshold,
+        use_sam_predictor=args.use_sam_predictor
     )
