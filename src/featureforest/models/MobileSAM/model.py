@@ -1,5 +1,3 @@
-from typing import Tuple
-
 import torch
 
 from .tiny_vit_sam import TinyViT

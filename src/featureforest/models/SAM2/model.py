@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import torch
 
 from sam2.modeling.sam2_base import SAM2Base
@@ -26,7 +24,7 @@ def get_large_model(
 
     # init the model
     model: SAM2Base = build_sam2(
-        config_file= "configs/sam2.1/sam2.1_hiera_l.yaml",
+        config_file="configs/sam2.1/sam2.1_hiera_l.yaml",
         ckpt_path=model_file,
         device="cpu"
     )
@@ -59,7 +57,7 @@ def get_base_model(
 
     # init the model
     model: SAM2Base = build_sam2(
-        config_file= "configs/sam2.1/sam2.1_hiera_b+.yaml",
+        config_file="configs/sam2.1/sam2.1_hiera_b+.yaml",
         ckpt_path=model_file,
         device="cpu"
     )

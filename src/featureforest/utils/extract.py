@@ -77,14 +77,14 @@ def get_slice_features(
         if not isinstance(slice_features, tuple):
             # model has only one output
             num_out = slice_features.shape[0]  # to take care of the last batch size
-            dataset[start : start + num_out] = slice_features.to(torch.float16)
+            dataset[start: start + num_out] = slice_features.to(torch.float16)
         else:
             # model has more than one output: put them into storage one by one
             ch_start = 0
             for feat in slice_features:
                 num_out = feat.shape[0]
                 ch_end = ch_start + feat.shape[-1]  # number of features
-                dataset[start : start + num_out, :, :, ch_start:ch_end] = feat.to(torch.float16)
+                dataset[start: start + num_out, :, :, ch_start:ch_end] = feat.to(torch.float16)
                 ch_start = ch_end
         yield b_idx
 

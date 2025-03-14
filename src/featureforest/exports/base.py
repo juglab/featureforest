@@ -29,6 +29,7 @@ def reset_mask_labels(mask_data: np.ndarray) -> np.ndarray:
 
     return mask_data
 
+
 class BaseExporter:
     """Base Exporter Class: all exporters should be a subclass of this class."""
     def __init__(self, name: str = "Base Exporter", extension: str = "bin") -> None:
