@@ -13,21 +13,26 @@ from featureforest.utils.data import (
 
 
 class SAMAdapter(BaseModelAdapter):
-    """SAM model adapter (vit_h)
+    """SAM model adapter
+
+    Supports: 1) default 'vit_h' model, and 2) light microscopy and electron microscopy `micro-sam` models ('vit_b').
     """
     def __init__(
         self,
         image_encoder: nn.Module,
         img_height: float,
         img_width: float,
-        device: torch.device
+        device: torch.device,
+        name: str,
     ) -> None:
         super().__init__(image_encoder, img_height, img_width, device)
-        self.name = "SAM"
+        self.name = name
         # we need sam image encoder part
         self.encoder = image_encoder
         self.encoder_num_channels = 256
-        self.embed_layer_num_channels = 1280
+
+        # NOTE: The parameter below matches the SAM model's encoder embedding dimension.
+        self.embed_layer_num_channels = image_encoder.patch_embed.proj.out_channels
         self._set_patch_size()
         self.device = device
 

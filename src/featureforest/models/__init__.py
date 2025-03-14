@@ -1,6 +1,5 @@
-from typing import Tuple, List
-
-import torch
+from typing import List
+from functools import partial
 
 from .base import BaseModelAdapter
 from .MobileSAM import get_model as get_mobile_sam_model
@@ -16,6 +15,8 @@ _MODELS_DICT = {
     "MobileSAM": get_mobile_sam_model,
     "SAM": get_sam_model,
     "DinoV2": get_dino_v2_model,
+    "μSAM_LM": partial(get_sam_model, model_type="vit_b_lm"),
+    "μSAM_EM_Organelles": partial(get_sam_model, model_type="vit_b_em_organelles"),
 }
 
 
