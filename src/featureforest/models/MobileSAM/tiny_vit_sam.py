@@ -508,7 +508,7 @@ class TinyViT(nn.Module):
                           #   input_resolution=(patches_resolution[0] // (2 ** i_layer),
                           #                     patches_resolution[1] // (2 ** i_layer)),
                           depth=depths[i_layer],
-                          drop_path=dpr[sum(depths[:i_layer])                                        :sum(depths[:i_layer + 1])],
+                          drop_path=dpr[sum(depths[:i_layer]): sum(depths[:i_layer + 1])],
                           downsample=PatchMerging if (
                               i_layer < self.num_layers - 1) else None,
                           use_checkpoint=use_checkpoint,

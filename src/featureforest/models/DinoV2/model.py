@@ -1,5 +1,3 @@
-from typing import Tuple
-
 import torch
 
 # from featureforest.utils.downloader import download_model

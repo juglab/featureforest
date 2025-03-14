@@ -55,12 +55,9 @@ class UsageStats(QDialog):
             # self.info_label.setText("Reset!")
 
 
-
-
 if __name__ == "__main__":
     import sys
     from qtpy.QtWidgets import QApplication
-
 
     stats = SegmentationUsageStats()
 

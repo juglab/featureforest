@@ -224,7 +224,6 @@ class FeatureExtractorWidget(QWidget):
                 "avg_per_slice": f"{int(self.timing['avg_per_slice'])} seconds"
             })
 
-
     def free_resource(self):
         if self.model_adapter is not None:
             del self.model_adapter
