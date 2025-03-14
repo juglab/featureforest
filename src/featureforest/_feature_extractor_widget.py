@@ -1,5 +1,5 @@
-import time
 import csv
+import time
 from pathlib import Path
 
 import napari
@@ -7,19 +7,22 @@ import napari.utils.notifications as notif
 import torch
 from napari.qt.threading import create_worker
 from napari.utils.events import Event
-
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import (
-    QHBoxLayout, QVBoxLayout, QWidget,
+    QComboBox,
+    QFileDialog,
     QGroupBox,
-    QPushButton, QLabel, QComboBox, QLineEdit,
-    QFileDialog, QProgressBar,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QProgressBar,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
 )
 
 from .models import get_available_models, get_model
-from .utils import (
-    config
-)
+from .utils import config
 from .utils.data import (
     get_stack_dims,
 )
@@ -36,10 +39,7 @@ class FeatureExtractorWidget(QWidget):
         self.viewer = napari_viewer
         self.extract_worker = None
         self.model_adapter = None
-        self.timing = {
-            "start": 0,
-            "avg_per_slice": 0
-        }
+        self.timing = {"start": 0, "avg_per_slice": 0}
         self.prepare_widget()
 
     def prepare_widget(self):
@@ -155,9 +155,7 @@ class FeatureExtractorWidget(QWidget):
         self.stack_progress.setValue(0)
         # check image layer
         image_layer_name = self.image_combo.currentText()
-        image_layer = get_layer(
-            self.viewer, image_layer_name, config.NAPARI_IMAGE_LAYER
-        )
+        image_layer = get_layer(self.viewer, image_layer_name, config.NAPARI_IMAGE_LAYER)
         if image_layer is None:
             notif.show_error("No Image layer is selected.")
             return
@@ -178,7 +176,7 @@ class FeatureExtractorWidget(QWidget):
             extract_embeddings_to_file,
             image=image_layer.data,
             storage_file_path=storage_path,
-            model_adapter=self.model_adapter
+            model_adapter=self.model_adapter,
         )
         self.extract_worker.yielded.connect(self.update_extract_progress)
         self.extract_worker.finished.connect(self.extract_is_done)
@@ -200,7 +198,9 @@ class FeatureExtractorWidget(QWidget):
         self.stack_progress.setFormat("slice %v of %m (%p%)")
         self.timing["avg_per_slice"] = elapsed_time / (curr + 1)
         remaining_time = (self.timing["avg_per_slice"] * (total - curr + 1)) / 60
-        self.time_label.setText(f"Estimated remaining time: {remaining_time: .2f} minutes")
+        self.time_label.setText(
+            f"Estimated remaining time: {remaining_time: .2f} minutes"
+        )
 
     def extract_is_done(self):
         elapsed_time = time.perf_counter() - self.timing["start"]
@@ -212,18 +212,21 @@ class FeatureExtractorWidget(QWidget):
         print("Extracting is done!")
         notif.show_info("Extracting is done!")
         print(f"Total Elapsed Time: {int(minutes)} minutes and {int(seconds)} seconds")
-        self.time_label.setText(f"Extraction Time: {int(minutes)} minutes and {int(seconds)} seconds")
+        self.time_label.setText(
+            f"Extraction Time: {int(minutes)} minutes and {int(seconds)} seconds"
+        )
         # save the stats
         storage_path = Path(self.storage_textbox.text())
         csv_path = storage_path.parent.joinpath(f"{storage_path.stem}_ext_stats.csv")
         with open(csv_path, mode="w") as f:
             writer = csv.DictWriter(f, fieldnames=["total", "avg_per_slice"])
             writer.writeheader()
-            writer.writerow({
-                "total": f"{int(minutes)} minutes and {int(seconds)} seconds",
-                "avg_per_slice": f"{int(self.timing['avg_per_slice'])} seconds"
-            })
-
+            writer.writerow(
+                {
+                    "total": f"{int(minutes)} minutes and {int(seconds)} seconds",
+                    "avg_per_slice": f"{int(self.timing['avg_per_slice'])} seconds",
+                }
+            )
 
     def free_resource(self):
         if self.model_adapter is not None:
