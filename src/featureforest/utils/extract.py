@@ -62,7 +62,8 @@ def get_slice_features(
     stride, _ = get_stride_margin(patch_size, overlap)
     dataset = storage_group.create_dataset(
         model_adapter.name, shape=(num_patches, stride, stride, total_channels),
-        dtype=np.float16
+        dtype=np.float16,
+        compression="lzf",
     )
 
     # get sam encoder output for image patches
