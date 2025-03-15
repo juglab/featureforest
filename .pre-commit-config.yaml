@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.2.0
+    rev: v5.0.0
     hooks:
       - id: check-docstring-first
       - id: end-of-file-fixer
@@ -8,11 +8,15 @@ repos:
         exclude: ^\.napari-hub/.*
       - id: check-yaml # checks for correct yaml syntax for github actions ex.
   - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: v0.0.256
+    rev: v0.11.0
     hooks:
-      - id: ruff
+      - id: ruff  # Run the linter
+        types_or: [ python, pyi ]
+        args: [ --fix ]
+      - id: ruff-format  # Run the formatter
+        types_or: [ python, pyi ]
   - repo: https://github.com/psf/black
-    rev: 22.3.0
+    rev: 25.1.0
     hooks:
       - id: black
   - repo: https://github.com/tlambert03/napari-plugin-checks
