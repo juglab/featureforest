@@ -1,5 +1,5 @@
 *Feature Forest* (***FF***) uses vision foundation models for the feature extraction. 
-`MobileSAM`, `SAM (huge)`, `DINOv2`, `SAM2 (large)`, and `SAM2 (base)` models are already included into the plugin.
+`MobileSAM`, `SAM (huge)`, `μSAM_LM (base)`, `μSAM_EM_Organelles (base)`, `DINOv2`, `SAM2 (large)`, and `SAM2 (base)` models are already included into the plugin.
 
 !!! tip
     Based on our experiences, we found `SAM2` works better, especially for complex images. 
