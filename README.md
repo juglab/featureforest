@@ -9,7 +9,7 @@
 [![napari hub](https://img.shields.io/endpoint?url=https://api.napari-hub.org/shields/featureforest)](https://napari-hub.org/plugins/featureforest)
 <!--[![Downloads](https://pepy.tech/badge/featureforest)](https://pepy.tech/project/featureforest)-->
 
-**A napari plugin for making image annotation using feature space of vision transformers and random forest classifier.**  
+**A napari plugin for making image annotation using feature space of vision transformers and random forest classifier.**
 We developed a *napari* plugin to train a *Random Forest* model using extracted features of vision foundation models and just a few scribble labels provided by the user as input. This approach can do the segmentation of desired objects almost as well as manual segmentations but in a much shorter time with less manual effort.
 
 ----------------------------------
@@ -30,6 +30,15 @@ conda env create -f ./env_gpu.yml
 ```bash
 # if you don't have a GPU
 conda env create -f ./env_cpu.yml
+```
+
+For developers that want to contribute to FeatureForest, you need to use this command to install the `dev` dependencies:
+```bash
+pip install -U "featureforest[dev]"
+```
+And make sure you have `pre-commit` installed in your environment, before committing changes:
+```bash
+pre-commit install
 ```
 
 For more detailed installation guide, check out [here](https://juglab.github.io/featureforest/install/).
