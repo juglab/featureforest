@@ -3,7 +3,6 @@ import time
 import pandas as pd
 
 
-
 def format_seconds(total_seconds):
     minutes, seconds = divmod(total_seconds, 60)
     nice = f"{int(minutes)} minutes and {int(seconds)} seconds"
