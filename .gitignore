@@ -82,3 +82,8 @@ venv/
 
 # written by setuptools_scm
 **/_version.py
+
+# Other feature-forest stuff
+*.h5
+*.hdf5
+*.csv

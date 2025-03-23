@@ -12,7 +12,7 @@ from ..utils.extract import extract_embeddings_to_file, get_stack_dims
 def extract_features(
     image: np.ndarray,
     output_path: Union[os.PathLike, str],
-    model_name: str = "SAM2_Tiny",
+    model_name: str = "SAM2_Large",
     image_height: Optional[int] = None,
     image_width: Optional[int] = None,
 ) -> str:
@@ -22,6 +22,7 @@ def extract_features(
         image: The input image.
         output_path: The filepath where the extracted features will be stored.
         model_name: The choice of model that will be used for feature extraction.
+            By default, extracts features for `SAM2_Large`.
         image_height: The height of input image. By default, extracted from the input image.
         image_width: The width of input image. By default, extracted from the input image.
 
@@ -39,7 +40,7 @@ def extract_features(
     transformed_image = model_adapter.input_transforms(image)
 
     # Step 2: Run the feature extraction step.
-    if os.path.splitext(output_path)[-1].lower() not in [".h5", ".hdf5"]:
+    if os.path.splitext(output_path)[-1].lower() != ".hdf5":
         # In this case, we assume that it's a filepath without extension and give it the desired one.
         output_path = str(Path(output_path).with_suffix(".hdf5"))
 
@@ -68,12 +69,12 @@ def main():
     )
     parser.add_argument(
         "-o", "--output_path", type=str, required=True,
-        help="The filepath to store the extracted features. The current supports store features in 'h5' / 'hdf5' file.",
+        help="The filepath to store the extracted features. The current supports store features in a 'hdf5' file.",
     )
     parser.add_argument(
-        "--model_choice", type=str, default="SAM2_Tiny",
+        "--model_choice", type=str, default="SAM2_Large",
         help=f"The choice of vision foundation model that will be used, one of ({available_models}). "
-        "By default, extracts features for 'SAM2_Tiny'.",
+        "By default, extracts features for 'SAM2_Large'.",
     )
 
     args = parser.parse_args()
