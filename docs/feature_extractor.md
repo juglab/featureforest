@@ -18,6 +18,15 @@ You can bring up the *Feature Extractor widget* from the napari **Plugins** menu
 4. **Extract Features** button: Will run the feature extraction process.
 5. **Stop** button: To stop the extraction process!
 
+## CLI Description
+
+You can also extract features by running the `featureforest.feature_extractor` CLI in your terminal.
+
+Here is a brief description of the expected input arguments (see `$ featureforest.feature_extractor -h` for details):
+1. `--input_path`: The filepath to an input image.
+2. `--output_path`: The filepath where the extracted features will be stored for the next step, i.e. [_Segmentation_](./segmentation.md).
+3. `--model_choice`: The choice of model that will be used for feature extraction.
+
 The extraction process might take some time based on number of image slices and the image resolution. This is due to the fact that in **FF** we turn an image into overlapping patches, then pass those patches to the encoder model to get the features. Why we do this? We need to aquire a feature vector per each pixel and not for the whole image. 
 
 ## Model Selection
