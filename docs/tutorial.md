@@ -4,12 +4,13 @@ Here, we provide a simple tutorial on how to use FeatureForest (**FF**). We assu
 After loading your image and the Segmentation widget, the first step is to choose your image features **HDF5** file. Click on the "**Select...**" button and select your **HDF5** file.
 
 !!! note
-    If you loaded more than one image/stack, you need to select your target image from the "Input Layer" dropdown.
+    If you loaded more than one image/stack, you need to select your target image from the "**Input Layer**" dropdown.
 
 ![Layer Tools](assets/labeling_1.png){width="228", align=right}
 
-The next step is to add a label layer. Use the "**Add Layer**" button. You can have more than one label layer. However, only the selected one is the effective label layer for training the RF model.
-Now, it's time to add some scribble labels. Make sure you *select* the label layer and then use the brush tool from the layer's top toolbar. Always use the first class *"1"* for labeling your *background* (areas you don't want to create a mask for). By increasing the label number, you can change the class and add labels for the next class which are objects of interest (areas that you want to create masks for).
+The next step is to add a label layer. Use the "**Add Layer**" button. You can have more than one label layer. However, only the selected one is the effective label layer for training the RF model.  
+Now, it's time to add some scribble labels. Make sure you *select* the label layer and then use the brush tool from the layer's top toolbar. Always use the first class *"1"* for labeling your *background* (areas you don't want to create a mask for).
+By increasing the label number, you can change the class and add labels for the next class which are objects of interest (areas that you want to create masks for).
 If you make a mistake, you can remove the labels by selecting the eraser button and removing the wrong labels.
 
 !!! note
@@ -17,7 +18,6 @@ If you make a mistake, you can remove the labels by selecting the eraser button 
     - The class *1* always must assigned to the background. We use this constraint to make sure the final mask won't include the background and to make it transparent on the napari viewer.
 
 After adding some labels, use the "**Train RF Model**" button to train the RF model. You can set the number of trees and the tree's max depth. But be careful not to set a high value for the max depth parameter. It will result in an *over-fitted* RF model, and it wouldn't perform well over images not presented in your training stack.
-
 When the training is done, use the "**Predict Slice**" button to make your first segmentation mask. We know the first one is usually not very good 🙁, but don't get disappointed! Good results will come with consistency, so do some more iterations 😊.
 
 ![Layer Tools](assets/labeling_2.png){width="300", align=right}
@@ -25,6 +25,7 @@ When the training is done, use the "**Predict Slice**" button to make your first
     Add some labels for background and other classes near the boundaries of targeted objects. This way you provide the most distinctive information for the model.
 
 **Don't add too many labels!**
+
 This is an iterative process, so at each iteration, add labels as few as possible, train the RF model, make a prediction, and then repeat the process by adding a bit more labels over the areas where the model made mistakes.
 For labeling, you can use any slices in the training stack. Therefore, it's better to make predictions over the whole stack and add more labels on any slices in which the model has low performance.
 

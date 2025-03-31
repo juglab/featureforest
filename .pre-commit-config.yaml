@@ -5,7 +5,12 @@ repos:
       - id: check-docstring-first
       - id: end-of-file-fixer
       - id: trailing-whitespace
-        exclude: ^\.napari-hub/.*
+        exclude: |
+          (?x)^(
+              \.napari-hub/.*|
+              docs/.*
+          )$
+        # exclude: ^\.napari-hub/.* | docs/.*
       - id: check-yaml # checks for correct yaml syntax for github actions ex.
   - repo: https://github.com/charliermarsh/ruff-pre-commit
     rev: v0.11.0
