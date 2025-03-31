@@ -1,10 +1,12 @@
-Here, we provide a simple tutorial on how to use FF. We assume you already extracted and saved your train image/stack features using the Feature Extractor widget.
+Here, we provide a simple tutorial on how to use FeatureForest (**FF**). We assume you already extracted and saved your train image/stack features using the Feature Extractor widget.
 
 ## Let's Begin!
 After loading your image and the Segmentation widget, the first step is to choose your image features **HDF5** file. Click on the "**Select...**" button and select your **HDF5** file.
 
 !!! note
     If you loaded more than one image/stack, you need to select your target image from the "Input Layer" dropdown.
+
+![Layer Tools](assets/labeling_1.png){width="228", align=right}
 
 The next step is to add a label layer. Use the "**Add Layer**" button. You can have more than one label layer. However, only the selected one is the effective label layer for training the RF model.
 Now, it's time to add some scribble labels. Make sure you *select* the label layer and then use the brush tool from the layer's top toolbar. Always use the first class *"1"* for labeling your *background* (areas you don't want to create a mask for). By increasing the label number, you can change the class and add labels for the next class which are objects of interest (areas that you want to create masks for).
@@ -18,6 +20,7 @@ After adding some labels, use the "**Train RF Model**" button to train the RF mo
 
 When the training is done, use the "**Predict Slice**" button to make your first segmentation mask. We know the first one is usually not very good 🙁, but don't get disappointed! Good results will come with consistency, so do some more iterations 😊.
 
+![Layer Tools](assets/labeling_2.png){width="300", align=right}
 !!! tip
     Add some labels for background and other classes near the boundaries of targeted objects. This way you provide the most distinctive information for the model.
 
@@ -40,6 +43,8 @@ If you select the "**Use SAM Predictor**" option, bounding boxes around the regi
 The "**Use SAM Auto-Segmentation**" option will use SAM2 auto-segmentation prediction, then it will select those regions that have an intersection with the RF mask above the set threshold. We recommend using this option only if you do have *not too many objects* in the image. Otherwise, it will be slow and take some time to make the final mask.
 
 !!! info
-    Use the "**Export**" button to save the created mask. This way the labels will be *0* for the background and onwards for other classes. If you save the mask using the napari file menu, labels will be started from *1* and on...
+    - Use the "**Export**" button to save the created mask. This way the labels will be *0* for the background and onwards for other classes. If you save the mask using the napari file menu, labels will be started from *1* and on...
 
-Thanks for using FF, and have a happy experience! 🙌
+    - Every time you make a prediction, the result will show up on a new layer unless you unchecked the "**New Layer**" checkbox.
+
+Thanks for using **FF**, and have a happy experience! 🙌
