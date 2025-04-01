@@ -1,7 +1,7 @@
 Here, we provide a simple tutorial on how to use FeatureForest (**FF**). We assume you already extracted and saved your train image/stack features using the [Feature Extractor widget](feature_extractor.md).
 
 ## Let's Begin!
-After loading your image and the Segmentation widget, the first step is to choose your image features **HDF5** file. Click on the "**Select...**" button and select your **HDF5** file.
+Load your image and open the Segmentation widget. The first step is to choose your image features **HDF5** file. Click on the "**Select...**" button and select your **HDF5** file.
 
 !!! note
     If you loaded more than one image/stack, you need to select your target image from the "**Input Layer**" dropdown.
