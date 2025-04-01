@@ -46,6 +46,6 @@ The "**Use SAM Auto-Segmentation**" option will use SAM2 auto-segmentation predi
 !!! info
     - Use the "**Export**" button to save the created mask. This way the labels will be *0* for the background and onwards for other classes. If you save the mask using the napari file menu, labels will be started from *1* and on...
 
-    - Every time you make a prediction, the result will show up on a new layer unless you unchecked the "**New Layer**" checkbox.
+    - Every time you make a prediction, the result will appear on a new layer unless you uncheck the "**New Layer**" checkbox.
 
 Thanks for using **FF**, and have a happy experience! 🙌
