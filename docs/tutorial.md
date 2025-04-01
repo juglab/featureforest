@@ -27,7 +27,7 @@ When the training is done, use the "**Predict Slice**" button to make your first
 **Don't add too many labels!**
 
 Training a model is an iterative process, so add as few labels as possible at each iteration. Then, train the RF model, make a prediction, and repeat the process by adding a bit more labels over the areas where the model made mistakes.  
-For labeling, you can use any slices in the training stack. Therefore, it's better to make predictions over the whole stack and add more labels on any slices in which the model has low performance.
+For labeling, you can use any slices in the training stack. Therefore, it's better to make predictions over the whole stack and add more labels on the slices in which the model performs poorly.
 
 !!! tip
     The default brush size is set to *one*. It is recommended to use very *thin* labels just to avoid annotating a lot of unnecessary pixels. The reason is that usually the neighboring pixels have similar features and this won't provide distinctive information for the training RF model.
