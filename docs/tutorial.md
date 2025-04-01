@@ -41,7 +41,7 @@ The next step is to eliminate small noisy areas that should not be included in t
 
 ### Post-processing using SAM2
 If you select the "**Use SAM Predictor**" option, bounding boxes around the regions of the RF-predicted mask will be used as prompts to SAM2. Then you will get a nice smooth mask as if you provided those prompts to SAM2. Smart, don't you agree?! 😁  
-The "**Use SAM Auto-Segmentation**" option will use SAM2 auto-segmentation prediction, then it will select those regions that have an intersection with the RF mask above the set threshold. We recommend using this option only if you do have *not too many objects* in the image. Otherwise, it will be slow and take some time to make the final mask.
+The "**Use SAM Auto-Segmentation**" option will use SAM2 auto-segmentation prediction and then select regions that intersect with the RF mask above the set threshold. We recommend using this option only if you have *not too many objects* in the image. Otherwise, it will be slow and take some time to make the final mask.
 
 !!! info
     - Use the "**Export**" button to save the created mask. This way the labels will be *0* for the background and onwards for other classes. If you save the mask using the napari file menu, labels will be started from *1* and on...
