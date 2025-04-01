@@ -9,7 +9,7 @@ Load your image and open the Segmentation widget. The first step is to choose yo
 ![Layer Tools](assets/labeling_1.png){width="228", align=right}
 
 The next step is to add a label layer. Use the "**Add Layer**" button. You can have more than one label layer. However, only the selected one is the effective label layer for training the RF model.  
-Now, it's time to add some scribble labels. Make sure you *select* the label layer and then use the brush tool from the layer's top toolbar. Always use the first class *"1"* for labeling your *background* (areas you don't want to create a mask for).  
+Now, it's time to add some scribble labels. Select the label layer and then use the brush tool from the layer's top toolbar. Always use the first class *"1"* for labeling your *background* (areas you don't want to create a mask for).  
 By increasing the label number, you can change the class and add labels for the next class which are objects of interest (areas that you want to create masks for).
 If you make a mistake, you can remove the labels by selecting the eraser button and removing the wrong labels.
 
