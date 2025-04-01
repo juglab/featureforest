@@ -49,7 +49,6 @@ dependencies = [
     "scikit-image",
     "matplotlib",
     "pynrrd",
-    "PyQt5",
     "magicgui",
     "qtpy",
     "napari",
@@ -72,6 +71,7 @@ dev = [
     "tox-gh-actions",
     "sybil",      # doctesting
 ]
+all = ["napari[all]"]
 [project.urls]
 homepage = "https://featureforest.github.io/"
 repository = "https://github.com/juglab/featureforest"
