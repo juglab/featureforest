@@ -15,7 +15,7 @@ If you make a mistake, you can remove the labels by selecting the eraser button 
 
 !!! note
     - Always make sure you select the label layer before using the brush tool.
-    - The class *1* always must assigned to the background. We use this constraint to make sure the final mask won't include the background and to make it transparent on the napari viewer.
+    - Class *1* must always be assigned to the background. We use this constraint to make sure the final mask won't include the background and to make it transparent on the napari viewer.
 
 After adding some labels, use the "**Train RF Model**" button to train the RF model. You can set the number of trees and the tree's max depth. But be careful not to set a high value for the max depth parameter. It will result in an *over-fitted* RF model, and it wouldn't perform well over images not presented in your training stack.  
 When the training is done, use the "**Predict Slice**" button to make your first segmentation mask. We know the first one is usually not very good 🙁, but don't get disappointed! Good results will come with consistency, so do some more iterations 😊.
