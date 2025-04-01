@@ -36,7 +36,7 @@ For labeling, you can use any slices in the training stack. Therefore, it's bett
 The post-processing is kind of our winning card! Well, since we are using a RF model for pixel classification, the produced masks, usually have holes and fuzzy edges, and post-processing is there to fix that!
 
 ### Simple post-processing:
-This will use a simple morphology and mean-curvature smoothing to fill holes and smooth the edges to some extent. You can set the number of smoothing iterations.  
+The postprocessing will use a simple morphology and mean-curvature smoothing to fill holes and smooth the edges. You can set the number of smoothing iterations.  
 The next step is to eliminate small noisy areas that should not be included in the mask (usually from the background class). You can set the area threshold for that, and all small regions with an area below the threshold will be excluded from the mask.
 
 ### Post-processing using SAM2
