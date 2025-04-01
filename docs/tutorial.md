@@ -30,7 +30,7 @@ Training a model is an iterative process, so add as few labels as possible at ea
 For labeling, you can use any slices in the training stack. Therefore, it's better to make predictions over the whole stack and add more labels on the slices in which the model performs poorly.
 
 !!! tip
-    The default brush size is set to *one*. It is recommended to use very *thin* labels just to avoid annotating a lot of unnecessary pixels. The reason is that usually the neighboring pixels have similar features and this won't provide distinctive information for the training RF model.
+    The default brush size is set to *one*. We recommended using very *thin* labels to avoid annotating unnecessary pixels. Neighboring pixels usually have similar features, which won't provide distinctive information for the training RF model.
 
 ## What about the post-processing?
 The post-processing is kind of our winning card! Well, since we are using a RF model for pixel classification, the produced masks, usually have holes and fuzzy edges, and post-processing is there to fix that!
