@@ -26,7 +26,7 @@ When the training is done, use the "**Predict Slice**" button to make your first
 
 **Don't add too many labels!**
 
-This is an iterative process, so at each iteration, add labels as few as possible, train the RF model, make a prediction, and then repeat the process by adding a bit more labels over the areas where the model made mistakes.  
+Training a model is an iterative process, so add as few labels as possible at each iteration. Then, train the RF model, make a prediction, and repeat the process by adding a bit more labels over the areas where the model made mistakes.  
 For labeling, you can use any slices in the training stack. Therefore, it's better to make predictions over the whole stack and add more labels on any slices in which the model has low performance.
 
 !!! tip
