@@ -33,7 +33,7 @@ For labeling, you can use any slices in the training stack. Therefore, it's bett
     The default brush size is set to *one*. We recommended using very *thin* labels to avoid annotating unnecessary pixels. Neighboring pixels usually have similar features, which won't provide distinctive information for the training RF model.
 
 ## What about the post-processing?
-The post-processing is kind of our winning card! Well, since we are using a RF model for pixel classification, the produced masks, usually have holes and fuzzy edges, and post-processing is there to fix that!
+Post-processing is kind of our winning card! Since we are using a RF model for pixel classification, the produced masks usually have holes and fuzzy edges, and post-processing is there to fix that!
 
 ### Simple post-processing:
 The postprocessing will use a simple morphology and mean-curvature smoothing to fill holes and smooth the edges. You can set the number of smoothing iterations.  
