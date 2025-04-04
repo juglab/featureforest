@@ -14,11 +14,16 @@ mamba env create -f ./env_cpu.yml
 ```
 
 ### Note 
-You need to install `sam-2` which can be installed easily using mamba (or conda). To install `sam-2` using `pip` please refer to the official [sam-2](https://github.com/facebookresearch/sam2) repository.
+You need to install `segment-anything` and `sam-2` which can be installed easily using mamba (or conda). To install `sam-2` using `pip` please refer to the official [sam-2](https://github.com/facebookresearch/sam2) repository.
 
 ## Requirements
-- `python >= 3.10`
-- `numpy==1.24.4`
+- `python>=3.10`
+- `numpy<2.2`
+- `pytorch>=2.3.1`
+- `torchvision>=0.18.1`
+- `timm`
+- `segment-anything`
+- `sam-2`
 - `opencv-python`
 - `scikit-learn`
 - `scikit-image`
@@ -28,12 +33,8 @@ You need to install `sam-2` which can be installed easily using mamba (or conda)
 - `qtpy`
 - `napari`
 - `h5py`
-- `pytorch=2.3.1`
-- `torchvision=0.18.1`
-- `timm=1.0.9`
 - `pynrrd`
-- `segment-anything`
-- `sam-2`
+- `pooch`
 
 ## Installing Only The Plugin
 If you use the provided conda environment yaml files, the plugin will be installed automatically. But in case you already have the environment setup, 
