@@ -11,7 +11,6 @@ dependencies:
   - opencv
   - pyqt
   - qtpy
-  - magicgui
   - napari
   - h5py
   - pytorch>=2.3.1
