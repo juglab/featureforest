@@ -20,7 +20,7 @@ jobs:
         shell: bash -el {0}
 
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         platform: [ubuntu-latest, windows-latest, macos-latest]
         python-version: ["3.10"]
@@ -37,7 +37,6 @@ jobs:
           environment-file: env_cpu.yml
           condarc: |
             channels:
-              - pytorch
               - conda-forge
               - defaults
           init-shell: bash powershell
@@ -61,7 +60,7 @@ jobs:
           micromamba activate ff
           git clone --depth 1 https://github.com/pyvista/gl-ci-helpers.git
           powershell gl-ci-helpers/appveyor/install_opengl.ps1
-  
+
       - name: Run Tests
         # uses: aganders3/headless-gui@v2.2
         # with:
@@ -70,7 +69,7 @@ jobs:
           micromamba activate ff
           python -m pip install .[dev]
           pytest -v --color=yes --cov=featureforest --cov-report=xml -m "not slow"
-          
+
       - name: Coverage
         uses: codecov/codecov-action@v4
         with:
@@ -115,4 +114,3 @@ jobs:
       - uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
-  
