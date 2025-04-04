@@ -55,7 +55,7 @@ jobs:
 
       - name: pip list
         run: pip list
-        shell: micromamba-shell {0}
+        shell: bash -el {0}
 
       # strategy borrowed from vispy for installing opengl libs on windows
       - name: Install Windows OpenGL
