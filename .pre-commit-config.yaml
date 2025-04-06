@@ -17,7 +17,7 @@ repos:
     hooks:
       - id: ruff  # Run the linter
         types_or: [ python, pyi ]
-        args: [ --fix ]
+        args: [ --fix, --show-fixes ]
       - id: ruff-format  # Run the formatter
         types_or: [ python, pyi ]
   - repo: https://github.com/psf/black
