@@ -164,7 +164,7 @@ def get_nonoverlapped_patches(patches: Tensor, patch_size: int, overlap: int) ->
     """
     stride, margin = get_stride_margin(patch_size, overlap)
 
-    return patches[:, :, margin : margin + stride, margin : margin + stride].permute(
+    return patches[:, :, margin: margin + stride, margin: margin + stride].permute(
         [0, 2, 3, 1]
     )
 
@@ -306,6 +306,8 @@ def image_to_uint8(image: np.ndarray) -> np.ndarray:
     _max = image.max()
     if _max - _min == 0:
         _max = 1
-    normalized_image = ((image - _min) * (255 / (_max - _min))).astype(np.uint8)
+    normalized_image = np.abs(
+        (image - _min) * (255 / (_max - _min))
+    ).astype(np.uint8)  # using abs to prevent invalid value encountered in cast
 
     return normalized_image
