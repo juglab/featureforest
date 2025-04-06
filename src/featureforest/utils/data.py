@@ -305,9 +305,10 @@ def image_to_uint8(image: np.ndarray) -> np.ndarray:
     _min = image.min()
     _max = image.max()
     if _max - _min == 0:
-        _max = 1
+        _max += 1e-7
+    # to prevent invalid value encountered in cast
     normalized_image = np.abs(
         (image - _min) * (255 / (_max - _min))
-    ).astype(np.uint8)  # using abs to prevent invalid value encountered in cast
+    ).astype(np.uint8)
 
     return normalized_image
