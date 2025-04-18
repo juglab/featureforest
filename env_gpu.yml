@@ -14,15 +14,17 @@ dependencies:
   - napari
   - h5py
   - cuda-version>=11.8
-  - pytorch-gpu>=2.3.1
-  - torchvision>=0.18.1
+  - pytorch-gpu>=2.5.1
+  - torchvision>=0.20.1
   - segment-anything
   - sam-2
   - pooch
   - pip
   - pip:
+    - pillow>=9.4.0
     - matplotlib
     - timm
     - pynrrd
     - iopath>=0.1.10
+    - tqdm>=4.66.1
     - git+https://github.com/juglab/featureforest.git
