@@ -54,7 +54,6 @@ dependencies = [
     "h5py",
     "pooch",
     "iopath>=0.1.10",
-    "pillow>=9.4.0",
     "torch>=2.5.1",
     "torchvision>=0.20.1",
     "timm",

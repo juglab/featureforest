@@ -21,7 +21,6 @@ dependencies:
   - pooch
   - pip
   - pip:
-    - pillow>=9.4.0
     - matplotlib
     - timm
     - pynrrd
