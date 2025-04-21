@@ -1,7 +1,7 @@
 name: featureforest
 channels:
   - conda-forge
-  - defaults
+  - nodefaults
 dependencies:
   - python=3.10
   - numpy<2.2
@@ -13,7 +13,7 @@ dependencies:
   - qtpy
   - napari
   - h5py
-  - pytorch>=2.5.1
+  - pytorch-cpu>=2.5.1
   - torchvision>=0.20.1
   - segment-anything
   - sam-2
