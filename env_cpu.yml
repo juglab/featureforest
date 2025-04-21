@@ -25,4 +25,4 @@ dependencies:
     - pynrrd
     - iopath>=0.1.10
     - tqdm>=4.66.1
-    - git+https://github.com/juglab/featureforest.git
+    - git+https://github.com/juglab/featureforest.git@ms/update/setup

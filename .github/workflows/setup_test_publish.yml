@@ -38,7 +38,7 @@ jobs:
           condarc: |
             channels:
               - conda-forge
-              - defaults
+              - nodefaults
           init-shell: bash powershell
           cache-downloads: true
           post-cleanup: 'all'
