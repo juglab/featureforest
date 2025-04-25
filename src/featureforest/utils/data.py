@@ -1,9 +1,8 @@
-from typing import Tuple, Optional
+from typing import Optional
 
 import numpy as np
-from numpy import ndarray
-
 import torch.nn.functional as F
+from numpy import ndarray
 from torch import Tensor
 
 
@@ -41,8 +40,9 @@ def get_patch_size(
     return patch_size
 
 
-def get_stride_margin(patch_size: int, overlap: int) -> Tuple[int, int]:
-    """Calculate the patching stride (step), and the margin pad needed to be added to image
+def get_stride_margin(patch_size: int, overlap: int) -> tuple[int, int]:
+    """Calculate the patching stride (step),
+        and the margin pad needed to be added to image
         to have complete patches covering all pixels.
 
     Args:
@@ -50,7 +50,7 @@ def get_stride_margin(patch_size: int, overlap: int) -> Tuple[int, int]:
         overlap (int): patch overlap size
 
     Returns:
-        Tuple[int, int]: sliding stride and margin
+        tuple[int, int]: sliding stride and margin
     """
     stride = patch_size - overlap
     margin = overlap // 2
@@ -58,9 +58,8 @@ def get_stride_margin(patch_size: int, overlap: int) -> Tuple[int, int]:
 
 
 def get_paddings(
-    patch_size: int, stride: int, margin: int,
-    img_height: float, img_width: float
-) -> Tuple[int, int]:
+    patch_size: int, stride: int, margin: int, img_height: float, img_width: float
+) -> tuple[int, int]:
     """Calculate the image paddings (right and bottom).
 
     Args:
@@ -70,7 +69,7 @@ def get_paddings(
         img_width (int): image width
 
     Returns:
-        Tuple[int, int]: right and bottom padding
+        tuple[int, int]: right and bottom padding
     """
     # pad amount should be enough to make the
     # (final size - patch_size) / stride an integer number.
@@ -84,9 +83,7 @@ def get_paddings(
 
 
 def patchify(
-    images: Tensor,
-    patch_size: Optional[int] = None,
-    overlap: Optional[int] = None
+    images: Tensor, patch_size: Optional[int] = None, overlap: Optional[int] = None
 ) -> Tensor:
     """Divide images into patches.
     images: (B, C, H, W)
@@ -108,23 +105,23 @@ def patchify(
         overlap = patch_size // 2
 
     stride, margin = get_stride_margin(patch_size, overlap)
-    pad_right, pad_bottom = get_paddings(patch_size, stride, margin, img_height, img_width)
+    pad_right, pad_bottom = get_paddings(
+        patch_size, stride, margin, img_height, img_width
+    )
     pad = (margin, pad_right + margin, margin, pad_bottom + margin)
     padded_imgs = F.pad(images, pad=pad, mode="reflect")
     # making patches using torch unfold method
-    patches = padded_imgs.unfold(
-        2, patch_size, step=stride).unfold(
-        3, patch_size, step=stride)
-    patches = patches.permute(0, 2, 3, 1, 4, 5).reshape(
-        -1, c, patch_size, patch_size
+    patches = padded_imgs.unfold(2, patch_size, step=stride).unfold(
+        3, patch_size, step=stride
     )
+    patches = patches.permute(0, 2, 3, 1, 4, 5).reshape(-1, c, patch_size, patch_size)
 
     return patches
 
 
 def get_num_patches(
     img_height: float, img_width: float, patch_size: int, overlap: int
-) -> Tuple[int, int]:
+) -> tuple[int, int]:
     """Returns number of patches per each image dimension.
 
     Args:
@@ -134,18 +131,22 @@ def get_num_patches(
         overlap (int): patch overlap size
 
     Returns:
-        Tuple[int, int]: number of patches for height and width of image
+        tuple[int, int]: number of patches for height and width of image
     """
     stride, margin = get_stride_margin(patch_size, overlap)
-    pad_right, pad_bottom = get_paddings(patch_size, stride, margin, img_height, img_width)
+    pad_right, pad_bottom = get_paddings(
+        patch_size, stride, margin, img_height, img_width
+    )
     new_width = img_width + pad_right + 2 * margin
     num_patches_w = ((new_width - patch_size) / stride) + 1
-    assert int(num_patches_w) == num_patches_w, \
-        f"number of patches in width {num_patches_w} is not an integer!"
+    assert (
+        int(num_patches_w) == num_patches_w
+    ), f"number of patches in width {num_patches_w} is not an integer!"
     new_height = img_height + pad_bottom + 2 * margin
     num_patches_h = ((new_height - patch_size) / stride) + 1
-    assert int(num_patches_h) == num_patches_h, \
-        f"number of patches in height {num_patches_h} is not an integer!"
+    assert (
+        int(num_patches_h) == num_patches_h
+    ), f"number of patches in height {num_patches_h} is not an integer!"
 
     return int(num_patches_h), int(num_patches_w)
 
@@ -163,15 +164,18 @@ def get_nonoverlapped_patches(patches: Tensor, patch_size: int, overlap: int) ->
     """
     stride, margin = get_stride_margin(patch_size, overlap)
 
-    return patches[
-        :, :, margin: margin + stride, margin: margin + stride
-    ].permute([0, 2, 3, 1])
+    return patches[:, :, margin: margin + stride, margin: margin + stride].permute(
+        [0, 2, 3, 1]
+    )
 
 
 def get_patch_index(
-    pix_y: float, pix_x: float,
-    img_height: float, img_width: float,
-    patch_size: int, overlap: int
+    pix_y: float,
+    pix_x: float,
+    img_height: float,
+    img_width: float,
+    patch_size: int,
+    overlap: int,
 ) -> int:
     """Gets patch index that contains the given single pixel coordinate.
 
@@ -186,19 +190,19 @@ def get_patch_index(
     Returns:
         int: patch index
     """
-    total_rows, total_cols = get_num_patches(
-        img_height, img_width, patch_size, overlap
-    )
+    total_rows, total_cols = get_num_patches(img_height, img_width, patch_size, overlap)
     stride, _ = get_stride_margin(patch_size, overlap)
-    patch_index = (
-        pix_y // stride) * total_cols + (pix_x // stride)
+    patch_index = (pix_y // stride) * total_cols + (pix_x // stride)
 
     return patch_index
 
 
 def get_patch_indices(
-    pixel_coords: ndarray, img_height: float, img_width: float,
-    patch_size: int, overlap: int
+    pixel_coords: ndarray,
+    img_height: float,
+    img_width: float,
+    patch_size: int,
+    overlap: int,
 ) -> ndarray:
     """Gets patch indices that contains the given pixel coordinates.
 
@@ -212,9 +216,7 @@ def get_patch_indices(
     Returns:
         ndarray: array of patch indices
     """
-    total_rows, total_cols = get_num_patches(
-        img_height, img_width, patch_size, overlap
-    )
+    total_rows, total_cols = get_num_patches(img_height, img_width, patch_size, overlap)
     stride, _ = get_stride_margin(patch_size, overlap)
     ys = pixel_coords[:, 0]
     xs = pixel_coords[:, 1]
@@ -225,7 +227,7 @@ def get_patch_indices(
 
 def get_patch_position(
     pix_y: float, pix_x: float, patch_size: int, overlap: int
-) -> Tuple[int, int]:
+) -> tuple[int, int]:
     """Gets patch 2D position that contains the given pixel coordinate.
 
     Args:
@@ -235,7 +237,7 @@ def get_patch_position(
         overlap (int): patch overlap size
 
     Returns:
-        Tuple[int, int]: patch position (row, col)
+        tuple[int, int]: patch position (row, col)
     """
     stride, _ = get_stride_margin(patch_size, overlap)
     patch_row = pix_y // stride
@@ -271,14 +273,14 @@ def is_stacked(image_data: ndarray) -> bool:
     return dims == 3
 
 
-def get_stack_dims(image_data: ndarray) -> Tuple[int, int, int]:
+def get_stack_dims(image_data: ndarray) -> tuple[int, int, int]:
     """Returns a 3D stack dimensions.
 
     Args:
         image_data (ndarray): image array
 
     Returns:
-        Tuple[int, int, int]: stack dims; number of slices, height, width
+        tuple[int, int, int]: stack dims; number of slices, height, width
     """
     num_slices = 1
     img_height = image_data.shape[0]
@@ -302,6 +304,11 @@ def image_to_uint8(image: np.ndarray) -> np.ndarray:
     """
     _min = image.min()
     _max = image.max()
-    normalized_image = ((image - _min) * (255 / (_max - _min))).astype(np.uint8)
+    if _max - _min == 0:
+        _max += 1e-7
+    # to prevent invalid value encountered in cast
+    normalized_image = np.abs(
+        (image - _min) * (255 / (_max - _min))
+    ).astype(np.uint8)
 
     return normalized_image
