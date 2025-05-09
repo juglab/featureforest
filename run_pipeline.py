@@ -126,7 +126,7 @@ def get_slice_features(
     num_batches = int(np.ceil(num_patches / batch_size))
 
     # get sam encoder output for image patches
-    print("\nextracting slice features:")
+    print("extracting slice features:")
     for b_idx in range(num_batches):
         print(f"batch #{b_idx + 1} of {num_batches}")
         start = b_idx * batch_size
