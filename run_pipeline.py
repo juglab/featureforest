@@ -198,6 +198,8 @@ def main(
     # result folder
     segmentation_dir = Path(output_dir)
     segmentation_dir.mkdir(parents=True, exist_ok=True)
+    prediction_dir = segmentation_dir.joinpath("Prediction")
+    prediction_dir.mkdir(exist_ok=True)
 
     # get patch sizes
     input_stack = Image.open(data_path)
@@ -268,7 +270,7 @@ def main(
             )
 
         img = Image.fromarray(slice_mask)
-        img.save(segmentation_dir.joinpath(f"slice_{i:04}_prediction.tiff"))
+        img.save(prediction_dir.joinpath(f"slice_{i:04}_prediction.tiff"))
 
         if do_postprocess:
             post_masks = apply_postprocessing(
