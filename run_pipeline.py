@@ -127,7 +127,7 @@ def get_slice_features(
     # get sam encoder output for image patches
     print("\nextracting slice features:")
     for b_idx in range(num_batches):
-        # print(f"batch #{b_idx + 1} of {num_batches}")
+        print(f"batch #{b_idx + 1} of {num_batches}")
         start = b_idx * batch_size
         end = start + batch_size
         slice_features = model_adapter.get_features_patches(
@@ -256,7 +256,6 @@ def main(
             # wait until all processes are done
             for p in procs:
                 if p.is_alive:
-                    print(p.name)
                     p.join()
             # collect results from each process
             batch_indices = sorted(result_dict.keys())

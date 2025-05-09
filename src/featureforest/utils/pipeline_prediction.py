@@ -93,7 +93,7 @@ def extract_predict(
     with mp.Manager() as manager:
         result_dict = manager.dict()
         for b_idx, patch_features in get_slice_features(image, model_adapter):
-            # print(b_idx, end="\r")
+            print(b_idx, end="\r")
             proc = mp.Process(
                 target=predict_patches,
                 args=(patch_features, rf_model, model_adapter, b_idx, result_dict),
@@ -103,7 +103,6 @@ def extract_predict(
         # wait until all processes are done
         for p in procs:
             if p.is_alive:
-                print(p.name)
                 p.join()
         # collect results from each process
         batch_indices = sorted(result_dict.keys())
