@@ -1,3 +1,4 @@
+import time
 import argparse
 import multiprocessing as mp
 import pickle
@@ -238,6 +239,7 @@ def main(
     sam_autoseg_iou_threshold = 0.35
 
     # ### Prediction
+    tic = time.perf_counter()
     for i, page in enumerate(ImageSequence.Iterator(input_stack)):
         print(f"\nslice {i + 1}")
         slide_img = np.array(page.convert("RGB"))
@@ -285,6 +287,8 @@ def main(
                 seg_dir = segmentation_dir.joinpath(name)
                 seg_dir.mkdir(exist_ok=True)
                 img.save(seg_dir.joinpath(f"slice_{i:04}_{name}.tiff"))
+
+    print(f"total elapsed time: {(time.perf_counter() - tic)} seconds")
 
 
 if __name__ == "__main__":
