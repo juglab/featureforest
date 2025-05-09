@@ -1,6 +1,6 @@
-import cv2
+import warnings
 
-# import napari.utils.notifications as notif
+import cv2
 import numpy as np
 import torch
 from cv2.typing import Rect
@@ -123,7 +123,7 @@ def get_sam_mask(
     bs = 16
     num_batches = np.ceil(len(bboxes) / bs).astype(int)
     final_mask = np.zeros((image.shape[0], image.shape[1]), dtype=bool)
-    for i in np_progress(range(num_batches), desc="Generating masks using SAM predictor"):
+    for i in np_progress(range(num_batches), desc="Generating masks by SAM2 predictor"):
         start = i * bs
         end = start + bs
         masks, _, _ = predictor.predict(
@@ -178,7 +178,9 @@ def postprocess_with_sam(
         bboxes = get_bounding_boxes(processed_mask)
         bboxes.extend(w_bboxes)
         # get sam output mask
-        sam_label_mask = get_sam_mask(predictor, processed_mask, bboxes)
+        with warnings.catch_warnings():
+            warnings.simplefilter(action="ignore")
+            sam_label_mask = get_sam_mask(predictor, processed_mask, bboxes)
         # put the final label mask into final result mask
         final_mask[sam_label_mask] = label
 
@@ -218,7 +220,9 @@ def get_sam_auto_masks(input_image: np.ndarray) -> tuple[np.ndarray, np.ndarray]
     # generate SAM2 masks
     print("generating masks using SAM2AutomaticMaskGenerator...")
     with np_progress(range(1), desc="Generating masks using SAM2AutomaticMaskGenerator"):
-        sam_generated_masks = mask_generator.generate(image)
+        with warnings.catch_warnings():
+            warnings.simplefilter(action="ignore")
+            sam_generated_masks = mask_generator.generate(image)
     sam_masks = np.array([mask["segmentation"] for mask in sam_generated_masks])
     sam_areas = np.array([mask["area"] for mask in sam_generated_masks])
 
