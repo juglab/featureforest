@@ -81,13 +81,14 @@ def get_slice_features(
         end = start + batch_size
         slice_features = model_adapter.get_features_patches(
             data_patches[start:end].to(model_adapter.device)
-        ).cpu()
+        )
         if isinstance(slice_features, tuple):  # model with more than one output
             slice_features = torch.cat(slice_features, dim=-1)
         if storage_group is not None:
             # to take care of the last batch size that might be smaller than batch_size
             num_out = slice_features.shape[0]
-            dataset[start : start + num_out] = slice_features.to(torch.float16).numpy()
+            dataset[start: start + num_out] = slice_features.to(
+                torch.float16).cpu().numpy()
             yield b_idx
         else:
             yield b_idx, slice_features.numpy()
