@@ -1,4 +1,5 @@
-from typing import Generator, Tuple
+from collections.abc import Generator
+from typing import Optional, Union
 
 import h5py
 import numpy as np
@@ -7,30 +8,32 @@ from napari.utils import progress as np_progress
 
 from featureforest.models import BaseModelAdapter
 from featureforest.models.SAM import SAMAdapter
-from featureforest.utils.data import get_stack_dims
 from featureforest.utils.data import (
-    patchify,
+    get_stack_dims,
     get_stride_margin,
+    image_to_uint8,
     is_image_rgb,
-    image_to_uint8
+    patchify,
 )
 
 
 def get_slice_features(
     image: np.ndarray,
-    patch_size: int,
-    overlap: int,
     model_adapter: BaseModelAdapter,
-    storage_group: h5py.Group,
-) -> Generator[int, None, None]:
-    """Extract the model features for one slice and save them into storage file.
+    storage_group: Optional[h5py.Group] = None,
+) -> Generator[Union[int, tuple[int, np.ndarray]], None, None]:
+    """Extract features for one image/slice using the given model adapter and
+    save them into a storage file or yield them batch by batch.
 
     Args:
-        image (np.ndarray): _description_
-        patch_size (int): _description_
-        overlap (int): _description_
-        model_adapter (BaseModelAdapter): _description_
-        storage_group (h5py.Group): _description_
+        image (np.ndarray): Input image
+        model_adapter (BaseModelAdapter): Model adapter to extract features from
+        storage_group (Optional[h5py.Group]): h5 file group where the extracted features
+        will be saved. If None, will yield patch features batch by batch.
+    Returns:
+        Generator[Union[int, tuple[int, np.ndarray]]]: A generator yielding either the
+        current batch number or a tuple containing the current batch number
+        and the corresponding patch features.
     """
     # image to torch tensor
     img_data = torch.from_numpy(image.copy()).to(torch.float32)
@@ -47,6 +50,8 @@ def get_slice_features(
         img_data = img_data.unsqueeze(0).unsqueeze(0).expand(-1, 3, -1, -1)
 
     # get input patches
+    patch_size = model_adapter.patch_size
+    overlap = model_adapter.overlap
     data_patches = patchify(img_data, patch_size, overlap)
     num_patches = len(data_patches)
 
@@ -57,44 +62,40 @@ def get_slice_features(
         batch_size = 2
 
     num_batches = int(np.ceil(num_patches / batch_size))
-    # prepare storage for the slice embeddings
-    total_channels = model_adapter.get_total_output_channels()
-    stride, _ = get_stride_margin(patch_size, overlap)
-    dataset = storage_group.create_dataset(
-        model_adapter.name, shape=(num_patches, stride, stride, total_channels),
-        dtype=np.float16,
-        compression="lzf",
-    )
+    # prepare storage for the image embeddings
+    if storage_group is not None:
+        total_channels = model_adapter.get_total_output_channels()
+        stride, _ = get_stride_margin(patch_size, overlap)
+        dataset = storage_group.create_dataset(
+            model_adapter.name,
+            shape=(num_patches, stride, stride, total_channels),
+            dtype=np.float16,
+            compression="lzf",
+        )
 
     # get sam encoder output for image patches
     print("extracting features:")
-    for b_idx in np_progress(range(num_batches), desc="extracting feature"):
+    for b_idx in np_progress(range(num_batches), desc="extracting features"):
         print(f"batch #{b_idx + 1} of {num_batches}")
         start = b_idx * batch_size
         end = start + batch_size
         slice_features = model_adapter.get_features_patches(
             data_patches[start:end].to(model_adapter.device)
-        )
-        if not isinstance(slice_features, tuple):
-            # model has only one output
-            num_out = slice_features.shape[0]  # to take care of the last batch size
-            dataset[start : start + num_out] = slice_features.to(torch.float16)
+        ).cpu()
+        if isinstance(slice_features, tuple):  # model with more than one output
+            slice_features = torch.cat(slice_features, dim=-1)
+        if storage_group is not None:
+            # to take care of the last batch size that might be smaller than batch_size
+            num_out = slice_features.shape[0]
+            dataset[start : start + num_out] = slice_features.to(torch.float16).numpy()
+            yield b_idx
         else:
-            # model has more than one output: put them into storage one by one
-            ch_start = 0
-            for feat in slice_features:
-                num_out = feat.shape[0]
-                ch_end = ch_start + feat.shape[-1]  # number of features
-                dataset[start : start + num_out, :, :, ch_start:ch_end] = feat.to(torch.float16)
-                ch_start = ch_end
-        yield b_idx
+            yield b_idx, slice_features.numpy()
 
 
 def extract_embeddings_to_file(
-    image: np.ndarray,
-    storage_file_path: str,
-    model_adapter: BaseModelAdapter
-) -> Generator[Tuple[int, int], None, None]:
+    image: np.ndarray, storage_file_path: str, model_adapter: BaseModelAdapter
+) -> Generator[tuple[int, int], None, None]:
     patch_size = model_adapter.patch_size
     overlap = model_adapter.overlap
 
