@@ -1,47 +1,43 @@
-from typing import List, Tuple
+import warnings
 
-from napari.utils import progress as np_progress
-# import napari.utils.notifications as notif
-
-import numpy as np
 import cv2
+import numpy as np
 import torch
-
 from cv2.typing import Rect
-from sam2.modeling.sam2_base import SAM2Base
-from sam2.build_sam import build_sam2
-from sam2.sam2_image_predictor import SAM2ImagePredictor
+from napari.utils import progress as np_progress
 from sam2.automatic_mask_generator import SAM2AutomaticMaskGenerator
+from sam2.build_sam import build_sam2
+from sam2.modeling.sam2_base import SAM2Base
+from sam2.sam2_image_predictor import SAM2ImagePredictor
 
+from featureforest.utils.data import image_to_uint8, is_image_rgb
 from featureforest.utils.downloader import download_model
-from featureforest.utils.data import is_image_rgb, image_to_uint8
+
 from .postprocess import postprocess_label_mask
 
 
 def get_sam2() -> SAM2Base:
-    model_url = \
-        "https://dl.fbaipublicfiles.com/segment_anything_2/092824/sam2.1_hiera_base_plus.pt"
+    model_url = "https://dl.fbaipublicfiles.com/segment_anything_2/092824/sam2.1_hiera_base_plus.pt"
     model_file = download_model(
-        model_url=model_url,
-        model_name="sam2.1_hiera_base_plus.pt"
+        model_url=model_url, model_name="sam2.1_hiera_base_plus.pt"
     )
     if model_file is None:
         raise ValueError(f"Could not download the model from {model_url}.")
 
     # init the model
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"running on {device}")
+    # print(f"running on {device}")
     sam2_model: SAM2Base = build_sam2(
-        config_file= "configs/sam2.1/sam2.1_hiera_b+.yaml",
+        config_file="configs/sam2.1/sam2.1_hiera_b+.yaml",
         ckpt_path=model_file,
-        device=device
+        device=device,
     )
     sam2_model.eval()
 
     return sam2_model
 
 
-def get_watershed_bboxes(image: np.ndarray) -> List[Rect]:
+def get_watershed_bboxes(image: np.ndarray) -> list[Rect]:
     """Apply watershed algorithm to the input binary image
     to get bounding boxes.
 
@@ -86,7 +82,7 @@ def get_watershed_bboxes(image: np.ndarray) -> List[Rect]:
     return bboxes
 
 
-def get_bounding_boxes(image: np.ndarray) -> List[Rect]:
+def get_bounding_boxes(image: np.ndarray) -> list[Rect]:
     """Getting bounding boxes around contours in the input image.
 
     Args:
@@ -95,9 +91,7 @@ def get_bounding_boxes(image: np.ndarray) -> List[Rect]:
     Returns:
         List[Rect]: list of bounding boxes
     """
-    contours, _ = cv2.findContours(
-        image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
-    )
+    contours, _ = cv2.findContours(image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     bboxes = []
     for cnt in contours:
         bboxes.append(cv2.boundingRect(cnt))
@@ -106,7 +100,7 @@ def get_bounding_boxes(image: np.ndarray) -> List[Rect]:
 
 
 def get_sam_mask(
-    predictor: SAM2ImagePredictor, image: np.ndarray, bboxes: List[Rect]
+    predictor: SAM2ImagePredictor, image: np.ndarray, bboxes: list[Rect]
 ) -> np.ndarray:
     """Returns a mask aggregated by sam predictor masks for each given bounding box.
 
@@ -122,17 +116,14 @@ def get_sam_mask(
     image = np.repeat(image[:, :, np.newaxis], 3, axis=2)
     predictor.set_image(image)
     # get sam-ready bounding boxes: x,y,w,h -> x1,y1,x2,y2
-    input_boxes = np.array([
-        (box[0], box[1], box[0] + box[2], box[1] + box[3])
-        for box in bboxes
-    ])
+    input_boxes = np.array(
+        [(box[0], box[1], box[0] + box[2], box[1] + box[3]) for box in bboxes]
+    )
     # get sam predictor masks
     bs = 16
     num_batches = np.ceil(len(bboxes) / bs).astype(int)
     final_mask = np.zeros((image.shape[0], image.shape[1]), dtype=bool)
-    for i in np_progress(
-        range(num_batches), desc="Generating masks using SAM predictor"
-    ):
+    for i in np_progress(range(num_batches), desc="Generating masks by SAM2 predictor"):
         start = i * bs
         end = start + bs
         masks, _, _ = predictor.predict(
@@ -143,8 +134,7 @@ def get_sam_mask(
         )
         reduced_axis = (0, 1) if masks.ndim == 4 else 0
         final_mask = np.bitwise_or(
-            final_mask,
-            np.bitwise_or.reduce(masks.astype(bool), axis=reduced_axis)
+            final_mask, np.bitwise_or.reduce(masks.astype(bool), axis=reduced_axis)
         )
 
     return final_mask
@@ -154,7 +144,7 @@ def postprocess_with_sam(
     segmentation_image: np.ndarray,
     smoothing_iterations: int = 25,
     area_threshold: int = 15,
-    area_is_abs: bool = False
+    area_is_abs: bool = False,
 ) -> np.ndarray:
     """Post-processes segmentations using SAM predictor.
 
@@ -177,9 +167,7 @@ def postprocess_with_sam(
     # postprocessing gets done for each label's mask separately.
     bg_label = 0
     class_labels = [c for c in np.unique(segmentation_image) if c > bg_label]
-    for label in np_progress(
-        class_labels, desc="Getting SAM masks for each class"
-    ):
+    for label in np_progress(class_labels, desc="Getting SAM masks for each class"):
         # make a binary image for the label (class)
         bin_image = (segmentation_image == label).astype(np.uint8) * 255
         processed_mask = postprocess_label_mask(
@@ -190,7 +178,9 @@ def postprocess_with_sam(
         bboxes = get_bounding_boxes(processed_mask)
         bboxes.extend(w_bboxes)
         # get sam output mask
-        sam_label_mask = get_sam_mask(predictor, processed_mask, bboxes)
+        with warnings.catch_warnings():
+            warnings.simplefilter(action="ignore")
+            sam_label_mask = get_sam_mask(predictor, processed_mask, bboxes)
         # put the final label mask into final result mask
         final_mask[sam_label_mask] = label
 
@@ -201,7 +191,7 @@ def postprocess_with_sam(
     return final_mask
 
 
-def get_sam_auto_masks(input_image: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+def get_sam_auto_masks(input_image: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     """Returns masks generated by SamAutomaticMaskGenerator
 
     Args:
@@ -211,10 +201,7 @@ def get_sam_auto_masks(input_image: np.ndarray) -> Tuple[np.ndarray, np.ndarray]
         Tuple[np.ndarray, np.ndarray]: a tuple of (masks, areas)
     """
     if not is_image_rgb(input_image):
-        input_image = np.repeat(
-            input_image[..., np.newaxis],
-            3, axis=-1
-        )
+        input_image = np.repeat(input_image[..., np.newaxis], 3, axis=-1)
     assert is_image_rgb(input_image)
     # normalize the image in [0, 255] as uint8
     image = image_to_uint8(input_image.copy())
@@ -228,12 +215,14 @@ def get_sam_auto_masks(input_image: np.ndarray) -> Tuple[np.ndarray, np.ndarray]
         crop_n_layers=1,
         crop_n_points_downscale_factor=8,
         min_mask_region_area=20,
-        use_m2m=True
+        use_m2m=True,
     )
     # generate SAM2 masks
     print("generating masks using SAM2AutomaticMaskGenerator...")
     with np_progress(range(1), desc="Generating masks using SAM2AutomaticMaskGenerator"):
-        sam_generated_masks = mask_generator.generate(image)
+        with warnings.catch_warnings():
+            warnings.simplefilter(action="ignore")
+            sam_generated_masks = mask_generator.generate(image)
     sam_masks = np.array([mask["segmentation"] for mask in sam_generated_masks])
     sam_areas = np.array([mask["area"] for mask in sam_generated_masks])
 
@@ -263,12 +252,12 @@ def get_ious(mask: np.ndarray, sam_masks: np.ndarray) -> np.ndarray:
 
 
 def postprocess_with_sam_auto(
-    sam_auto_masks: Tuple[np.ndarray, np.ndarray],
+    sam_auto_masks: tuple[np.ndarray, np.ndarray],
     segmentation_image: np.ndarray,
     smoothing_iterations: int = 20,
     iou_threshold: float = 0.45,
     area_threshold: int = 15,
-    area_is_abs: bool = False
+    area_is_abs: bool = False,
 ) -> np.ndarray:
     """Post-processes segmentations using SAM auto-segmentation instances' masks.
 
@@ -297,9 +286,7 @@ def postprocess_with_sam_auto(
     # postprocessing gets done for each class segmentation.
     bg_label = 0
     class_labels = [c for c in np.unique(segmentation_image) if c > bg_label]
-    for class_label in np_progress(
-        class_labels, desc="Getting SAM masks for each class"
-    ):
+    for class_label in np_progress(class_labels, desc="Getting SAM masks for each class"):
         # make a binary image for the label (class)
         bin_image = (segmentation_image == class_label).astype(np.uint8) * 255
         processed_mask = postprocess_label_mask(

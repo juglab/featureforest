@@ -1,54 +1,60 @@
+import csv
+import datetime as dt
 import os
 import pickle
-import warnings
-import datetime as dt
 import time
-import csv
+import warnings
 from pathlib import Path
 
+import h5py
 import napari
 import napari.utils.notifications as notif
-from napari.utils.events import Event
-from napari.qt.threading import create_worker
-from napari.utils import progress as np_progress
-
-from qtpy.QtWidgets import (
-    QWidget, QHBoxLayout, QVBoxLayout,
-    QGroupBox, QCheckBox, QRadioButton,
-    QPushButton, QLabel, QComboBox, QLineEdit,
-    QFileDialog, QProgressBar
-)
-from qtpy.QtCore import Qt
-from qtpy.QtGui import QIntValidator, QDoubleValidator
-
-import h5py
 import numpy as np
 import tifffile
-from tifffile import TiffFile
+from napari.qt.threading import create_worker
+from napari.utils import progress as np_progress
+from napari.utils.events import Event
+from qtpy.QtCore import Qt
+from qtpy.QtGui import QDoubleValidator, QIntValidator
+from qtpy.QtWidgets import (
+    QCheckBox,
+    QComboBox,
+    QFileDialog,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QProgressBar,
+    QPushButton,
+    QRadioButton,
+    QVBoxLayout,
+    QWidget,
+)
 from sklearn.ensemble import RandomForestClassifier
+from tifffile import TiffFile
 
+from .exports import EXPORTERS
 from .models import get_model
+from .postprocess import (
+    get_sam_auto_masks,
+    postprocess,
+    postprocess_with_sam,
+    postprocess_with_sam_auto,
+)
+from .utils import colormaps, config
+from .utils.data import (
+    get_num_patches,
+    get_patch_indices,
+    get_stack_dims,
+    get_stride_margin,
+)
+from .utils.pipeline_prediction import extract_predict
+from .utils.usage_stats import SegmentationUsageStats
 from .widgets import (
     ScrollWidgetWrapper,
     UsageStats,
     get_layer,
 )
-from .utils.data import (
-    get_stack_dims, get_patch_indices,
-    get_num_patches, get_stride_margin
-)
-from .utils import (
-    colormaps, config
-)
-from .utils.usage_stats import SegmentationUsageStats
-from .postprocess import (
-    postprocess,
-    postprocess_with_sam,
-    postprocess_with_sam_auto,
-    get_sam_auto_masks
-)
-from .exports import EXPORTERS
-from .utils.pipeline_prediction import extract_predict
 
 
 class SegmentationWidget(QWidget):
@@ -299,16 +305,12 @@ class SegmentationWidget(QWidget):
         smooth_label = QLabel("Smoothing Iterations:")
         self.smoothing_iteration_textbox = QLineEdit()
         self.smoothing_iteration_textbox.setText("25")
-        self.smoothing_iteration_textbox.setValidator(
-            QIntValidator(0, 1000000)
-        )
+        self.smoothing_iteration_textbox.setValidator(QIntValidator(0, 1000000))
 
         area_label = QLabel("Area Threshold:")
         self.area_threshold_textbox = QLineEdit()
         self.area_threshold_textbox.setText("50")
-        self.area_threshold_textbox.setValidator(
-            QIntValidator(0, 2147483647)
-        )
+        self.area_threshold_textbox.setValidator(QIntValidator(0, 2147483647))
         self.area_threshold_textbox.setToolTip(
             "Keeps only regions with area above the threshold."
         )
@@ -518,9 +520,7 @@ class SegmentationWidget(QWidget):
             if index > -1:
                 self.gt_combo.setCurrentIndex(index)
         if len(pred_curr_text) > 0:
-            index = self.prediction_layer_combo.findText(
-                pred_curr_text, Qt.MatchExactly
-            )
+            index = self.prediction_layer_combo.findText(pred_curr_text, Qt.MatchExactly)
             if index > -1:
                 self.prediction_layer_combo.setCurrentIndex(index)
 
@@ -530,8 +530,8 @@ class SegmentationWidget(QWidget):
     def postprocess_layer_removed(self, event: Event):
         """Fires when current postprocess layer is removed."""
         if (
-            self.postprocess_layer is not None and
-            self.postprocess_layer not in self.viewer.layers
+            self.postprocess_layer is not None
+            and self.postprocess_layer not in self.viewer.layers
         ):
             self.postprocess_layer = None
 
@@ -553,8 +553,7 @@ class SegmentationWidget(QWidget):
             self.storage = h5py.File(selected_file, "r")
             # set the patch size and overlap from the selected storage
             self.patch_size = self.storage.attrs.get("patch_size", self.patch_size)
-            self.overlap = self.storage.attrs.get(
-                "overlap", self.overlap)
+            self.overlap = self.storage.attrs.get("overlap", self.overlap)
             self.stride, _ = get_stride_margin(self.patch_size, self.overlap)
 
             # initialize the model based on the selected storage
@@ -572,8 +571,7 @@ class SegmentationWidget(QWidget):
 
     def add_labels_layer(self):
         self.image_layer = get_layer(
-            self.viewer,
-            self.image_combo.currentText(), config.NAPARI_IMAGE_LAYER
+            self.viewer, self.image_combo.currentText(), config.NAPARI_IMAGE_LAYER
         )
         if self.image_layer is None:
             notif.show_error("No Image layer is added or selected!")
@@ -581,15 +579,15 @@ class SegmentationWidget(QWidget):
 
         layer = self.viewer.add_labels(
             np.zeros(get_stack_dims(self.image_layer.data), dtype=np.uint8),
-            name="Labels", opacity=1.0
+            name="Labels",
+            opacity=1.0,
         )
         layer.colormap = colormaps.create_colormap(10)[0]
         layer.brush_size = 1
 
     def set_stats_label_layer(self):
         layer = get_layer(
-            self.viewer,
-            self.gt_combo.currentText(), config.NAPARI_LABELS_LAYER
+            self.viewer, self.gt_combo.currentText(), config.NAPARI_LABELS_LAYER
         )
         if layer is not None:
             self.stats.set_label_layer(layer)
@@ -618,9 +616,9 @@ class SegmentationWidget(QWidget):
             labels_dict = self.get_class_labels()
         num_labels = [len(v) for v in labels_dict.values()]
         self.num_class_label.setText(f"Number of classes: {len(num_labels)}")
-        each_class = "\n".join([
-            f"class {i + 1}: {num_labels[i]:,d}" for i in range(len(num_labels))
-        ])
+        each_class = "\n".join(
+            [f"class {i + 1}: {num_labels[i]:,d}" for i in range(len(num_labels))]
+        )
         self.each_class_label.setText("Labels per class:\n" + each_class)
 
     def show_usage_stats(self):
@@ -654,23 +652,23 @@ class SegmentationWidget(QWidget):
             for slice_index in np_progress(uniq_slices, desc="reading slices"):
                 slice_coords = class_label_coords[
                     class_label_coords[:, 0] == slice_index
-                ][:, 1:]  # omit the slice dim
+                ][
+                    :, 1:
+                ]  # omit the slice dim
                 patch_indices = get_patch_indices(
-                    slice_coords, img_height, img_width,
-                    self.patch_size, self.overlap
+                    slice_coords, img_height, img_width, self.patch_size, self.overlap
                 )
                 grp_key = str(slice_index)
                 slice_dataset = self.storage[grp_key][self.model_adapter.name]
                 for p_i in np.unique(patch_indices):
                     patch_coords = slice_coords[patch_indices == p_i]
                     patch_features = slice_dataset[p_i]
-                    train_data[count: count + len(patch_coords)] = patch_features[
-                        patch_coords[:, 0] % self.stride,
-                        patch_coords[:, 1] % self.stride
+                    train_data[count : count + len(patch_coords)] = patch_features[
+                        patch_coords[:, 0] % self.stride, patch_coords[:, 1] % self.stride
                     ]
-                    labels[
-                        count: count + len(patch_coords)
-                    ] = class_index - 1  # to have bg class as zero
+                    labels[count : count + len(patch_coords)] = (
+                        class_index - 1
+                    )  # to have bg class as zero
                     count += len(patch_coords)
 
         assert (labels > -1).all()
@@ -679,8 +677,7 @@ class SegmentationWidget(QWidget):
 
     def train_model(self):
         self.image_layer = get_layer(
-            self.viewer,
-            self.image_combo.currentText(), config.NAPARI_IMAGE_LAYER
+            self.viewer, self.image_combo.currentText(), config.NAPARI_IMAGE_LAYER
         )
         if self.image_layer is None:
             notif.show_error("No Image layer is selected!")
@@ -710,7 +707,7 @@ class SegmentationWidget(QWidget):
             min_samples_leaf=3,
             max_features=25,
             n_jobs=2 if os.cpu_count() < 5 else os.cpu_count() - 3,
-            verbose=1
+            verbose=1,
         )
         rf_classifier.fit(train_data, labels)
         self.rf_model = rf_classifier
@@ -771,7 +768,7 @@ class SegmentationWidget(QWidget):
                 "img_height": self.storage.attrs["img_height"],
                 "img_width": self.storage.attrs["img_width"],
                 "patch_size": self.patch_size,
-                "overlap": self.overlap
+                "overlap": self.overlap,
             }
             with open(selected_file, mode="wb") as f:
                 pickle.dump(model_data, f)
@@ -784,8 +781,7 @@ class SegmentationWidget(QWidget):
             return
 
         self.image_layer = get_layer(
-            self.viewer,
-            self.image_combo.currentText(), config.NAPARI_IMAGE_LAYER
+            self.viewer, self.image_combo.currentText(), config.NAPARI_IMAGE_LAYER
         )
         if self.image_layer is None:
             notif.show_error("No Image layer is selected!")
@@ -799,13 +795,14 @@ class SegmentationWidget(QWidget):
         if self.new_layer_checkbox.checkState() == Qt.Checked:
             self.segmentation_layer = self.viewer.add_labels(
                 np.zeros((num_slices, img_height, img_width), dtype=np.uint8),
-                name="Segmentations"
+                name="Segmentations",
             )
         else:
             # using selected layer for the segmentation
             self.segmentation_layer = get_layer(
                 self.viewer,
-                self.prediction_layer_combo.currentText(), config.NAPARI_LABELS_LAYER
+                self.prediction_layer_combo.currentText(),
+                config.NAPARI_LABELS_LAYER,
             )
             if self.segmentation_layer is None:
                 notif.show_error("No segmentation layer is selected!")
@@ -839,8 +836,8 @@ class SegmentationWidget(QWidget):
             self.stats.count_prediction()
             # add/update segmentation result layer
             if (
-                self.new_layer_checkbox.checkState() == Qt.Checked or
-                self.seg_replace_radiobutton.isChecked()
+                self.new_layer_checkbox.checkState() == Qt.Checked
+                or self.seg_replace_radiobutton.isChecked()
             ):
                 self.segmentation_layer.data[slice_index] = segmentation_image
             else:
@@ -880,8 +877,7 @@ class SegmentationWidget(QWidget):
             patch_rows, patch_cols, self.stride, self.stride
         )
         segmentation_image = np.moveaxis(segmentation_image, 1, 2).reshape(
-            patch_rows * self.stride,
-            patch_cols * self.stride
+            patch_rows * self.stride, patch_cols * self.stride
         )
         # skip paddings
         segmentation_image = segmentation_image[:img_height, :img_width]
@@ -924,14 +920,16 @@ class SegmentationWidget(QWidget):
     def postprocess_segmentation(self, whole_stack=False):
         self.segmentation_layer = get_layer(
             self.viewer,
-            self.prediction_layer_combo.currentText(), config.NAPARI_LABELS_LAYER
+            self.prediction_layer_combo.currentText(),
+            config.NAPARI_LABELS_LAYER,
         )
         if self.segmentation_layer is None:
             notif.show_error("No segmentation layer is selected!")
             return
 
-        smoothing_iterations, area_threshold, area_is_absolute = \
+        smoothing_iterations, area_threshold, area_is_absolute = (
             self.get_postprocess_params()
+        )
 
         num_slices, img_height, img_width = get_stack_dims(self.image_layer.data)
         slice_indices = []
@@ -943,8 +941,7 @@ class SegmentationWidget(QWidget):
 
         if self.postprocess_layer is None:
             self.postprocess_layer = self.viewer.add_labels(
-                data=np.zeros_like(self.segmentation_layer.data),
-                name="Postprocessing"
+                data=np.zeros_like(self.segmentation_layer.data), name="Postprocessing"
             )
         self.postprocess_layer.colormap = self.segmentation_layer.colormap
 
@@ -953,8 +950,7 @@ class SegmentationWidget(QWidget):
 
             if self.sam_post_checkbox.isChecked():
                 self.postprocess_layer.data[slice_index] = postprocess_with_sam(
-                    prediction,
-                    smoothing_iterations, area_threshold, area_is_absolute
+                    prediction, smoothing_iterations, area_threshold, area_is_absolute
                 )
             elif self.sam_auto_post_checkbox.isChecked():
                 # get input image/slice
@@ -970,13 +966,14 @@ class SegmentationWidget(QWidget):
                 self.postprocess_layer.data[slice_index] = postprocess_with_sam_auto(
                     self.sam_auto_masks,
                     prediction,
-                    smoothing_iterations, iou_threshold,
-                    area_threshold, area_is_absolute
+                    smoothing_iterations,
+                    iou_threshold,
+                    area_threshold,
+                    area_is_absolute,
                 )
             else:
                 self.postprocess_layer.data[slice_index] = postprocess(
-                    prediction,
-                    smoothing_iterations, area_threshold, area_is_absolute
+                    prediction, smoothing_iterations, area_threshold, area_is_absolute
                 )
 
         self.postprocess_layer.refresh()
@@ -998,8 +995,8 @@ class SegmentationWidget(QWidget):
             selected_file += f".{exporter.extension}"
         layer_to_export = self.segmentation_layer
         if (
-            self.export_postprocess_checkbox.isChecked() and
-            self.postprocess_layer is not None
+            self.export_postprocess_checkbox.isChecked()
+            and self.postprocess_layer is not None
         ):
             layer_to_export = self.postprocess_layer
 
@@ -1015,15 +1012,15 @@ class SegmentationWidget(QWidget):
             # get stack info
             with TiffFile(selected_file) as tiff_stack:
                 axes = tiff_stack.series[0].axes
-                assert ("Y" in axes) and ("X" in axes), \
-                    "Could not find YX in the stack axes!"
+                assert ("Y" in axes) and (
+                    "X" in axes
+                ), "Could not find YX in the stack axes!"
                 stack_dims = tiff_stack.series[0].shape
             stack_height = stack_dims[axes.index("Y")]
             stack_width = stack_dims[axes.index("X")]
             # selected stack image dimensions should be as the same as the current image
             self.image_layer = get_layer(
-                self.viewer,
-                self.image_combo.currentText(), config.NAPARI_IMAGE_LAYER
+                self.viewer, self.image_combo.currentText(), config.NAPARI_IMAGE_LAYER
             )
             if self.image_layer is not None:
                 _, img_height, img_width = get_stack_dims(self.image_layer.data)
@@ -1043,8 +1040,10 @@ class SegmentationWidget(QWidget):
 
     def select_result_dir(self):
         selected_dir = QFileDialog.getExistingDirectory(
-            self, "Select a directory", self.large_stack_textbox.text(),
-            QFileDialog.ShowDirsOnly | QFileDialog.DontResolveSymlinks
+            self,
+            "Select a directory",
+            self.large_stack_textbox.text(),
+            QFileDialog.ShowDirsOnly | QFileDialog.DontResolveSymlinks,
         )
         if selected_dir is not None and len(selected_dir) > 0:
             self.result_dir_textbox.setText(selected_dir)
@@ -1060,24 +1059,16 @@ class SegmentationWidget(QWidget):
         self.pipeline_progressbar.setValue(0)
         self.run_pipeline_button.setEnabled(False)
         self.stop_pipeline_button.setEnabled(True)
-        # create the slice temporary storage
-        tmp_storage_path = Path.home().joinpath(".featureforest", "tmp_storage.h5")
-        storage = h5py.File(tmp_storage_path, "w")
-        storage_group = storage.create_group("slice")
-        # run pipeline prediction in another thread
         self.pipeline_worker = create_worker(
             self.run_pipeline,
             Path(self.large_stack_textbox.text()),
             Path(self.result_dir_textbox.text()),
-            storage_group
         )
         self.pipeline_worker.yielded.connect(self.update_pipeline_progress)
         self.pipeline_worker.finished.connect(self.pipeline_is_done)
         self.pipeline_worker.run()
 
-    def run_pipeline(
-            self, tiff_stack_file: str, result_dir: Path, storage_group: h5py.Group
-    ):
+    def run_pipeline(self, tiff_stack_file: str, result_dir: Path):
         start = dt.datetime.now()
         slices_total_time = 0
         postprocess_total_time = 0
@@ -1092,45 +1083,50 @@ class SegmentationWidget(QWidget):
             total_pages = len(tiff_stack.pages)
             for page_idx, page in np_progress(
                 enumerate(tiff_stack.pages),
-                desc="runing the pipeline", total=len(tiff_stack.pages)
+                desc="runing the pipeline",
+                total=len(tiff_stack.pages),
             ):
                 slice_start = time.perf_counter()
                 image = page.asarray()
                 prediction_mask = extract_predict(
-                    image, self.model_adapter, storage_group, self.rf_model
+                    image, self.model_adapter, self.rf_model
                 )
                 # save the prediction
                 tifffile.imwrite(
                     prediction_dir.joinpath(f"slice_{page_idx:04}_prediction.tiff"),
-                    prediction_mask
+                    prediction_mask,
                 )
                 # post-processing
-                smoothing_iterations, area_threshold, area_is_absolute = \
+                smoothing_iterations, area_threshold, area_is_absolute = (
                     self.get_postprocess_params()
+                )
                 post_mask = postprocess(
-                    prediction_mask, smoothing_iterations,
-                    area_threshold, area_is_absolute
+                    prediction_mask,
+                    smoothing_iterations,
+                    area_threshold,
+                    area_is_absolute,
                 )
                 tifffile.imwrite(
                     simple_post_dir.joinpath(f"slice_{page_idx:04}_post_simple.tiff"),
-                    post_mask
+                    post_mask,
                 )
                 pp_start = time.perf_counter()
                 post_sam_mask = postprocess_with_sam(
                     prediction_mask,
-                    smoothing_iterations, area_threshold, area_is_absolute
+                    smoothing_iterations,
+                    area_threshold,
+                    area_is_absolute,
                 )
                 tifffile.imwrite(
                     sam_post_dir.joinpath(f"slice_{page_idx:04}_post_sam.tiff"),
-                    post_sam_mask
+                    post_sam_mask,
                 )
                 # slices timing
                 postprocess_total_time += round(time.perf_counter() - pp_start, 2)
                 slices_total_time += round(time.perf_counter() - slice_start, 2)
                 slice_avg = slices_total_time / (page_idx + 1)
                 rem_minutes, rem_seconds = divmod(
-                    slice_avg * (total_pages - page_idx + 1),
-                    60
+                    slice_avg * (total_pages - page_idx + 1), 60
                 )
                 rem_hour, rem_minutes = divmod(rem_minutes, 60)
                 self.timing_info.setText(
@@ -1145,12 +1141,6 @@ class SegmentationWidget(QWidget):
         self.save_pipeline_stats(
             result_dir, start, end, slices_total_time, postprocess_total_time, total_pages
         )
-        # closing the h5 storage & remove the file
-        try:
-            storage_group.file.close()
-            self.remove_temp_storage()
-        except Exception:  # noqa: BLE001
-            pass
 
     def stop_pipeline(self):
         if self.pipeline_worker is not None:
@@ -1178,23 +1168,38 @@ class SegmentationWidget(QWidget):
             tmp_storage_path.unlink()
 
     def save_pipeline_stats(
-        self, save_dir: Path, start: dt.datetime, end: dt.datetime,
-        slice_total: float, pp_total: float, num_images: int
+        self,
+        save_dir: Path,
+        start: dt.datetime,
+        end: dt.datetime,
+        slice_total: float,
+        pp_total: float,
+        num_images: int,
     ):
         total_time = (end - start).total_seconds()
         total_min, total_sec = divmod(total_time, 60)
         total_hour, total_min = divmod(total_min, 60)
         csv_file = save_dir.joinpath("stats.csv")
         with open(csv_file, mode="w") as f:
-            writer = csv.DictWriter(f, fieldnames=[
-                "num_images", "start", "end", "total", "slice_avg", "postprocess_avg"
-            ])
+            writer = csv.DictWriter(
+                f,
+                fieldnames=[
+                    "num_images",
+                    "start",
+                    "end",
+                    "total",
+                    "slice_avg",
+                    "postprocess_avg",
+                ],
+            )
             writer.writeheader()
-            writer.writerow({
-                "num_images": num_images,
-                "start": str(start),
-                "end": str(end),
-                "total": f"{int(total_hour):02}:{int(total_min):02}:{int(total_sec):02}",
-                "slice_avg": round(slice_total / num_images, 2),
-                "postprocess_avg": round(pp_total / num_images, 2)
-            })
+            writer.writerow(
+                {
+                    "num_images": num_images,
+                    "start": str(start),
+                    "end": str(end),
+                    "total": f"{int(total_hour):02}:{int(total_min):02}:{int(total_sec):02}",
+                    "slice_avg": round(slice_total / num_images, 2),
+                    "postprocess_avg": round(pp_total / num_images, 2),
+                }
+            )
