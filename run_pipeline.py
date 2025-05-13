@@ -242,13 +242,13 @@ def main(
     tic = time.perf_counter()
     for i, page in enumerate(ImageSequence.Iterator(input_stack)):
         print(f"\nslice {i + 1}")
-        slide_img = np.array(page.convert("RGB"))
+        slice_img = np.array(page.convert("RGB"))
         procs = []
         # random forest prediction happens per batch of extracted features
         # in a separate process.
         with mp.Manager() as manager:
             result_dict = manager.dict()
-            for b_idx, patch_features in get_slice_features(slide_img, model_adapter):
+            for b_idx, patch_features in get_slice_features(slice_img, model_adapter):
                 proc = mp.Process(
                     target=predict_patches,
                     args=(patch_features, rf_model, model_adapter, b_idx, result_dict),
@@ -272,7 +272,7 @@ def main(
 
         if do_postprocess:
             post_masks = apply_postprocessing(
-                slide_img,
+                slice_img,
                 slice_mask,
                 smoothing_iterations,
                 area_threshold,
