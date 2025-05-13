@@ -1,7 +1,7 @@
-import time
 import argparse
 import multiprocessing as mp
 import pickle
+import time
 from collections.abc import Generator
 from pathlib import Path
 
@@ -201,13 +201,11 @@ def main(
     prediction_dir = segmentation_dir.joinpath("Prediction")
     prediction_dir.mkdir(exist_ok=True)
 
-    # get patch sizes
+    # get input image dims
     input_stack = Image.open(data_path)
-
     num_slices = input_stack.n_frames
     img_height = input_stack.height
     img_width = input_stack.width
-
     print(f"input_stack: {num_slices}, {img_height}, {img_width}")
 
     with open(rf_model_path, mode="rb") as f:
@@ -225,9 +223,9 @@ def main(
 
     # list of available models
     available_models = get_available_models()
-    assert (
-        model_name in available_models
-    ), f"Couldn't find {model_name} in available models\n{available_models}."
+    assert model_name in available_models, (
+        f"Couldn't find {model_name} in available models\n{available_models}."
+    )
 
     model_adapter = get_model(model_name, img_height, img_width)
     patch_size = model_adapter.patch_size
