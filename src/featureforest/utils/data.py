@@ -7,7 +7,7 @@ from torch import Tensor
 
 
 def get_patch_size(
-    img_height: float, img_width: float, divisible_by: float = None
+    img_height: float, img_width: float, divisible_by: Optional[int] = None
 ) -> int:
     """Calculate the patch size given image dimensions.
 
@@ -22,7 +22,7 @@ def get_patch_size(
     patch_size = 512
     img_min_dim = min(img_height, img_width)
     # if image is too small
-    if img_min_dim <= patch_size:
+    if img_min_dim < patch_size:
         # get a power of two smaller than image dim
         patch_size = 2 ** int(np.log2(img_min_dim))
     else:
@@ -75,9 +75,9 @@ def get_paddings(
     # (final size - patch_size) / stride an integer number.
     # see https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html
     new_width = img_width + 2 * margin
-    pad_right = stride - ((new_width - patch_size) % stride)
+    pad_right = stride - int((new_width - patch_size) % stride)
     new_height = img_height + 2 * margin
-    pad_bottom = stride - ((new_height - patch_size) % stride)
+    pad_bottom = stride - int((new_height - patch_size) % stride)
 
     return pad_right, pad_bottom
 
@@ -139,14 +139,14 @@ def get_num_patches(
     )
     new_width = img_width + pad_right + 2 * margin
     num_patches_w = ((new_width - patch_size) / stride) + 1
-    assert (
-        int(num_patches_w) == num_patches_w
-    ), f"number of patches in width {num_patches_w} is not an integer!"
+    assert int(num_patches_w) == num_patches_w, (
+        f"number of patches in width {num_patches_w} is not an integer!"
+    )
     new_height = img_height + pad_bottom + 2 * margin
     num_patches_h = ((new_height - patch_size) / stride) + 1
-    assert (
-        int(num_patches_h) == num_patches_h
-    ), f"number of patches in height {num_patches_h} is not an integer!"
+    assert int(num_patches_h) == num_patches_h, (
+        f"number of patches in height {num_patches_h} is not an integer!"
+    )
 
     return int(num_patches_h), int(num_patches_w)
 
@@ -164,7 +164,7 @@ def get_nonoverlapped_patches(patches: Tensor, patch_size: int, overlap: int) ->
     """
     stride, margin = get_stride_margin(patch_size, overlap)
 
-    return patches[:, :, margin: margin + stride, margin: margin + stride].permute(
+    return patches[:, :, margin : margin + stride, margin : margin + stride].permute(
         [0, 2, 3, 1]
     )
 
@@ -192,7 +192,7 @@ def get_patch_index(
     """
     total_rows, total_cols = get_num_patches(img_height, img_width, patch_size, overlap)
     stride, _ = get_stride_margin(patch_size, overlap)
-    patch_index = (pix_y // stride) * total_cols + (pix_x // stride)
+    patch_index = int((pix_y // stride) * total_cols + (pix_x // stride))
 
     return patch_index
 
@@ -240,8 +240,8 @@ def get_patch_position(
         tuple[int, int]: patch position (row, col)
     """
     stride, _ = get_stride_margin(patch_size, overlap)
-    patch_row = pix_y // stride
-    patch_col = pix_x // stride
+    patch_row = int(pix_y // stride)
+    patch_col = int(pix_x // stride)
 
     return patch_row, patch_col
 
@@ -307,8 +307,6 @@ def image_to_uint8(image: np.ndarray) -> np.ndarray:
     if _max - _min == 0:
         _max += 1e-7
     # to prevent invalid value encountered in cast
-    normalized_image = np.abs(
-        (image - _min) * (255 / (_max - _min))
-    ).astype(np.uint8)
+    normalized_image = np.abs((image - _min) * (255 / (_max - _min))).astype(np.uint8)
 
     return normalized_image
