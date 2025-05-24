@@ -29,30 +29,43 @@ jobs:
       - uses: actions/checkout@v4
       # these libraries enable testing on Qt on linux
       - uses: tlambert03/setup-qt-libs@v1
-      - uses: mamba-org/setup-micromamba@v2
-        env:
-          ACTIONS_STEP_DEBUG: false
-      - name: setup
+      - uses: conda-incubator/setup-miniconda@v3
+        with:
+          auto-update-conda: true
+          python-version: ${{ matrix.python-version }}
+      - name: create featureforest environment
+        run: conda create -n featureforest -y python=3.10
+      - name: activate environment
+        run: conda activate featureforest
+      - name: install torch & torchvision
         run: |
-          if ["$RUNNER_OS" == "Windows"]; then
-            ./install.bat
-          else
-            chmod +x ./install.sh
-            ./install.sh
-          fi
-        shell: bash -el {0}
-      - name: mamba info
-        run: micromamba info
+          pip install light-the-torch
+          ltt install 'torch>=2.5.1' 'torchvision>=0.20.1'
+      - name: install dependencies
+        run: pip install -r ./requirements.txt
+      - name: install featureforest
+        run: pip install git+https://github.com/juglab/featureforest.git
+
+        # run: |
+        #   if ["$RUNNER_OS" == "Windows"]; then
+        #     ./install.bat
+        #   else
+        #     chmod +x ./install.sh
+        #     ./install.sh
+        #   fi
+        # shell: bash {0}
+      - name: conda info
+        run: conda info
 
       - name: more info
         run: |
           echo $PATH
-          echo "$(which micromamba)"
+          echo "$(which conda)"
           echo "$(which python)"
 
       - name: pip list
         run: pip list
-        shell: bash -el {0}
+        shell: bash
 
       # strategy borrowed from vispy for installing opengl libs on windows
       - name: Install Windows OpenGL
@@ -67,7 +80,7 @@ jobs:
         # with:
         #   shell: bash
         run: |
-          micromamba activate featureforest
+          conda activate featureforest
           python -m pip install .[dev]
           pytest -v --color=yes --cov=featureforest --cov-report=xml -m "not slow"
 
