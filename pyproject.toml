@@ -72,7 +72,8 @@ dev = [
     "pytest-cov",
     "tox",
     "tox-gh-actions",
-    "sybil",      # doctesting
+    "sybil",
+    "mkdocs-material"      # doctesting
 ]
 # all = ["napari[all]"]
 

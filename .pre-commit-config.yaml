@@ -8,7 +8,8 @@ repos:
         exclude: |
           (?x)^(
               \.napari-hub/.*|
-              docs/.*
+              docs/.*|
+              .*\.md
           )$
         # exclude: ^\.napari-hub/.* | docs/.*
       - id: check-yaml # checks for correct yaml syntax for github actions ex.
