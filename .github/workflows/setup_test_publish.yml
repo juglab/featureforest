@@ -58,7 +58,7 @@ jobs:
       - name: Install Windows OpenGL
         if: runner.os == 'Windows'
         run: |
-          micromamba activate ff
+          micromamba activate featureforest
           git clone --depth 1 https://github.com/pyvista/gl-ci-helpers.git
           powershell gl-ci-helpers/appveyor/install_opengl.ps1
 
@@ -67,7 +67,7 @@ jobs:
         # with:
         #   shell: bash
         run: |
-          micromamba activate ff
+          micromamba activate featureforest
           python -m pip install .[dev]
           pytest -v --color=yes --cov=featureforest --cov-report=xml -m "not slow"
 
