@@ -35,16 +35,20 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: create featureforest environment
         run: conda create -n featureforest -y python=3.10
-      - name: activate environment
-        run: conda activate featureforest
       - name: install torch & torchvision
         run: |
+          conda activate featureforest
           pip install light-the-torch
           ltt install 'torch>=2.5.1' 'torchvision>=0.20.1'
       - name: install dependencies
-        run: pip install -r ./requirements.txt
+        run: |
+          conda activate featureforest
+          pip install -U pip
+          pip install -r ./requirements.txt
       - name: install featureforest
-        run: pip install git+https://github.com/juglab/featureforest.git
+        run: |
+          conda activate featureforest
+          pip install git+https://github.com/juglab/featureforest.git
 
         # run: |
         #   if ["$RUNNER_OS" == "Windows"]; then
@@ -55,16 +59,21 @@ jobs:
         #   fi
         # shell: bash {0}
       - name: conda info
-        run: conda info
+        run: |
+          conda activate featureforest
+          conda info
 
       - name: more info
         run: |
+          conda activate featureforest
           echo $PATH
           echo "$(which conda)"
           echo "$(which python)"
 
       - name: pip list
-        run: pip list
+        run: |
+          conda activate featureforest
+          pip list
         shell: bash
 
       # strategy borrowed from vispy for installing opengl libs on windows
