@@ -1,32 +1,65 @@
-## Easy Way!
-To install this plugin you need to use [mamba] or [conda] to create a environment and install the requirements. Use commands below to create the environment and install the plugin:
+It is highly recomended to create and use a new environment to install the plugin and its dependencies.
+You can use [mamba] or [conda] to manage you environments but it's not necessary and you can use python `venv` as well. 
+
+## Setup
+We provided `install.sh` for Linux & Mac OS users, and `install.bat` for Windows users.  
+First you need to clone the repo:
 ```bash
 git clone https://github.com/juglab/featureforest
 cd ./featureforest
 ```
+Now run the installation script:
 ```bash
-# for GPU
-mamba env create -f ./env_gpu.yml
+# Linux or Mac OS
+sh ./install.sh
 ```
 ```bash
-# if you don't have a GPU
-mamba env create -f ./env_cpu.yml
+# Windows
+./install.bat
 ```
 
-### Note 
-You need to install `segment-anything` and `sam-2` which can be installed easily using mamba (or conda). To install `sam-2` using `pip` please refer to the official [sam-2](https://github.com/facebookresearch/sam2) repository.
+## Step by Step
+1. Create a new environment:
+```bash
+conda create -n featureforest -y python=3.10
+```
+
+2. Activate the environment:
+```bash
+conda activate featureforest
+```
+
+3. Install `torch` and `torchvision`:  
+You can follow the instruction from [here](https://pytorch.org/get-started/locally/). But we can also use [`light-the-torch`](https://github.com/Slicer/light-the-torch) package:
+```bash
+pip install light-the-torch
+ltt install 'torch>=2.5.1' 'torchvision>=0.20.1'
+```
+This will install the appropriate PyTorch binaries without user intervention by automatically identifying compatible CUDA versions from the local setup.  
+
+4. Installing all other dependencies:
+```bash
+pip install -r ./requirements.txt
+```
+This will install all dependencies including `napari`, `segment-anything` and `sam-2`.  
+
+5. Finally, install the plugin:
+```bash
+pip install git+https://github.com/juglab/featureforest.git
+```
 
 ## Requirements
 - `python>=3.10`
 - `numpy<2.2`
-- `pytorch>=2.3.1`
-- `torchvision>=0.18.1`
+- `pytorch>=2.5.1`
+- `torchvision>=0.20.1`
 - `timm`
 - `segment-anything`
 - `sam-2`
 - `opencv-python`
 - `scikit-learn`
 - `scikit-image`
+- `scipy`
 - `matplotlib`
 - `pyqt`
 - `magicgui`
@@ -36,24 +69,15 @@ You need to install `segment-anything` and `sam-2` which can be installed easily
 - `pynrrd`
 - `pooch`
 
-## Installing Only The Plugin
-If you use the provided conda environment yaml files, the plugin will be installed automatically. But in case you already have the environment setup, 
-you can just install the plugin. First clone the repository:
-```bash
-git clone https://github.com/juglab/featureforest
-```
-Then run the following commands:
-```bash
-cd ./featureforest
-pip install .
-```
 
-There is also a [pypi package](https://pypi.org/project/featureforest/) available that you can install using `pip`:
+There is also a [pypi package](https://pypi.org/project/featureforest/) available that you can install **FF** using `pip`:
 ```bash
 pip install featureforest
 ```
+!!! note
+    Before install `featureforest` using `pip` you need to install `segment-anything` and `sam-2` manually.
 
-If you want to install the plugin manually using GPU, please follow the pytorch installation instruction [here](https://pytorch.org/get-started/locally/). For detailed napari installation see [here](https://napari.org/stable/tutorials/fundamentals/installation).  
+For detailed napari installation see [here](https://napari.org/stable/tutorials/fundamentals/installation).  
 
 
 [conda]: https://conda.io/projects/conda/en/latest/index.html
