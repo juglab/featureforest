@@ -74,13 +74,12 @@ jobs:
         run: |
           conda activate featureforest
           pip list
-        shell: bash
 
       # strategy borrowed from vispy for installing opengl libs on windows
       - name: Install Windows OpenGL
         if: runner.os == 'Windows'
         run: |
-          micromamba activate featureforest
+          conda activate featureforest
           git clone --depth 1 https://github.com/pyvista/gl-ci-helpers.git
           powershell gl-ci-helpers/appveyor/install_opengl.ps1
 
