@@ -32,18 +32,14 @@ jobs:
       - uses: mamba-org/setup-micromamba@v2
         env:
           ACTIONS_STEP_DEBUG: false
-        with:
-          environment-name: ff
-          environment-file: env_cpu.yml
-          condarc: |
-            channels:
-              - conda-forge
-              - nodefaults
-          init-shell: bash powershell
-          cache-downloads: true
-          post-cleanup: 'all'
-          # log-level: debug
-
+      - name: setup
+        run: |
+          if ["$RUNNER_OS" == "Windows"]; then
+            ./install.bat
+          else
+            ./install.sh
+          fi
+        shell: bash -el {0}
       - name: mamba info
         run: micromamba info
 
