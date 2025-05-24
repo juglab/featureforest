@@ -4,7 +4,7 @@ conda init
 echo "\nCreate a new conda environment named featureforest with Python 3.10"
 conda create -n featureforest -y python=3.10
 echo "\nActivate the featureforest environment"
-source activate base
+REM source activate base
 conda activate featureforest
 echo "\nInstall PyTorch and torchvision using light-the-torch"
 python -m pip install light-the-torch
