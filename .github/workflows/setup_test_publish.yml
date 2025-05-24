@@ -37,6 +37,7 @@ jobs:
           if ["$RUNNER_OS" == "Windows"]; then
             ./install.bat
           else
+            chmod +x ./install.sh
             ./install.sh
           fi
         shell: bash -el {0}
