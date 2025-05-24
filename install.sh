@@ -7,9 +7,9 @@ echo "\nActivate the featureforest environment"
 source activate base
 conda activate featureforest
 echo "\nInstall PyTorch and torchvision using light-the-torch"
-pip install light-the-torch
+python -m pip install light-the-torch
 ltt install 'torch>=2.5.1' 'torchvision>=0.20.1'
 echo "\nInstall additional dependencies"
-pip install -r ./requirements.txt
+python -m pip install -r ./requirements.txt
 echo "\nInstall FeatureForest from GitHub"
-pip install git+https://github.com/juglab/featureforest.git
+python -m pip install git+https://github.com/juglab/featureforest.git

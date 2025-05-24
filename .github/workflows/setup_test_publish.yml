@@ -43,12 +43,12 @@ jobs:
       - name: install dependencies
         run: |
           conda activate featureforest
-          pip install -U pip
-          pip install -r ./requirements.txt
+          python -m pip install -U pip
+          python -m pip install -r ./requirements.txt
       - name: install featureforest
         run: |
           conda activate featureforest
-          pip install git+https://github.com/juglab/featureforest.git
+          python -m pip install git+https://github.com/juglab/featureforest.git
 
         # run: |
         #   if ["$RUNNER_OS" == "Windows"]; then
