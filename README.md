@@ -9,34 +9,36 @@
 [![napari hub](https://img.shields.io/endpoint?url=https://api.napari-hub.org/shields/featureforest)](https://napari-hub.org/plugins/featureforest)
 <!--[![Downloads](https://pepy.tech/badge/featureforest)](https://pepy.tech/project/featureforest)-->
 
-**A napari plugin for making image annotation using feature space of vision transformers and random forest classifier.**
-We developed a *napari* plugin to train a *Random Forest* model using extracted features of vision foundation models and just a few scribble labels provided by the user as input. This approach can do the segmentation of desired objects almost as well as manual segmentations but in a much shorter time with less manual effort.
+**A napari plugin for making image annotation using feature space of vision transformers and random forest classifier.**  
+We developed a *napari* plugin to train a *Random Forest* model using extracted features of vision foundation models and just a few scribble labels provided by the user as input. This approach can do the segmentation of desired objects almost as well as manual segmentations but in a much shorter time with less manual effort.  
 
 ----------------------------------
 
 ## Documentation
-You can check the documentation [here](https://juglab.github.io/featureforest/) (⚠️ work in progress!).
+You can check the documentation [here](https://juglab.github.io/featureforest/) (⚠️ work in progress!).  
 
 ## Installation
-To install this plugin you need to use [conda] or [mamba] to create an environment and install the requirements. Use commands below to create the environment and install the plugin:
+We provided `install.sh` for Linux & Mac OS users, and `install.bat` for Windows users.  
+First you need to clone the repo:  
 ```bash
 git clone https://github.com/juglab/featureforest
 cd ./featureforest
 ```
+Now run the installation script:  
 ```bash
-# for GPU
-conda env create -f ./env_gpu.yml
+# Linux or Mac OS
+sh ./install.sh
 ```
 ```bash
-# if you don't have a GPU
-conda env create -f ./env_cpu.yml
+# Windows
+./install.bat
 ```
 
-For developers that want to contribute to FeatureForest, you need to use this command to install the `dev` dependencies:
+For developers that want to contribute to FeatureForest, you need to use this command to install the `dev` dependencies:  
 ```bash
 pip install -U "featureforest[dev]"
 ```
-And make sure you have `pre-commit` installed in your environment, before committing changes:
+And make sure you have `pre-commit` installed in your environment, before committing changes:  
 ```bash
 pre-commit install
 ```
@@ -52,11 +54,11 @@ Seifi, Mehdi, Damian Dalle Nogare, Juan Battagliotti, Vera Galinova, Ananya Kedi
 ## License
 
 Distributed under the terms of the [BSD-3] license,
-"featureforest" is free and open source software
+"featureforest" is free and open source software.  
 
 ## Issues
 
-If you encounter any problems, please [file an issue](https://github.com/juglab/featureforest/issues/new) along with a detailed description.
+If you encounter any problems, please [file an issue](https://github.com/juglab/featureforest/issues/new) along with a detailed description.  
 
 [napari]: https://github.com/napari/napari
 [Cookiecutter]: https://github.com/audreyr/cookiecutter

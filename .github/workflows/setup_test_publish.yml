@@ -29,39 +29,57 @@ jobs:
       - uses: actions/checkout@v4
       # these libraries enable testing on Qt on linux
       - uses: tlambert03/setup-qt-libs@v1
-      - uses: mamba-org/setup-micromamba@v2
-        env:
-          ACTIONS_STEP_DEBUG: false
+      - uses: conda-incubator/setup-miniconda@v3
         with:
-          environment-name: ff
-          environment-file: env_cpu.yml
-          condarc: |
-            channels:
-              - conda-forge
-              - nodefaults
-          init-shell: bash powershell
-          cache-downloads: true
-          post-cleanup: 'all'
-          # log-level: debug
+          auto-update-conda: true
+          python-version: ${{ matrix.python-version }}
+      - name: create featureforest environment
+        run: conda create -n featureforest -y python=3.10
+      - name: install torch & torchvision
+        run: |
+          conda activate featureforest
+          python -m pip install light-the-torch
+          ltt install 'torch>=2.5.1' 'torchvision>=0.20.1'
+      - name: install dependencies
+        run: |
+          conda activate featureforest
+          python -m pip install -U pip
+          python -m pip install -r ./requirements.txt
+      - name: install featureforest
+        run: |
+          conda activate featureforest
+          python -m pip install git+https://github.com/juglab/featureforest.git
 
-      - name: mamba info
-        run: micromamba info
+        # run: |
+        #   if ["$RUNNER_OS" == "Windows"]; then
+        #     ./install.bat
+        #   else
+        #     chmod +x ./install.sh
+        #     ./install.sh
+        #   fi
+        # shell: bash {0}
+      - name: conda info
+        run: |
+          conda activate featureforest
+          conda info
 
       - name: more info
         run: |
+          conda activate featureforest
           echo $PATH
-          echo "$(which micromamba)"
+          echo "$(which conda)"
           echo "$(which python)"
 
       - name: pip list
-        run: pip list
-        shell: bash -el {0}
+        run: |
+          conda activate featureforest
+          pip list
 
       # strategy borrowed from vispy for installing opengl libs on windows
       - name: Install Windows OpenGL
         if: runner.os == 'Windows'
         run: |
-          micromamba activate ff
+          conda activate featureforest
           git clone --depth 1 https://github.com/pyvista/gl-ci-helpers.git
           powershell gl-ci-helpers/appveyor/install_opengl.ps1
 
@@ -70,7 +88,7 @@ jobs:
         # with:
         #   shell: bash
         run: |
-          micromamba activate ff
+          conda activate featureforest
           python -m pip install .[dev]
           pytest -v --color=yes --cov=featureforest --cov-report=xml -m "not slow"
 
