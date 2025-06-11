@@ -9,6 +9,7 @@ from napari.qt.threading import create_worker
 from napari.utils.events import Event
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QFileDialog,
     QGroupBox,
@@ -23,9 +24,7 @@ from qtpy.QtWidgets import (
 
 from .models import get_available_models, get_model
 from .utils import config
-from .utils.data import (
-    get_stack_dims,
-)
+from .utils.data import get_stack_dims
 from .utils.extract import extract_embeddings_to_file
 from .widgets import (
     ScrollWidgetWrapper,
@@ -66,6 +65,11 @@ class FeatureExtractorWidget(QWidget):
         self.storage_textbox.setReadOnly(True)
         storage_button = QPushButton("Set Storage File")
         storage_button.clicked.connect(self.save_storage)
+        # no-patching checkbox
+        self.no_patching_checkbox = QCheckBox("No &Patching")
+        self.no_patching_checkbox.setToolTip(
+            "Whether divide an image into patches or not"
+        )
         # extract button
         self.extract_button = QPushButton("Extract Features")
         self.extract_button.setEnabled(False)
@@ -104,6 +108,7 @@ class FeatureExtractorWidget(QWidget):
         hbox.addWidget(self.storage_textbox)
         hbox.addWidget(storage_button)
         vbox.addLayout(hbox)
+        vbox.addWidget(self.no_patching_checkbox)
         hbox = QHBoxLayout()
         hbox.setContentsMargins(0, 0, 0, 0)
         hbox.addWidget(self.extract_button, alignment=Qt.AlignLeft)
@@ -168,6 +173,7 @@ class FeatureExtractorWidget(QWidget):
         _, img_height, img_width = get_stack_dims(image_layer.data)
         model_name = self.model_combo.currentText()
         self.model_adapter = get_model(model_name, img_height, img_width)
+        self.model_adapter.no_patching = self.no_patching_checkbox.isChecked()
 
         self.extract_button.setEnabled(False)
         self.stop_button.setEnabled(True)
