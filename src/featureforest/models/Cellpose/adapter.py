@@ -6,7 +6,6 @@ from torchvision.transforms import v2 as tv_transforms2
 from featureforest.models.base import BaseModelAdapter
 from featureforest.utils.data import (
     get_nonoverlapped_patches,
-    get_patch_size,
 )
 
 
@@ -16,8 +15,8 @@ class CellposeAdapter(BaseModelAdapter):
     def __init__(
         self,
         image_encoder: nn.Module,
-        img_height: float,
-        img_width: float,
+        img_height: int,
+        img_width: int,
         device: torch.device,
         name: str = "Cellpose_cyto3",
     ) -> None:
@@ -28,9 +27,9 @@ class CellposeAdapter(BaseModelAdapter):
         # self.encoder_num_channels = 480
         self.device = device
         self._set_patch_size()
-        assert (
-            int(self.patch_size / 4) == self.patch_size / 4
-        ), f"patch size {self.patch_size} is not divisible by 4"
+        assert int(self.patch_size / 4) == self.patch_size / 4, (
+            f"patch size {self.patch_size} is not divisible by 4"
+        )
 
         # input transform for sam
         self.input_transforms = None
@@ -45,11 +44,7 @@ class CellposeAdapter(BaseModelAdapter):
             ]
         )
 
-    def _set_patch_size(self) -> None:
-        self.patch_size = get_patch_size(self.img_height, self.img_width)
-        self.overlap = self.patch_size // 2
-
-    def get_features_patches(self, in_patches: Tensor) -> tuple[Tensor, Tensor]:
+    def get_features_patches(self, in_patches: Tensor) -> Tensor:
         # cellpose works on microscopic channels not RGB
         # we need to select one channel and add a second zero channel
         in_patches = torch.cat(
