@@ -120,7 +120,7 @@ def patchify(
 
 
 def get_num_patches(
-    img_height: float, img_width: float, patch_size: int, overlap: int
+    img_height: int, img_width: int, patch_size: int, overlap: int
 ) -> tuple[int, int]:
     """Returns number of patches per each image dimension.
 
@@ -172,8 +172,8 @@ def get_nonoverlapped_patches(patches: Tensor, patch_size: int, overlap: int) ->
 def get_patch_index(
     pix_y: float,
     pix_x: float,
-    img_height: float,
-    img_width: float,
+    img_height: int,
+    img_width: int,
     patch_size: int,
     overlap: int,
 ) -> int:
@@ -199,8 +199,8 @@ def get_patch_index(
 
 def get_patch_indices(
     pixel_coords: ndarray,
-    img_height: float,
-    img_width: float,
+    img_height: int,
+    img_width: int,
     patch_size: int,
     overlap: int,
 ) -> ndarray:
