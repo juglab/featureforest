@@ -1,9 +1,38 @@
 from typing import Optional
 
 import numpy as np
+import torch
 import torch.nn.functional as F
 from numpy import ndarray
 from torch import Tensor
+
+
+def get_model_ready_image(image: np.ndarray) -> torch.Tensor:
+    """Convert the input image to a torch tensor and normalize it.
+    Args:
+        image (np.ndarray): Input image to be converted.
+    Returns:
+        torch.Tensor: The input image as a torch tensor, normalized to [0, 1].
+    """
+    # image to torch tensor
+    img_data = torch.from_numpy(image.copy()).to(torch.float32)
+    # normalize in [0, 1]
+    _min = img_data.min()
+    _max = img_data.max()
+    img_data = (img_data - _min) / (_max - _min)
+    # for sam the input image should be 4D: BxCxHxW ; an RGB image.
+    if not is_stacked(img_data.numpy()):
+        # add a batch dim
+        img_data = img_data.unsqueeze(0)
+    if is_image_rgb(img_data.numpy()):
+        # it's already RGB
+        img_data = img_data[..., :3]  # discard the alpha channel (in case of PNG).
+        img_data = img_data.permute([0, 3, 1, 2])  # make it channel first
+    else:
+        # make it RGB by repeating the single channel
+        img_data = img_data.unsqueeze(1).expand(-1, 3, -1, -1)
+
+    return img_data
 
 
 def get_patch_size(
