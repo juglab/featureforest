@@ -11,9 +11,7 @@ from typing import Optional
 import h5py
 import napari
 import napari.layers
-import napari.types
 import napari.utils.notifications as notif
-import napari.view_layers
 import numpy as np
 import tifffile
 from napari.qt.threading import create_worker
