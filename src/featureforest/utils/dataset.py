@@ -1,5 +1,6 @@
 from collections.abc import Iterable
 from pathlib import Path
+from typing import Optional
 
 import numpy as np
 import pims
@@ -43,11 +44,14 @@ class FFImageDataset(IterableDataset):
         self.patch_size = patch_size
         self.overlap = overlap
         self.image_files = []
-        self.image_source = []
+        self.image_source: Optional[pims.ImageSequence | np.ndarray] = None
 
         if image_array is not None:
             # image is already loaded as a numpy array
             self.image_source = image_array
+            # add slice dimension if not present
+            if self.image_source.ndim == 2:
+                self.image_source = self.image_source[np.newaxis, ...]
         elif stack_file is not None:
             # can be a large stack, using pims for lazy loading
             self.image_source = pims.open(str(stack_file))
@@ -68,14 +72,17 @@ class FFImageDataset(IterableDataset):
             self.image_source = pims.ImageSequence(map(str, self.image_files))
 
     def __iter__(self):
-        for img_idx, img_slice in enumerate(self.image_source[:]):
+        if self.image_source is None:
+            raise ValueError("No image source is available. Please check the input data.")
+
+        for img_idx, img_slice in enumerate(self.image_source):
             img_tensor = get_model_ready_image(img_slice)
             if self.no_patching:
                 # return the whole image as a tensor
                 yield img_tensor, torch.tensor([img_idx, 0])
             else:
                 # divide the image into patches and yield them
-                patches = patchify(img_tensor.unsqueeze(0), self.patch_size, self.overlap)
+                patches = patchify(img_tensor, self.patch_size, self.overlap)
                 for p_idx, patch in enumerate(patches):
                     yield patch, torch.tensor([img_idx, p_idx])
 

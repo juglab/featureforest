@@ -1,6 +1,7 @@
 import csv
 import time
 from pathlib import Path
+from typing import Optional
 
 import napari
 import napari.utils.notifications as notif
@@ -38,7 +39,7 @@ class FeatureExtractorWidget(QWidget):
         self.viewer = napari_viewer
         self.extract_worker = None
         self.model_adapter = None
-        self.timing = {"start": 0, "avg_per_slice": 0}
+        self.timing = {"start": 0.0, "avg_per_slice": 0.0}
         self.prepare_widget()
 
     def prepare_widget(self):
@@ -129,7 +130,7 @@ class FeatureExtractorWidget(QWidget):
         self.base_layout.addWidget(gbox)
         self.base_layout.addStretch(1)
 
-    def check_input_layers(self, event: Event = None):
+    def check_input_layers(self, event: Optional[Event] = None):
         curr_text = self.image_combo.currentText()
         self.image_combo.clear()
         for layer in self.viewer.layers:
@@ -181,7 +182,7 @@ class FeatureExtractorWidget(QWidget):
         self.extract_worker = create_worker(
             extract_embeddings_to_file,
             image=image_layer.data,
-            storage_file_path=storage_path,
+            storage_path=storage_path,
             model_adapter=self.model_adapter,
         )
         self.extract_worker.yielded.connect(self.update_extract_progress)

@@ -14,23 +14,24 @@ def get_model_ready_image(image: np.ndarray) -> torch.Tensor:
     Returns:
         torch.Tensor: The input image as a torch tensor, normalized to [0, 1].
     """
+    assert image.ndim < 4, "Input image must be 2D or 3D (single channel or RGB)."
     # image to torch tensor
     img_data = torch.from_numpy(image.copy()).to(torch.float32)
     # normalize in [0, 1]
     _min = img_data.min()
     _max = img_data.max()
     img_data = (img_data - _min) / (_max - _min)
-    # for sam the input image should be 4D: BxCxHxW ; an RGB image.
-    if not is_stacked(img_data.numpy()):
-        # add a batch dim
-        img_data = img_data.unsqueeze(0)
+    # for image encoders, the input image must be in RGB.
+    # if not is_stacked(img_data.numpy()):
+    #     # add a batch dim
+    #     img_data = img_data.unsqueeze(0)
     if is_image_rgb(img_data.numpy()):
         # it's already RGB
         img_data = img_data[..., :3]  # discard the alpha channel (in case of PNG).
-        img_data = img_data.permute([0, 3, 1, 2])  # make it channel first
+        img_data = img_data.permute([3, 1, 2])  # make it channel first
     else:
         # make it RGB by repeating the single channel
-        img_data = img_data.unsqueeze(1).expand(-1, 3, -1, -1)
+        img_data = img_data.unsqueeze(0).expand(3, -1, -1)
 
     return img_data
 
@@ -112,33 +113,34 @@ def get_paddings(
 
 
 def patchify(
-    images: Tensor, patch_size: Optional[int] = None, overlap: Optional[int] = None
+    image: Tensor, patch_size: Optional[int] = None, overlap: Optional[int] = None
 ) -> Tensor:
     """Divide images into patches.
-    images: (B, C, H, W)
-    out: (B*N, C, patch_size, patch_size)
+    image: (C, H, W)
+    out: (N, C, patch_size, patch_size)
 
     Args:
-        images (Tensor): a batch of images of shape (B, C, H, W)
+        images (Tensor): an image of shape (C, H, W)
         patch_size (Optional[int], optional): patch size. Defaults to None.
         overlap (Optional[int], optional): patch overlap. Defaults to None.
 
     Returns:
-        Tensor: patches of the input batch of shape (B*N, C, patch_size, patch_size)
+        Tensor: patches of shape (N, C, patch_size, patch_size)
     """
-    _, c, img_height, img_width = images.shape
+    c, img_height, img_width = image.shape
     if patch_size is None:
         patch_size = get_patch_size(img_height, img_width)
-        overlap = patch_size // 2
+        overlap = patch_size // 4
     if overlap is None:
-        overlap = patch_size // 2
+        overlap = patch_size // 4
 
     stride, margin = get_stride_margin(patch_size, overlap)
     pad_right, pad_bottom = get_paddings(
         patch_size, stride, margin, img_height, img_width
     )
     pad = (margin, pad_right + margin, margin, pad_bottom + margin)
-    padded_imgs = F.pad(images, pad=pad, mode="reflect")
+    # add batch dim and pad the image
+    padded_imgs = F.pad(image.unsqueeze(0), pad=pad, mode="reflect")
     # making patches using torch unfold method
     patches = padded_imgs.unfold(2, patch_size, step=stride).unfold(
         3, patch_size, step=stride

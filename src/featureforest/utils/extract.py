@@ -1,20 +1,75 @@
 from collections.abc import Generator
+from pathlib import Path
 from typing import Optional, Union
 
 import h5py
 import numpy as np
 import torch
 from napari.utils import progress as np_progress
+from torch.utils.data import DataLoader
 
 from featureforest.models import BaseModelAdapter
 from featureforest.models.SAM import SAMAdapter
 from featureforest.utils.data import (
-    get_stack_dims,
     get_stride_margin,
-    image_to_uint8,
     is_image_rgb,
     patchify,
 )
+from featureforest.utils.dataset import FFImageDataset
+
+
+def get_batch_size(model_adapter: BaseModelAdapter) -> int:
+    """Get the batch size for the model adapter.
+    The batch size is set to 8 for most models, but for SAMAdapter it is set to 2
+    to avoid memory issues with large images.
+    Args:
+        model_adapter (BaseModelAdapter): The model adapter to get the batch size for.
+    Returns:
+        int: The batch size for the model adapter.
+    """
+    # set a low batch size
+    batch_size = 8
+    # for big SAM we need even lower batch size :(
+    if isinstance(model_adapter, SAMAdapter):
+        batch_size = 2
+    return batch_size
+
+
+def get_dataset(
+    image: str | np.ndarray,
+    no_patching: bool = False,
+    patch_size: int = 512,
+    overlap: int = 128,
+) -> FFImageDataset:
+    if isinstance(image, str):
+        # image is a path to a large TIFF file or a directory of images
+        img_path = Path(image)
+        if img_path.is_dir():
+            # load images from a directory
+            dataset = FFImageDataset(
+                img_dir=img_path,
+                no_patching=no_patching,
+                patch_size=patch_size,
+                overlap=overlap,
+            )
+        else:
+            # load a (large) stack
+            dataset = FFImageDataset(
+                stack_file=img_path,
+                no_patching=no_patching,
+                patch_size=patch_size,
+                overlap=overlap,
+            )
+    elif isinstance(image, np.ndarray):
+        # image is already loaded as a numpy array
+        dataset = FFImageDataset(
+            image_array=image,
+            no_patching=no_patching,
+            patch_size=patch_size,
+            overlap=overlap,
+        )
+
+    return dataset
 
 
 def get_slice_features(
@@ -87,37 +142,55 @@ def get_slice_features(
         if storage_group is not None:
             # to take care of the last batch size that might be smaller than batch_size
             num_out = slice_features.shape[0]
-            dataset[start: start + num_out] = slice_features.to(
-                torch.float16).cpu().numpy()
+            dataset[start : start + num_out] = (
+                slice_features.to(torch.float16).cpu().numpy()
+            )
             yield b_idx
         else:
             yield b_idx, slice_features.numpy()
 
 
 def extract_embeddings_to_file(
-    image: np.ndarray, storage_file_path: str, model_adapter: BaseModelAdapter
+    image: np.ndarray | str, storage_path: str, model_adapter: BaseModelAdapter
 ) -> Generator[tuple[int, int], None, None]:
+    no_patching = model_adapter.no_patching
     patch_size = model_adapter.patch_size
     overlap = model_adapter.overlap
+    batch_size = get_batch_size(model_adapter)
 
-    with h5py.File(storage_file_path, "w") as storage:
-        num_slices, img_height, img_width = get_stack_dims(image)
+    dataset = get_dataset(
+        image=image, no_patching=no_patching, patch_size=patch_size, overlap=overlap
+    )
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
+    for img_data, indices in dataloader:
+        print(f"images: {img_data.shape}\nslices: {indices}")
+        features = model_adapter.get_features_patches(img_data.to(model_adapter.device))
+        print(f"features shape: {features.shape}")
+        unique_slices = torch.unique(indices[:, 0]).numpy()
+        print(f"unique slices: {unique_slices}")
+        for idx in unique_slices:
+            img_features = features[indices[:, 0] == idx].numpy().astype(np.float16)
+            print(f"image: {idx}, features shape: {img_features.shape}")
+            yield idx, len(unique_slices)
 
-        storage.attrs["num_slices"] = num_slices
-        storage.attrs["img_height"] = img_height
-        storage.attrs["img_width"] = img_width
-        storage.attrs["model"] = model_adapter.name
-        storage.attrs["patch_size"] = patch_size
-        storage.attrs["overlap"] = overlap
+    # with h5py.File(storage_path, "w") as storage:
+    #     num_slices, img_height, img_width = get_stack_dims(image)
 
-        for slice_index in np_progress(
-            range(num_slices), desc="extract features for slices"
-        ):
-            print(f"\nslice index: {slice_index}")
-            slice_img = image[slice_index].copy() if num_slices > 1 else image.copy()
-            slice_img = image_to_uint8(slice_img)  # image must be an uint8 array
-            slice_grp = storage.create_group(str(slice_index))
-            for _ in get_slice_features(slice_img, model_adapter, slice_grp):
-                pass
+    #     storage.attrs["num_slices"] = num_slices
+    #     storage.attrs["img_height"] = img_height
+    #     storage.attrs["img_width"] = img_width
+    #     storage.attrs["model"] = model_adapter.name
+    #     storage.attrs["patch_size"] = patch_size
+    #     storage.attrs["overlap"] = overlap
 
-            yield slice_index, num_slices
+    #     for slice_index in np_progress(
+    #         range(num_slices), desc="extract features for slices"
+    #     ):
+    #         print(f"\nslice index: {slice_index}")
+    #         slice_img = image[slice_index].copy() if num_slices > 1 else image.copy()
+    #         slice_img = image_to_uint8(slice_img)  # image must be an uint8 array
+    #         slice_grp = storage.create_group(str(slice_index))
+    #         for _ in get_slice_features(slice_img, model_adapter, slice_grp):
+    #             pass
+
+    #         yield slice_index, num_slices

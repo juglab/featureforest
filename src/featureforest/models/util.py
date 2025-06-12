@@ -1,12 +1,12 @@
 import os
 from pathlib import Path
-from typing import Union, Optional
+from typing import Optional, Union
 
-import numpy as np
 import imageio.v3 as imageio
+import numpy as np
 
-from . import _MODELS_DICT, get_model
 from ..utils.extract import extract_embeddings_to_file, get_stack_dims
+from . import _MODELS_DICT, get_model
 
 
 def extract_features(
@@ -34,7 +34,9 @@ def extract_features(
         _, image_height, image_width = get_stack_dims(image)
 
     # Step 1: Get the desired model adapter.
-    model_adapter = get_model(model_name=model_name, img_height=image_height, img_width=image_width)
+    model_adapter = get_model(
+        model_name=model_name, img_height=image_height, img_width=image_width
+    )
 
     # - Transform the inputs
     transformed_image = model_adapter.input_transforms(image)
@@ -45,7 +47,9 @@ def extract_features(
         output_path = str(Path(output_path).with_suffix(".hdf5"))
 
     extractor_generator = extract_embeddings_to_file(
-        image=transformed_image, storage_file_path=output_path, model_adapter=model_adapter,
+        image=transformed_image,
+        storage_path=output_path,
+        model_adapter=model_adapter,
     )
 
     # Step 3: Run the extractor generator till the end
@@ -64,15 +68,23 @@ def main():
 
     parser = argparse.ArgumentParser(description="Extract features for a chosen model.")
     parser.add_argument(
-        "-i", "--input_path", type=str, required=True,
+        "-i",
+        "--input_path",
+        type=str,
+        required=True,
         help="The filepath to the image data. Supports all data types that can be read by imageio (eg. tif, png, ...).",
     )
     parser.add_argument(
-        "-o", "--output_path", type=str, required=True,
+        "-o",
+        "--output_path",
+        type=str,
+        required=True,
         help="The filepath to store the extracted features. The current supports store features in a 'hdf5' file.",
     )
     parser.add_argument(
-        "--model_choice", type=str, default="SAM2_Large",
+        "--model_choice",
+        type=str,
+        default="SAM2_Large",
         help=f"The choice of vision foundation model that will be used, one of ({available_models}). "
         "By default, extracts features for 'SAM2_Large'.",
     )
@@ -84,6 +96,10 @@ def main():
     image = imageio.imread(args.input_path)
 
     # Extract the features.
-    output_path = extract_features(image=image, output_path=args.output_path, model_name=args.model_choice)
+    output_path = extract_features(
+        image=image, output_path=args.output_path, model_name=args.model_choice
+    )
 
-    print(f"The features of '{args.model_choice}' have been extracted at '{os.path.abspath(output_path)}'.")
+    print(
+        f"The features of '{args.model_choice}' have been extracted at '{os.path.abspath(output_path)}'."
+    )
