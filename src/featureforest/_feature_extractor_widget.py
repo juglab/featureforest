@@ -60,17 +60,17 @@ class FeatureExtractorWidget(QWidget):
         self.model_combo.setEditable(False)
         self.model_combo.addItems(get_available_models())
         self.model_combo.setCurrentIndex(0)
+        # no-patching checkbox
+        self.no_patching_checkbox = QCheckBox("No &Patching")
+        self.no_patching_checkbox.setToolTip(
+            "Whether divide an image into patches or not"
+        )
         # storage
         storage_label = QLabel("Features Storage File:")
         self.storage_textbox = QLineEdit()
         self.storage_textbox.setReadOnly(True)
         storage_button = QPushButton("Set Storage File")
         storage_button.clicked.connect(self.save_storage)
-        # no-patching checkbox
-        self.no_patching_checkbox = QCheckBox("No &Patching")
-        self.no_patching_checkbox.setToolTip(
-            "Whether divide an image into patches or not"
-        )
         # extract button
         self.extract_button = QPushButton("Extract Features")
         self.extract_button.setEnabled(False)
@@ -99,6 +99,7 @@ class FeatureExtractorWidget(QWidget):
         vbox.addWidget(self.image_combo)
         vbox.addWidget(model_label)
         vbox.addWidget(self.model_combo)
+        vbox.addWidget(self.no_patching_checkbox)
         layout.addLayout(vbox)
 
         vbox = QVBoxLayout()
@@ -109,7 +110,6 @@ class FeatureExtractorWidget(QWidget):
         hbox.addWidget(self.storage_textbox)
         hbox.addWidget(storage_button)
         vbox.addLayout(hbox)
-        vbox.addWidget(self.no_patching_checkbox)
         hbox = QHBoxLayout()
         hbox.setContentsMargins(0, 0, 0, 0)
         hbox.addWidget(self.extract_button, alignment=Qt.AlignLeft)
