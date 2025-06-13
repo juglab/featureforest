@@ -54,6 +54,7 @@ class FeatureExtractorWidget(QWidget):
         # input layer
         input_label = QLabel("Image Layer:")
         self.image_combo = QComboBox()
+        self.image_combo.currentIndexChanged.connect(self.image_changed)
         # model selection
         model_label = QLabel("Encoder Model:")
         self.model_combo = QComboBox()
@@ -63,7 +64,8 @@ class FeatureExtractorWidget(QWidget):
         # no-patching checkbox
         self.no_patching_checkbox = QCheckBox("No &Patching")
         self.no_patching_checkbox.setToolTip(
-            "Whether divide an image into patches or not"
+            "Whether divide an image into patches or not; "
+            "\nOnly works for square images (height=width)"
         )
         # storage
         storage_label = QLabel("Features Storage File:")
@@ -142,6 +144,19 @@ class FeatureExtractorWidget(QWidget):
             if index > -1:
                 self.image_combo.setCurrentIndex(index)
 
+    def image_changed(self, event: Optional[Event] = None) -> None:
+        # check if image is square so we can do no_patching
+        image_layer = get_layer(
+            self.viewer, self.image_combo.currentText(), config.NAPARI_IMAGE_LAYER
+        )
+        if image_layer is not None:
+            _, img_height, img_width = get_stack_dims(image_layer.data)
+            if img_height != img_width:
+                self.no_patching_checkbox.setChecked(False)
+                self.no_patching_checkbox.setEnabled(False)
+            else:
+                self.no_patching_checkbox.setEnabled(True)
+
     def save_storage(self):
         # default storage name
         image_layer_name = self.image_combo.currentText()
@@ -173,6 +188,7 @@ class FeatureExtractorWidget(QWidget):
         if storage_path is None or len(storage_path) < 6:
             notif.show_error("No storage path was set.")
             return
+
         # initialize the selected model
         _, img_height, img_width = get_stack_dims(image_layer.data)
         model_name = self.model_combo.currentText()
