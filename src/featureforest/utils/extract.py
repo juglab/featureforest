@@ -94,7 +94,7 @@ def extract_embeddings(
         for idx in unique_slices:
             img_features = features[indices[:, 0] == idx].numpy().astype(np.float16)
 
-            yield img_features, idx, len(unique_slices)
+            yield img_features, idx, image_dataset.num_images
 
 
 def extract_embeddings_to_file(
@@ -124,6 +124,7 @@ def extract_embeddings_to_file(
         image, model_adapter, image_dataset
     ):
         if store_root.get(str(idx)) is None:
+            # create a group for the slice
             grp = store_root.create_group(str(idx))  # type: ignore
             z_arr = grp.create(  # type: ignore
                 name="features",
