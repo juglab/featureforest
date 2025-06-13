@@ -71,6 +71,22 @@ class FFImageDataset(IterableDataset):
             self.image_files = self._natural_sort(self.image_files)
             self.image_source = pims.ImageSequence(map(str, self.image_files))
 
+    @property
+    def num_images(self) -> int:
+        """Return the number of images in the dataset."""
+        if self.image_source is None:
+            return 0
+        return len(self.image_source)
+
+    @property
+    def image_shape(self) -> tuple[int, int]:
+        """Return the shape of the images in the dataset."""
+        if self.image_source is None:
+            raise ValueError("No image source is available. Please check the input data.")
+        if isinstance(self.image_source, np.ndarray):
+            return self.image_source.shape[1:]
+        return self.image_source.frame_shape
+
     def __iter__(self):
         if self.image_source is None:
             raise ValueError("No image source is available. Please check the input data.")

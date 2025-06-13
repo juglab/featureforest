@@ -146,14 +146,17 @@ class FeatureExtractorWidget(QWidget):
         # default storage name
         image_layer_name = self.image_combo.currentText()
         model_name = self.model_combo.currentText()
-        storage_name = f"{image_layer_name}_{model_name}.hdf5"
+        storage_name = f"{image_layer_name}_{model_name}"
+        if self.no_patching_checkbox.isChecked():
+            storage_name += "_no_patching"
+        storage_name += ".zarr"
         # open the save dialog
         selected_file, _filter = QFileDialog.getSaveFileName(
-            self, "FeatureForest", storage_name, "Embeddings Storage(*.hdf5)"
+            self, "FeatureForest", storage_name, "Zarr Storage(*.zarr)"
         )
         if selected_file is not None and len(selected_file) > 0:
-            if not selected_file.endswith(".hdf5"):
-                selected_file += ".hdf5"
+            if not selected_file.endswith(".zarr"):
+                selected_file += ".zarr"
             self.storage_textbox.setText(selected_file)
             self.extract_button.setEnabled(True)
 

@@ -5,7 +5,8 @@ from sklearn.ensemble import RandomForestClassifier as RF
 
 from featureforest.models import BaseModelAdapter
 from featureforest.utils.data import get_num_patches, get_stride_margin
-from featureforest.utils.extract import get_slice_features
+
+# from featureforest.utils.extract import get_slice_features
 
 
 def predict_patches(
@@ -87,23 +88,23 @@ def extract_predict(
     img_height, img_width = image.shape[:2]
     patch_size = model_adapter.patch_size
     overlap = model_adapter.overlap
-    procs = []
+    # procs = []
     # prediction happens per batch of extracted features
     # in a separate process.
     with mp.Manager() as manager:
         result_dict = manager.dict()
-        for b_idx, patch_features in get_slice_features(image, model_adapter):
-            print(b_idx, end="\r")
-            proc = mp.Process(
-                target=predict_patches,
-                args=(patch_features, rf_model, model_adapter, b_idx, result_dict),
-            )
-            procs.append(proc)
-            proc.start()
-        # wait until all processes are done
-        for p in procs:
-            if p.is_alive:
-                p.join()
+        # for b_idx, patch_features in get_slice_features(image, model_adapter):
+        #     print(b_idx, end="\r")
+        #     proc = mp.Process(
+        #         target=predict_patches,
+        #         args=(patch_features, rf_model, model_adapter, b_idx, result_dict),
+        #     )
+        #     procs.append(proc)
+        #     proc.start()
+        # # wait until all processes are done
+        # for p in procs:
+        #     if p.is_alive:
+        #         p.join()
         # collect results from each process
         batch_indices = sorted(result_dict.keys())
         patch_masks = [result_dict[b] for b in batch_indices]
