@@ -33,7 +33,8 @@ class FFImageDataset(IterableDataset):
         super().__init__()
         if image_array is not None and (stack_file is not None or img_dir is not None):
             raise ValueError(
-                "Please provide either an image array or a stack file or an image directory, not both."
+                "Please provide either an image array or a stack file "
+                "or an image directory, not both."
             )
         if image_array is None and stack_file is None and img_dir is None:
             raise ValueError(

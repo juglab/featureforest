@@ -89,16 +89,10 @@ def extract_embeddings(
         image_dataset, batch_size=batch_size, shuffle=False, num_workers=0
     )
     for img_data, indices in dataloader:
-        # print(f"images: {img_data.shape}\nslices: {indices}")
         features = model_adapter.get_features_patches(img_data.to(model_adapter.device))
-        print(f"batch features shape: {features.shape}")
         unique_slices = torch.unique(indices[:, 0]).numpy()
-        # print(f"unique slices: {unique_slices}")
         for idx in unique_slices:
             img_features = features[indices[:, 0] == idx].numpy().astype(np.float16)
-            print(
-                f"image: {idx}, features shape: {img_features.shape}, {img_features.dtype}"
-            )
 
             yield img_features, idx, len(unique_slices)
 
