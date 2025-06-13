@@ -8,12 +8,12 @@ from collections.abc import Generator
 from pathlib import Path
 from typing import Optional
 
-import h5py
 import napari
 import napari.layers
 import napari.utils.notifications as notif
 import numpy as np
 import tifffile
+import zarr
 from napari.qt.threading import create_worker
 from napari.utils import progress as np_progress
 from napari.utils.events import Event
@@ -64,16 +64,16 @@ class SegmentationWidget(QWidget):
     def __init__(self, napari_viewer: napari.Viewer) -> None:
         super().__init__()
         self.viewer = napari_viewer
-        self.image_layer: Optional[napari.layers.Image] = None
-        self.gt_layer: Optional[napari.layers.Labels] = None
-        self.segmentation_layer: Optional[napari.layers.Labels] = None
-        self.postprocess_layer: Optional[napari.layers.Labels] = None
-        self.storage: Optional[str] = None
-        self.rf_model: Optional[RandomForestClassifier] = None
-        self.model_adapter: Optional[BaseModelAdapter] = None
+        self.image_layer: napari.layers.Image | None = None
+        self.gt_layer: napari.layers.Labels | None = None
+        self.segmentation_layer: napari.layers.Labels | None = None
+        self.postprocess_layer: napari.layers.Labels | None = None
+        self.storage: zarr.Group | None = None  # type: ignore
+        self.rf_model: RandomForestClassifier | None = None
+        self.model_adapter: BaseModelAdapter | None = None
         self.sam_auto_masks = None
         self.patch_size = 512  # default values
-        self.overlap = 384
+        self.overlap = 512 // 4
         self.stride = self.patch_size - self.overlap
         self.stats = SegmentationUsageStats()
 
@@ -547,13 +547,11 @@ class SegmentationWidget(QWidget):
             self.sam_post_checkbox.setChecked(False)
 
     def select_storage(self) -> None:
-        selected_file, _filter = QFileDialog.getOpenFileName(
-            self, "FeatureForest", ".", "Feature Storage(*.hdf5)"
-        )
+        selected_file = QFileDialog.getExistingDirectory(self, "FeatureForest", "..")
         if selected_file is not None and len(selected_file) > 0:
             self.storage_textbox.setText(selected_file)
             # load the storage
-            self.storage = h5py.File(selected_file, "r")
+            self.storage: zarr.Group = zarr.open(selected_file, mode="r")  # type: ignore
             # set the patch size and overlap from the selected storage
             self.patch_size = self.storage.attrs.get("patch_size", self.patch_size)
             self.overlap = self.storage.attrs.get("overlap", self.overlap)
@@ -562,10 +560,11 @@ class SegmentationWidget(QWidget):
             # initialize the model based on the selected storage
             img_height = self.storage.attrs["img_height"]
             img_width = self.storage.attrs["img_width"]
-            # TODO: raise an error if current image dims are in conflicting with storage
             model_name = str(self.storage.attrs["model"])
+            no_patching = self.storage.attrs["no_patching"]
             self.model_adapter = get_model(model_name, img_height, img_width)
-            print(model_name, self.patch_size, self.overlap)
+            self.model_adapter.no_patching = no_patching
+            print(model_name, self.patch_size, self.overlap, no_patching)
 
             # set the plugin usage stats csv file
             storage_path = Path(selected_file)
@@ -614,7 +613,7 @@ class SegmentationWidget(QWidget):
 
         return labels_dict
 
-    def analyze_labels(self, labels_dict: Optional[dict]) -> None:
+    def analyze_labels(self, labels_dict: Optional[dict] = None) -> None:
         if labels_dict is None:
             labels_dict = self.get_class_labels()
         num_labels = [len(v) for v in labels_dict.values()]
@@ -643,7 +642,7 @@ class SegmentationWidget(QWidget):
         num_labels = sum([len(v) for v in labels_dict.values()])
         total_channels = self.model_adapter.get_total_output_channels()
         train_data = np.zeros((num_labels, total_channels))
-        labels = np.zeros(num_labels, dtype="int32") - 1
+        labels = np.zeros(num_labels, dtype=np.int32) - 1
         count = 0
         for class_index in np_progress(
             labels_dict, desc="getting training data", total=len(labels_dict.keys())
@@ -660,7 +659,7 @@ class SegmentationWidget(QWidget):
                     slice_coords, img_height, img_width, self.patch_size, self.overlap
                 )
                 grp_key = str(slice_index)
-                slice_dataset = self.storage[grp_key][self.model_adapter.name]
+                slice_dataset = self.storage[grp_key]["features"]
                 for p_i in np.unique(patch_indices):
                     patch_coords = slice_coords[patch_indices == p_i]
                     patch_features = slice_dataset[p_i]
@@ -869,8 +868,8 @@ class SegmentationWidget(QWidget):
     ) -> np.ndarray:
         """Predict a slice patch by patch"""
         segmentation_image = []
-        # shape: N x target_size x target_size x C
-        feature_patches = self.storage[str(slice_index)][self.model_adapter.name][:]
+        # shape: N x stride x stride x C
+        feature_patches: np.ndarray = self.storage[str(slice_index)]["features"][:]
         num_patches = feature_patches.shape[0]
         total_channels = self.model_adapter.get_total_output_channels()
         for i in np_progress(range(num_patches), desc="Predicting slice patches"):
