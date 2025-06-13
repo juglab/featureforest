@@ -23,54 +23,47 @@ class FFImageDataset(IterableDataset):
 
     def __init__(
         self,
-        image_array: np.ndarray | None = None,
-        stack_file: str | Path | None = None,
-        img_dir: str | Path | None = None,
+        images: str | Path | np.ndarray,
         no_patching: bool = False,
         patch_size: int = 512,
         overlap: int = 128,
     ) -> None:
         super().__init__()
-        if image_array is not None and (stack_file is not None or img_dir is not None):
-            raise ValueError(
-                "Please provide either an image array or a stack file "
-                "or an image directory, not both."
-            )
-        if image_array is None and stack_file is None and img_dir is None:
-            raise ValueError(
-                "Please provide either a large TIFF file or an image directory."
-            )
-
         self.no_patching = no_patching
         self.patch_size = patch_size
         self.overlap = overlap
         self.image_files = []
         self.image_source: Optional[pims.ImageSequence | np.ndarray] = None
 
-        if image_array is not None:
-            # image is already loaded as a numpy array
-            self.image_source = image_array
+        if isinstance(images, np.ndarray):
+            # images are already loaded into a numpy array
+            self.image_source = images
             # add slice dimension if not present
             if self.image_source.ndim == 2:
                 self.image_source = self.image_source[np.newaxis, ...]
-        elif stack_file is not None:
-            # can be a large stack, using pims for lazy loading
-            self.image_source = pims.open(str(stack_file))
-        elif img_dir is not None:
-            # load images from a directory
-            img_dir = Path(img_dir)
-            if not img_dir.is_dir():
-                raise ValueError(f"The provided path {img_dir} is not a directory.")
-            self.image_files = (
-                list(img_dir.glob("*.tiff"))
-                + list(img_dir.glob("*.tif"))
-                + list(img_dir.glob("*.png"))
-                + list(img_dir.glob("*.jpg"))
+
+        elif isinstance(images, str | Path):
+            images = Path(images)
+            if images.is_file():
+                # can be a large stack, using pims for lazy loading
+                self.image_source = pims.open(str(images))
+
+            elif images.is_dir():
+                self.image_files = (
+                    list(images.glob("*.tiff"))
+                    + list(images.glob("*.tif"))
+                    + list(images.glob("*.png"))
+                    + list(images.glob("*.jpg"))
+                )
+                if not self.image_files:
+                    raise ValueError(f"No image files found in the directory {images}.")
+                self.image_files = self._natural_sort(self.image_files)
+                self.image_source = pims.ImageSequence(map(str, self.image_files))
+        else:
+            raise ValueError(
+                f"images should be a numpy array or a directory or an image stack!"
+                f"\nGot {type(images)}"
             )
-            if not self.image_files:
-                raise ValueError(f"No image files found in the directory {img_dir}.")
-            self.image_files = self._natural_sort(self.image_files)
-            self.image_source = pims.ImageSequence(map(str, self.image_files))
 
     @property
     def num_images(self) -> int:

@@ -1,5 +1,4 @@
 from collections.abc import Generator
-from pathlib import Path
 from typing import Optional
 
 import numpy as np
@@ -32,43 +31,6 @@ def get_batch_size(model_adapter: BaseModelAdapter) -> int:
     return batch_size
 
 
-def get_image_dataset(
-    image: str | np.ndarray,
-    no_patching: bool = False,
-    patch_size: int = 512,
-    overlap: int = 128,
-) -> FFImageDataset:
-    if isinstance(image, str):
-        # image is a path to a large TIFF file or a directory of images
-        img_path = Path(image)
-        if img_path.is_dir():
-            # load images from a directory
-            dataset = FFImageDataset(
-                img_dir=img_path,
-                no_patching=no_patching,
-                patch_size=patch_size,
-                overlap=overlap,
-            )
-        else:
-            # load a (large) stack
-            dataset = FFImageDataset(
-                stack_file=img_path,
-                no_patching=no_patching,
-                patch_size=patch_size,
-                overlap=overlap,
-            )
-    elif isinstance(image, np.ndarray):
-        # image is already loaded as a numpy array
-        dataset = FFImageDataset(
-            image_array=image,
-            no_patching=no_patching,
-            patch_size=patch_size,
-            overlap=overlap,
-        )
-
-    return dataset
-
-
 def extract_embeddings(
     image: np.ndarray | str,
     model_adapter: BaseModelAdapter,
@@ -81,8 +43,8 @@ def extract_embeddings(
 
     # create the image dataset
     if image_dataset is None:
-        image_dataset = get_image_dataset(
-            image=image, no_patching=no_patching, patch_size=patch_size, overlap=overlap
+        image_dataset = FFImageDataset(
+            images=image, no_patching=no_patching, patch_size=patch_size, overlap=overlap
         )
     # loop through the dataset and extract features
     dataloader = DataLoader(
@@ -106,8 +68,8 @@ def extract_embeddings_to_file(
     # batch_size = get_batch_size(model_adapter)
 
     # # create the image dataset
-    image_dataset = get_image_dataset(
-        image=image, no_patching=no_patching, patch_size=patch_size, overlap=overlap
+    image_dataset = FFImageDataset(
+        images=image, no_patching=no_patching, patch_size=patch_size, overlap=overlap
     )
     # create the zarr storage
     storage = zarr.storage.DirectoryStore(storage_path)

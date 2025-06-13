@@ -6,8 +6,6 @@ from sklearn.ensemble import RandomForestClassifier as RF
 from featureforest.models import BaseModelAdapter
 from featureforest.utils.data import get_num_patches, get_stride_margin
 
-# from featureforest.utils.extract import get_slice_features
-
 
 def predict_patches(
     patch_features: np.ndarray,
