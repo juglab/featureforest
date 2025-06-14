@@ -1,40 +1,38 @@
-import multiprocessing as mp
+from collections.abc import Generator
 
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier as RF
 
 from featureforest.models import BaseModelAdapter
 from featureforest.utils.data import get_num_patches, get_stride_margin
+from featureforest.utils.dataset import FFImageDataset
+from featureforest.utils.extract import extract_embeddings
 
 
 def predict_patches(
-    patch_features: np.ndarray,
+    feature_list: list[np.ndarray],
     rf_model: RF,
     model_adapter: BaseModelAdapter,
-    batch_idx: int,
-    result_dict: dict,
-) -> None:
-    """Predicts the class labels for a given set of patch features.
+) -> np.ndarray:
+    """Predicts the class labels for a given list of features (patches).
 
     Args:
-        patch_features (np.ndarray): Patch features to be predicted.
+        feature_list (list[np.ndarray]): List of features to be predicted.
         rf_model (RF): Random Forest Model used for predictions.
         model_adapter (BaseModelAdapter): Model adapter object used for extracting data.
-        batch_idx (int): Batch index of the current patch features.
-        result_dict (dict): Dictionary where the predicted masks will be stored.
     """
     patch_masks = []
-    # shape: N x target_size x target_size x C
-    num_patches = patch_features.shape[0]
+    # shape: N x stride x stride x C
+    num_patches = len(feature_list)
     total_channels = model_adapter.get_total_output_channels()
     print(f"predicting {num_patches} patches...")
     for i in range(num_patches):
-        patch_data = patch_features[i].reshape(-1, total_channels)
+        patch_data = feature_list[i].reshape(-1, total_channels)
         pred = rf_model.predict(patch_data).astype(np.uint8)
         patch_masks.append(pred)
 
     patch_masks = np.vstack(patch_masks)
-    result_dict[batch_idx] = patch_masks
+    return patch_masks
 
 
 def get_image_mask(
@@ -68,47 +66,39 @@ def get_image_mask(
     return mask_image
 
 
-def extract_predict(
-    image: np.ndarray,
+def run_prediction_pipeline(
+    input_stack: str,
     model_adapter: BaseModelAdapter,
     rf_model: RF,
-) -> np.ndarray:
-    """Extracts features and predicts the classes for a given image.
-
-    Args:
-        image (np.ndarray): Input image to extract features from.
-        model_adapter (BaseModelAdapter): Model adapter object used for extracting data.
-        rf_model (RF): Random Forest Model used for predictions.
-
-    Returns:
-        np.ndarray: Final image mask.
-    """
-    img_height, img_width = image.shape[:2]
+) -> Generator[tuple[np.ndarray, int, int], None, None]:
+    no_patching = model_adapter.no_patching
     patch_size = model_adapter.patch_size
     overlap = model_adapter.overlap
-    # procs = []
-    # prediction happens per batch of extracted features
-    # in a separate process.
-    with mp.Manager() as manager:
-        result_dict = manager.dict()
-        # for b_idx, patch_features in get_slice_features(image, model_adapter):
-        #     print(b_idx, end="\r")
-        #     proc = mp.Process(
-        #         target=predict_patches,
-        #         args=(patch_features, rf_model, model_adapter, b_idx, result_dict),
-        #     )
-        #     procs.append(proc)
-        #     proc.start()
-        # # wait until all processes are done
-        # for p in procs:
-        #     if p.is_alive:
-        #         p.join()
-        # collect results from each process
-        batch_indices = sorted(result_dict.keys())
-        patch_masks = [result_dict[b] for b in batch_indices]
-        patch_masks = np.vstack(patch_masks)
-        slice_mask = get_image_mask(
-            patch_masks, img_height, img_width, patch_size, overlap
-        )
+    stack_dataset = FFImageDataset(
+        images=input_stack,
+        no_patching=no_patching,
+        patch_size=patch_size,
+        overlap=overlap,
+    )
+    img_height, img_width = stack_dataset.image_shape
 
-    return slice_mask
+    prev_idx = 0
+    slice_features = []
+    for img_features, slice_idx, total in extract_embeddings(
+        model_adapter, image_dataset=stack_dataset
+    ):
+        if prev_idx != slice_idx:
+            # we have one slice features extracted: make a prediction.
+            patch_masks = predict_patches(slice_features, rf_model, model_adapter)
+            slice_mask = get_image_mask(
+                patch_masks, img_height, img_width, patch_size, overlap
+            )
+            yield slice_mask, slice_idx, total
+
+            # start collecting next slice features
+            prev_idx = slice_idx
+            slice_features = []
+            slice_features.append(img_features)
+
+        # collect slice features
+        slice_features.append(img_features)

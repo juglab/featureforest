@@ -32,8 +32,8 @@ def get_batch_size(model_adapter: BaseModelAdapter) -> int:
 
 
 def extract_embeddings(
-    image: np.ndarray | str,
     model_adapter: BaseModelAdapter,
+    image: Optional[np.ndarray | str] = None,
     image_dataset: Optional[FFImageDataset] = None,
 ) -> Generator[tuple[np.ndarray, int, int], None, None]:
     no_patching = model_adapter.no_patching
@@ -43,6 +43,8 @@ def extract_embeddings(
 
     # create the image dataset
     if image_dataset is None:
+        if image is None:
+            raise ValueError("Should pass either the image or the image_dataset!")
         image_dataset = FFImageDataset(
             images=image, no_patching=no_patching, patch_size=patch_size, overlap=overlap
         )
@@ -65,7 +67,6 @@ def extract_embeddings_to_file(
     no_patching = model_adapter.no_patching
     patch_size = model_adapter.patch_size
     overlap = model_adapter.overlap
-    # batch_size = get_batch_size(model_adapter)
 
     # # create the image dataset
     image_dataset = FFImageDataset(
@@ -83,7 +84,7 @@ def extract_embeddings_to_file(
     store_root.attrs["overlap"] = overlap
 
     for img_features, idx, total in extract_embeddings(
-        image, model_adapter, image_dataset
+        model_adapter, image_dataset=image_dataset
     ):
         if store_root.get(str(idx)) is None:
             # create a group for the slice

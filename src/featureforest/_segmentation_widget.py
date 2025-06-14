@@ -51,7 +51,7 @@ from .utils.data import (
     get_stack_dims,
     get_stride_margin,
 )
-from .utils.pipeline_prediction import extract_predict
+from .utils.pipeline_prediction import run_prediction_pipeline
 from .utils.usage_stats import SegmentationUsageStats
 from .widgets import (
     ScrollWidgetWrapper,
@@ -1085,6 +1085,9 @@ class SegmentationWidget(QWidget):
     def run_pipeline(
         self, tiff_stack_file: str, result_dir: Path
     ) -> Generator[tuple[int, int], None, None]:
+        if self.model_adapter is None or self.rf_model is None:
+            raise ValueError("RF model and/or Model Adapter are missing!")
+
         start = dt.datetime.now()
         slices_total_time = 0
         postprocess_total_time = 0
@@ -1095,67 +1098,63 @@ class SegmentationWidget(QWidget):
         sam_post_dir = result_dir.joinpath("post_sam")
         sam_post_dir.mkdir(parents=True, exist_ok=True)
 
-        with TiffFile(tiff_stack_file) as tiff_stack:
-            total_pages = len(tiff_stack.pages)
-            for page_idx, page in np_progress(
-                enumerate(tiff_stack.pages),
-                desc="runing the pipeline",
-                total=len(tiff_stack.pages),
-            ):
-                slice_start = time.perf_counter()
-                image = page.asarray()
-                prediction_mask = extract_predict(
-                    image, self.model_adapter, self.rf_model
-                )
-                # save the prediction
-                tifffile.imwrite(
-                    prediction_dir.joinpath(f"slice_{page_idx:04}_prediction.tiff"),
-                    prediction_mask,
-                )
-                # post-processing
-                smoothing_iterations, area_threshold, area_is_absolute = (
-                    self.get_postprocess_params()
-                )
-                post_mask = postprocess(
-                    prediction_mask,
-                    smoothing_iterations,
-                    area_threshold,
-                    area_is_absolute,
-                )
-                tifffile.imwrite(
-                    simple_post_dir.joinpath(f"slice_{page_idx:04}_post_simple.tiff"),
-                    post_mask,
-                )
-                pp_start = time.perf_counter()
-                post_sam_mask = postprocess_with_sam(
-                    prediction_mask,
-                    smoothing_iterations,
-                    area_threshold,
-                    area_is_absolute,
-                )
-                tifffile.imwrite(
-                    sam_post_dir.joinpath(f"slice_{page_idx:04}_post_sam.tiff"),
-                    post_sam_mask,
-                )
-                # slices timing
-                postprocess_total_time += round(time.perf_counter() - pp_start, 2)
-                slices_total_time += round(time.perf_counter() - slice_start, 2)
-                slice_avg = slices_total_time / (page_idx + 1)
-                rem_minutes, rem_seconds = divmod(
-                    slice_avg * (total_pages - page_idx + 1), 60
-                )
-                rem_hour, rem_minutes = divmod(rem_minutes, 60)
-                self.timing_info.setText(
-                    f"Estimated remaining time: "
-                    f"{int(rem_hour):02}:{int(rem_minutes):02}:{int(rem_seconds):02}"
-                )
-                print(f"slice average time(seconds): {slice_avg:.2f}")
+        slice_start = time.perf_counter()
+        for slice_mask, idx, total in np_progress(
+            run_prediction_pipeline(
+                tiff_stack_file,
+                self.model_adapter,
+                self.rf_model,
+            ),
+            desc="running the pipeline",
+        ):
+            # save the prediction
+            tifffile.imwrite(
+                prediction_dir.joinpath(f"slice_{idx:04}_prediction.tiff"),
+                slice_mask,
+            )
+            # post-processing
+            smoothing_iterations, area_threshold, area_is_absolute = (
+                self.get_postprocess_params()
+            )
+            post_mask = postprocess(
+                slice_mask,
+                smoothing_iterations,
+                area_threshold,
+                area_is_absolute,
+            )
+            tifffile.imwrite(
+                simple_post_dir.joinpath(f"slice_{idx:04}_post_simple.tiff"),
+                post_mask,
+            )
+            pp_start = time.perf_counter()
+            post_sam_mask = postprocess_with_sam(
+                slice_mask,
+                smoothing_iterations,
+                area_threshold,
+                area_is_absolute,
+            )
+            tifffile.imwrite(
+                sam_post_dir.joinpath(f"slice_{idx:04}_post_sam.tiff"),
+                post_sam_mask,
+            )
+            # slices timing
+            postprocess_total_time += round(time.perf_counter() - pp_start, 2)
+            slices_total_time += round(time.perf_counter() - slice_start, 2)
+            slice_avg = slices_total_time / (idx + 1)
+            rem_minutes, rem_seconds = divmod(slice_avg * (total - idx + 1), 60)
+            rem_hour, rem_minutes = divmod(rem_minutes, 60)
+            self.timing_info.setText(
+                f"Estimated remaining time: "
+                f"{int(rem_hour):02}:{int(rem_minutes):02}:{int(rem_seconds):02}"
+            )
+            print(f"slice average time(seconds): {slice_avg:.2f}")
+            slice_start = time.perf_counter()
 
-                yield page_idx, total_pages
+            yield idx, total
         # stack is done
         end = dt.datetime.now()
         self.save_pipeline_stats(
-            result_dir, start, end, slices_total_time, postprocess_total_time, total_pages
+            result_dir, start, end, slices_total_time, postprocess_total_time, total
         )
 
     def stop_pipeline(self) -> None:
