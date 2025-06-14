@@ -44,7 +44,7 @@ def extract_embeddings(
     # create the image dataset
     if image_dataset is None:
         if image is None:
-            raise ValueError("Should pass either the image or the image_dataset!")
+            raise ValueError("You should pass either the image or the image_dataset!")
         image_dataset = FFImageDataset(
             images=image, no_patching=no_patching, patch_size=patch_size, overlap=overlap
         )
@@ -52,6 +52,7 @@ def extract_embeddings(
     dataloader = DataLoader(
         image_dataset, batch_size=batch_size, shuffle=False, num_workers=0
     )
+    print(f"Start extracting features for {image_dataset.num_images} slices...")
     for img_data, indices in dataloader:
         features = model_adapter.get_features_patches(img_data.to(model_adapter.device))
         unique_slices = torch.unique(indices[:, 0]).numpy()

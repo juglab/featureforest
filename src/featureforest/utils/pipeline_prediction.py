@@ -23,11 +23,12 @@ def predict_patches(
     """
     patch_masks = []
     # shape: N x stride x stride x C
-    num_patches = len(feature_list)
+    patch_features = np.vstack(feature_list)
+    num_patches = len(patch_features)
     total_channels = model_adapter.get_total_output_channels()
     print(f"predicting {num_patches} patches...")
     for i in range(num_patches):
-        patch_data = feature_list[i].reshape(-1, total_channels)
+        patch_data = patch_features[i].reshape(-1, total_channels)
         pred = rf_model.predict(patch_data).astype(np.uint8)
         patch_masks.append(pred)
 
@@ -87,18 +88,24 @@ def run_prediction_pipeline(
     for img_features, slice_idx, total in extract_embeddings(
         model_adapter, image_dataset=stack_dataset
     ):
+        print(f"{slice_idx} / {total}")
         if prev_idx != slice_idx:
             # we have one slice features extracted: make a prediction.
             patch_masks = predict_patches(slice_features, rf_model, model_adapter)
             slice_mask = get_image_mask(
                 patch_masks, img_height, img_width, patch_size, overlap
             )
-            yield slice_mask, slice_idx, total
+
+            yield slice_mask, prev_idx, total
 
             # start collecting next slice features
             prev_idx = slice_idx
             slice_features = []
             slice_features.append(img_features)
-
-        # collect slice features
-        slice_features.append(img_features)
+        else:
+            # collect slice features
+            slice_features.append(img_features)
+    # make prediction for the last slice
+    patch_masks = predict_patches(slice_features, rf_model, model_adapter)
+    slice_mask = get_image_mask(patch_masks, img_height, img_width, patch_size, overlap)
+    yield slice_mask, slice_idx, total

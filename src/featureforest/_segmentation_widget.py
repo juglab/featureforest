@@ -719,7 +719,7 @@ class SegmentationWidget(QWidget):
 
     def load_rf_model(self) -> None:
         selected_file, _filter = QFileDialog.getOpenFileName(
-            self, "FeatureForest", ".", "model(*.bin)"
+            self, "FeatureForest", "..", "model(*.bin)"
         )
         if len(selected_file) > 0:
             # to suppress the sklearn InconsistentVersionWarning
@@ -758,7 +758,7 @@ class SegmentationWidget(QWidget):
             notif.show_info("There is no trained model!")
             return
         selected_file, _filter = QFileDialog.getSaveFileName(
-            self, "FeatureForest", ".", "model(*.bin)"
+            self, "FeatureForest", "..", "model(*.bin)"
         )
         if len(selected_file) > 0:
             if not selected_file.endswith(".bin"):
@@ -1020,7 +1020,7 @@ class SegmentationWidget(QWidget):
 
     def select_stack(self) -> None:
         selected_file, _filter = QFileDialog.getOpenFileName(
-            self, "FeatureForest", ".", "TIFF stack (*.tiff *.tif)"
+            self, "FeatureForest", "..", "TIFF stack (*.tiff *.tif)"
         )
         if selected_file is not None and len(selected_file) > 0:
             # get stack info
@@ -1098,6 +1098,7 @@ class SegmentationWidget(QWidget):
         sam_post_dir = result_dir.joinpath("post_sam")
         sam_post_dir.mkdir(parents=True, exist_ok=True)
 
+        self.rf_model.set_params(verbose=0)
         slice_start = time.perf_counter()
         for slice_mask, idx, total in np_progress(
             run_prediction_pipeline(
@@ -1113,6 +1114,7 @@ class SegmentationWidget(QWidget):
                 slice_mask,
             )
             # post-processing
+            print("post processing...")
             smoothing_iterations, area_threshold, area_is_absolute = (
                 self.get_postprocess_params()
             )
@@ -1156,6 +1158,7 @@ class SegmentationWidget(QWidget):
         self.save_pipeline_stats(
             result_dir, start, end, slices_total_time, postprocess_total_time, total
         )
+        self.rf_model.set_params(verbose=1)
 
     def stop_pipeline(self) -> None:
         if self.pipeline_worker is not None:
