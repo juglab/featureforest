@@ -10,7 +10,7 @@ from torch import Tensor
 def get_model_ready_image(image: np.ndarray) -> torch.Tensor:
     """Convert the input image to a torch tensor and normalize it.
     Args:
-        image (np.ndarray): Input image to be converted.
+        image (np.ndarray): Input image to be converted (H, W, C).
     Returns:
         torch.Tensor: The input image as a torch tensor, normalized to [0, 1].
     """
@@ -22,13 +22,10 @@ def get_model_ready_image(image: np.ndarray) -> torch.Tensor:
     _max = img_data.max()
     img_data = (img_data - _min) / (_max - _min)
     # for image encoders, the input image must be in RGB.
-    # if not is_stacked(img_data.numpy()):
-    #     # add a batch dim
-    #     img_data = img_data.unsqueeze(0)
     if is_image_rgb(img_data.numpy()):
         # it's already RGB
         img_data = img_data[..., :3]  # discard the alpha channel (in case of PNG).
-        img_data = img_data.permute([3, 1, 2])  # make it channel first
+        img_data = img_data.permute([2, 0, 1])  # make it channel first
     else:
         # make it RGB by repeating the single channel
         img_data = img_data.unsqueeze(0).expand(3, -1, -1)

@@ -10,6 +10,7 @@ from torch.utils.data import IterableDataset
 
 from featureforest.utils.data import (
     get_model_ready_image,
+    is_stacked,
     patchify,
 )
 
@@ -39,7 +40,7 @@ class FFImageDataset(IterableDataset):
             # images are already loaded into a numpy array
             self.image_source = images
             # add slice dimension if not present
-            if self.image_source.ndim == 2:
+            if not is_stacked(self.image_source):
                 self.image_source = self.image_source[np.newaxis, ...]
 
         elif isinstance(images, str | Path):
