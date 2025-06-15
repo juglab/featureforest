@@ -25,7 +25,7 @@ def get_available_models() -> list[str]:
 
 
 def get_model(
-    model_name: str, img_height: float, img_width: float, *args, **kwargs
+    model_name: str, img_height: int, img_width: int, *args, **kwargs
 ) -> BaseModelAdapter:
     """Returns the requested model adapter.
 
