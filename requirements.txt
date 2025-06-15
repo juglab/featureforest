@@ -9,7 +9,9 @@ pynrrd
 qtpy
 magicgui
 napari[all]
-h5py
+tifffile
+zarr>=2,<3
+pims
 pooch
 tqdm>=4.66.1
 iopath>=0.1.10
