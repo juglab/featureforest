@@ -8,8 +8,6 @@ import pims
 import tifffile
 
 from featureforest.models import get_available_models, get_model
-
-# from featureforest.models.SAM import SAMAdapter
 from featureforest.postprocess import (
     get_sam_auto_masks,
     postprocess,
