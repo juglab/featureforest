@@ -27,10 +27,10 @@ class SAMAdapter(BaseModelAdapter):
         self.name = name
         # we need sam image encoder part
         self.encoder = image_encoder
-        self.encoder_num_channels = 256
+        self.encoder_num_channels: int = 256
 
         # NOTE: The parameter below matches the SAM model's encoder embedding dimension.
-        self.embed_layer_num_channels = image_encoder.patch_embed.proj.out_channels
+        self.embed_layer_num_channels: int = image_encoder.patch_embed.proj.out_channels
         self._set_patch_size()
         self.device = device
 
@@ -64,7 +64,7 @@ class SAMAdapter(BaseModelAdapter):
             # embed_output: b,64,64,1280 -> b,1280,64,64
             embed_output = self.encoder.patch_embed(
                 self.input_transforms(in_patches)
-            ).permute(0, 3, 1, 2)
+            ).permute(0, 3, 1, 2)  # type: ignore
 
         # get non-overlapped feature patches
         out_feature_patches = get_nonoverlapped_patches(

@@ -56,7 +56,7 @@ class DinoV2Adapter(BaseModelAdapter):
                 1,
                 return_class_token=False,
                 reshape=True,
-            )[0]
+            )[0]  # type: ignore
 
         # get non-overlapped feature patches
         feature_patches = get_nonoverlapped_patches(
