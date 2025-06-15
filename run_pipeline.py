@@ -14,6 +14,7 @@ from featureforest.postprocess import (
     postprocess_with_sam,
     postprocess_with_sam_auto,
 )
+from featureforest.utils.extract import extract_embeddings_to_file
 from featureforest.utils.pipeline_prediction import run_prediction_pipeline
 
 
@@ -55,7 +56,7 @@ def apply_postprocessing(
     return post_masks
 
 
-def main(
+def run(
     input_file: str,
     rf_model_file: str,
     output_dir: str,
@@ -152,16 +153,54 @@ def main(
     print(f"total elapsed time: {(time.perf_counter() - tic)} seconds")
 
 
+def run_extract_features(
+    input_file: str,
+    output_dir: str,
+    model_name: str = "SAM2_Large",
+    no_patching: bool = False,
+):
+    # input image
+    data_path = Path(input_file)
+    print(f"data_path exists: {data_path.exists()}")
+    # get stack dims
+    lazy_stack = pims.open(input_file)
+    img_height, img_width = lazy_stack.frame_shape
+
+    # list of available models
+    available_models = get_available_models()
+    assert model_name in available_models, (
+        f"Couldn't find {model_name} in available models\n{available_models}."
+    )
+    model_adapter = get_model(model_name, img_height, img_width)
+    model_adapter.no_patching = no_patching
+    patch_size = model_adapter.patch_size
+    overlap = model_adapter.overlap
+    print(f"patch_size: {patch_size}, overlap: {overlap}")
+
+    # zarr data store
+    store_path = Path(output_dir)
+    if not store_path.name.endswith(".zarr"):
+        output_dir += ".zarr"
+
+    tic = time.perf_counter()
+    print(f"extracting features from {input_file}...")
+    for idx, total in extract_embeddings_to_file(input_file, output_dir, model_adapter):
+        print(f"slice {idx + 1} / {total}")
+
+    print(f"total elapsed time: {(time.perf_counter() - tic)} seconds")
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="\nFeatureForest run-pipeline script",
     )
     parser.add_argument("--data", help="Path to the input image", required=True)
-    parser.add_argument("--rf_model", help="Path to the trained RF model", required=True)
     parser.add_argument("--outdir", help="Path to the output directory", required=True)
+    parser.add_argument("--rf_model", help="Path to the trained RF model", required=False)
     parser.add_argument(
         "--feat_model",
         choices=get_available_models(),
+        default="SAM2_Large",
         help="Name of the model for feature extraction",
     )
     parser.add_argument(
@@ -182,15 +221,26 @@ if __name__ == "__main__":
         help="Post-processing area threshold to remove small regions; default=50",
     )
     parser.add_argument(
-        "--use_sam_predictor",
+        "--post_sam",
         default=True,
         action="store_true",
-        help="uses SAM2 for generating final masks",
+        help="to use SAM2 for generating final masks",
+    )
+    parser.add_argument(
+        "--only_extract",
+        default=False,
+        action="store_true",
+        help="to only extract features to zarr file without running prediction pipeline",
     )
 
     args = parser.parse_args()
 
-    main(
+    if args.only_extract:
+        run_extract_features(args.data, args.outdir, args.feat_model, args.no_patching)
+        exit(0)
+
+    assert args.rf_model is not None, "RF model file is required."
+    run(
         input_file=args.data,
         rf_model_file=args.rf_model,
         output_dir=args.outdir,
@@ -198,5 +248,5 @@ if __name__ == "__main__":
         no_patching=args.no_patching,
         smoothing_iterations=args.smoothing_iterations,
         area_threshold=args.area_threshold,
-        use_sam_predictor=args.use_sam_predictor,
+        use_sam_predictor=args.post_sam,
     )
