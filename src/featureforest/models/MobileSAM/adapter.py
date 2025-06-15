@@ -46,7 +46,7 @@ class MobileSAMAdapter(BaseModelAdapter):
             ]
         )
 
-    def get_features_patches(self, in_patches: Tensor) -> tuple[Tensor, Tensor]:
+    def get_features_patches(self, in_patches: Tensor) -> Tensor:
         # get the mobile-sam encoder and embedding layer outputs
         with torch.no_grad():
             output, embed_output, _ = self.encoder(self.input_transforms(in_patches))
@@ -58,8 +58,10 @@ class MobileSAMAdapter(BaseModelAdapter):
         embed_feature_patches = get_nonoverlapped_patches(
             self.embedding_transform(embed_output.cpu()), self.patch_size, self.overlap
         )
+        # concat both features together on channel dimension
+        output = torch.cat([out_feature_patches, embed_feature_patches], dim=-1)
 
-        return out_feature_patches, embed_feature_patches
+        return output
 
     def get_total_output_channels(self) -> int:
         return self.encoder_num_channels + self.embed_layer_num_channels
