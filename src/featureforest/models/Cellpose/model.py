@@ -25,7 +25,7 @@ class Cyto3Encoder(torch.nn.Module):
         return out
 
 
-def get_model(img_height: float, img_width: float, *args, **kwargs) -> CellposeAdapter:
+def get_model(img_height: int, img_width: int, *args, **kwargs) -> CellposeAdapter:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"running on {device}")
     # init the model

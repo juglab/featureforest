@@ -1,28 +1,22 @@
-from typing import Tuple
-
 import torch
-
-from .tiny_vit_sam import TinyViT
 from segment_anything.modeling import MaskDecoder, PromptEncoder, Sam, TwoWayTransformer
 
 from featureforest.utils.downloader import download_model
+
 from .adapter import MobileSAMAdapter
+from .tiny_vit_sam import TinyViT
 
 
-def get_model(
-    img_height: float, img_width: float, *args, **kwargs
-) -> MobileSAMAdapter:
+def get_model(img_height: int, img_width: int, *args, **kwargs) -> MobileSAMAdapter:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"running on {device}")
     # get the model
     model = setup_model().to(device)
     # download model's weights
-    model_url = \
+    model_url = (
         "https://github.com/ChaoningZhang/MobileSAM/raw/master/weights/mobile_sam.pt"
-    model_file = download_model(
-        model_url=model_url,
-        model_name="mobile_sam.pt"
     )
+    model_file = download_model(model_url=model_url, model_name="mobile_sam.pt")
     if model_file is None:
         raise ValueError(f"Could not download the model from {model_url}.")
 
@@ -32,9 +26,7 @@ def get_model(
     model.eval()
 
     # create the model adapter
-    sam_model_adapter = MobileSAMAdapter(
-        model, img_height, img_width, device
-    )
+    sam_model_adapter = MobileSAMAdapter(model, img_height, img_width, device)
 
     return sam_model_adapter
 
@@ -46,18 +38,20 @@ def setup_model() -> Sam:
     image_embedding_size = image_size // vit_patch_size
     mobile_sam = Sam(
         image_encoder=TinyViT(
-            img_size=1024, in_chans=3, num_classes=1000,
+            img_size=1024,
+            in_chans=3,
+            num_classes=1000,
             embed_dims=[64, 128, 160, 320],
             depths=[2, 2, 6, 2],
             num_heads=[2, 4, 5, 10],
             window_sizes=[7, 7, 14, 7],
-            mlp_ratio=4.,
-            drop_rate=0.,
+            mlp_ratio=4.0,
+            drop_rate=0.0,
             drop_path_rate=0.0,
             use_checkpoint=False,
             mbconv_expand_ratio=4.0,
             local_conv_size=3,
-            layer_lr_decay=0.8
+            layer_lr_decay=0.8,
         ),
         prompt_encoder=PromptEncoder(
             embed_dim=prompt_embed_dim,

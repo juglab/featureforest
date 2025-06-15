@@ -1,11 +1,10 @@
 import torch
-
-from segment_anything.modeling import Sam
 from segment_anything import sam_model_registry
+from segment_anything.modeling import Sam
 
 from featureforest.utils.downloader import download_model
-from .adapter import SAMAdapter
 
+from .adapter import SAMAdapter
 
 MODEL_URLS = {
     "vit_h": "https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth",
@@ -27,16 +26,13 @@ MODEL_NAMES = {
 
 
 def get_model(
-    img_height: float, img_width: float, model_type: str = "vit_h", *args, **kwargs
+    img_height: int, img_width: int, model_type: str = "vit_h", *args, **kwargs
 ) -> SAMAdapter:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"running on {device}")
     # download model's weights
     model_url = MODEL_URLS[model_type]
-    model_file = download_model(
-        model_url=model_url,
-        model_name=MODEL_FNAMES[model_type]
-    )
+    model_file = download_model(model_url=model_url, model_name=MODEL_FNAMES[model_type])
     if model_file is None:
         raise ValueError(f"Could not download the model from {model_url}.")
 
