@@ -101,6 +101,9 @@ def get_paddings(
     # pad amount should be enough to make the
     # (final size - patch_size) / stride an integer number.
     # see https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html
+    # if whole image is just one patch
+    if img_height == patch_size and img_width == patch_size and patch_size == stride:
+        return 0, 0
     new_width = img_width + 2 * margin
     pad_right = stride - int((new_width - patch_size) % stride)
     new_height = img_height + 2 * margin
