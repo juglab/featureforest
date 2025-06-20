@@ -1,7 +1,6 @@
 from tempfile import TemporaryDirectory
 
-import zarr
-import zarr.storage
+import h5py
 
 from featureforest.utils.extract import extract_embeddings_to_file
 
@@ -19,7 +18,7 @@ def check_embedding_extraction(
         # Run the extractor generator till the end
         _ = list(extractor_generator)
 
-        read_storage: zarr.Group = zarr.open(tmp_file, mode="r")  # type: ignore
+        read_storage: h5py.File = h5py.File(tmp_file, mode="r")  # type: ignore
         slices = list(read_storage.keys())
         assert len(slices) == expected_slices, (
             f"Unexpected number of slices: {len(slices)}, expected: {expected_slices}"
@@ -35,4 +34,4 @@ def check_embedding_extraction(
                 f"expected: {expected_output_shape}"
             )
 
-        read_storage.store.close()
+        read_storage.close()
