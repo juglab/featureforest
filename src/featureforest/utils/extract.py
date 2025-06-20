@@ -1,12 +1,9 @@
 from collections.abc import Generator
 from typing import Optional
 
+import h5py
 import numpy as np
 import torch
-import zarr
-import zarr.core
-import zarr.storage
-from numcodecs import Zstd
 from torch.utils.data import DataLoader
 
 from featureforest.models import BaseModelAdapter
@@ -73,35 +70,38 @@ def extract_embeddings_to_file(
     image_dataset = FFImageDataset(
         images=image, no_patching=no_patching, patch_size=patch_size, overlap=overlap
     )
-    # create the zarr storage
-    storage = zarr.storage.DirectoryStore(storage_path)
-    store_root = zarr.group(store=storage, overwrite=False)
-    store_root.attrs["num_slices"] = image_dataset.num_images
-    store_root.attrs["img_height"] = image_dataset.image_shape[0]
-    store_root.attrs["img_width"] = image_dataset.image_shape[1]
-    store_root.attrs["model"] = model_adapter.name
-    store_root.attrs["no_patching"] = no_patching
-    store_root.attrs["patch_size"] = patch_size
-    store_root.attrs["overlap"] = overlap
+    # create the storage
+    storage = h5py.File(storage_path, "w")
+    storage.attrs["num_slices"] = image_dataset.num_images
+    storage.attrs["img_height"] = image_dataset.image_shape[0]
+    storage.attrs["img_width"] = image_dataset.image_shape[1]
+    storage.attrs["model"] = model_adapter.name
+    storage.attrs["no_patching"] = no_patching
+    storage.attrs["patch_size"] = patch_size
+    storage.attrs["overlap"] = overlap
 
     for img_features, idx, total in extract_embeddings(
         model_adapter, image_dataset=image_dataset
     ):
-        if store_root.get(str(idx)) is None:
+        if storage.get(str(idx)) is None:
             # create a group for the slice
-            grp = store_root.create_group(str(idx))  # type: ignore
-            z_arr = grp.create(  # type: ignore
+            grp = storage.create_group(str(idx))
+            ds = grp.create_dataset(
                 name="features",
                 shape=img_features.shape,
+                maxshape=(None,) + img_features.shape[1:],
                 chunks=(1,) + img_features.shape[1:],
                 dtype=np.float16,
-                compressor=Zstd(level=3),
+                compression="lzf",
             )
-            z_arr[:] = img_features
+            ds[:] = img_features
         else:
-            # append features to the slice/image group
-            grp: zarr.core.Array = store_root[str(idx)]["features"]  # type: ignore
-            grp.append(img_features)
+            # resize the dataset and append features to the slice/image group
+            ds: h5py.Dataset = storage[str(idx)]["features"]  # type: ignore
+            old_num_patches = ds.shape[0]
+            num_patches = ds.shape[0] + img_features.shape[0]
+            ds.resize(num_patches, axis=0)
+            ds[old_num_patches:, ...] = img_features
 
         yield idx, total
 

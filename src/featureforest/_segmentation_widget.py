@@ -8,12 +8,12 @@ from collections.abc import Generator
 from pathlib import Path
 from typing import Optional
 
+import h5py
 import napari
 import napari.layers
 import napari.utils.notifications as notif
 import numpy as np
 import tifffile
-import zarr
 from napari.qt.threading import create_worker
 from napari.utils import progress as np_progress
 from napari.utils.events import Event
@@ -68,7 +68,7 @@ class SegmentationWidget(QWidget):
         self.gt_layer: napari.layers.Labels | None = None
         self.segmentation_layer: napari.layers.Labels | None = None
         self.postprocess_layer: napari.layers.Labels | None = None
-        self.storage: zarr.Group | None = None  # type: ignore
+        self.storage: h5py.File | None = None
         self.rf_model: RandomForestClassifier | None = None
         self.model_adapter: BaseModelAdapter | None = None
         self.sam_auto_masks = None
@@ -547,21 +547,23 @@ class SegmentationWidget(QWidget):
             self.sam_post_checkbox.setChecked(False)
 
     def select_storage(self) -> None:
-        selected_file = QFileDialog.getExistingDirectory(self, "FeatureForest", "..")
+        selected_file, _ = QFileDialog.getOpenFileName(
+            self, "FeatureForest", "..", "Feature Storage(*.hdf5)"
+        )
         if selected_file is not None and len(selected_file) > 0:
             self.storage_textbox.setText(selected_file)
             # load the storage
-            self.storage: zarr.Group = zarr.open(selected_file, mode="r")  # type: ignore
+            self.storage = h5py.File(selected_file, mode="r")
             # set the patch size and overlap from the selected storage
             self.patch_size = self.storage.attrs.get("patch_size", self.patch_size)
             self.overlap = self.storage.attrs.get("overlap", self.overlap)
             self.stride, _ = get_stride_margin(self.patch_size, self.overlap)
 
             # initialize the model based on the selected storage
-            img_height = self.storage.attrs["img_height"]
-            img_width = self.storage.attrs["img_width"]
+            img_height: int = self.storage.attrs.get("img_height", 0)
+            img_width: int = self.storage.attrs.get("img_width", 0)
             model_name = str(self.storage.attrs["model"])
-            no_patching = self.storage.attrs["no_patching"]
+            no_patching = self.storage.attrs.get("no_patching", False)
             self.model_adapter = get_model(model_name, img_height, img_width)
             self.model_adapter.no_patching = no_patching
             print(model_name, self.patch_size, self.overlap, no_patching)
@@ -594,82 +596,92 @@ class SegmentationWidget(QWidget):
         if layer is not None:
             self.stats.set_label_layer(layer)
 
-    def get_class_labels(self) -> dict[int, np.ndarray]:
-        labels_dict = {}
+    def get_labeled_pixels(self) -> dict[int, np.ndarray]:
         layer = get_layer(
             self.viewer, self.gt_combo.currentText(), config.NAPARI_LABELS_LAYER
         )
         if layer is None:
             print("No label layer is selected!")
             notif.show_error("No label layer is selected!")
-            return labels_dict
+            return {}
 
+        labeled_pixels = {}
+        slice_dim = 0
+        ydim = 1
+        xdim = 2
         class_indices = np.unique(layer.data).tolist()
         # class zero is the napari background class.
         class_indices = [i for i in class_indices if i > 0]
-        for class_idx in class_indices:
-            positions = np.argwhere(layer.data == class_idx)
-            labels_dict[class_idx] = positions
+        coords = np.argwhere(np.isin(layer.data, class_indices))
+        for s_i in np.unique(coords[:, slice_dim]).tolist():
+            s_coords = coords[coords[:, slice_dim] == s_i]
+            slice_labels = layer.data[s_i, s_coords[:, ydim], s_coords[:, xdim]]
+            labeled_pixels[s_i] = np.column_stack(
+                [
+                    slice_labels,
+                    s_coords[:, [ydim, xdim]],  # omit slice dim
+                ]
+            )
 
-        return labels_dict
+        return labeled_pixels
 
-    def analyze_labels(self, labels_dict: Optional[dict] = None) -> None:
-        if labels_dict is None:
-            labels_dict = self.get_class_labels()
-        num_labels = [len(v) for v in labels_dict.values()]
-        self.num_class_label.setText(f"Number of classes: {len(num_labels)}")
-        each_class = "\n".join(
-            [f"class {i + 1}: {num_labels[i]:,d}" for i in range(len(num_labels))]
-        )
-        self.each_class_label.setText("Labels per class:\n" + each_class)
+    def analyze_labels(self, labeled_pixels: dict | None = None) -> None:
+        if not labeled_pixels:
+            labeled_pixels = self.get_labeled_pixels()
+
+        if len(labeled_pixels) > 0:
+            labels = np.concat([v[:, 0] for v in labeled_pixels.values()], axis=None)
+            classes = np.unique(labels)
+            self.num_class_label.setText(f"Number of classes: {len(classes)}")
+            each_class = "\n".join([f"class {c}: {sum(labels == c):,d}" for c in classes])
+            self.each_class_label.setText("Labels per class:\n" + each_class)
 
     def show_usage_stats(self) -> None:
         stats_widget = UsageStats(self.stats)
         stats_widget.exec()
 
     def get_train_data(self) -> tuple[np.ndarray, np.ndarray] | None:
-        # get ground truth class labels
-        labels_dict = self.get_class_labels()
-        if len(labels_dict) == 0:
+        # get ground truth labeled pixels
+        labeled_pixels = self.get_labeled_pixels()
+        if labeled_pixels is None:
             return None
         if self.storage is None:
             notif.show_error("No embeddings storage file is selected!")
             return None
         # update labels stats
-        self.analyze_labels(labels_dict)
+        self.analyze_labels(labeled_pixels)
 
         num_slices, img_height, img_width = get_stack_dims(self.image_layer.data)
-        num_labels = sum([len(v) for v in labels_dict.values()])
         total_channels = self.model_adapter.get_total_output_channels()
+        num_labels = sum([len(v) for v in labeled_pixels.values()])
+        label_dim = 0
+        ydim = 1
+        xdim = 2
+        count = 0
         train_data = np.zeros((num_labels, total_channels))
         labels = np.zeros(num_labels, dtype=np.int32) - 1
-        count = 0
-        for class_index in np_progress(
-            labels_dict, desc="getting training data", total=len(labels_dict.keys())
+        for s_idx, label_coords in np_progress(
+            labeled_pixels.items(), desc="getting training data"
         ):
-            class_label_coords = labels_dict[class_index]
-            uniq_slices = np.unique(class_label_coords[:, 0]).tolist()
-            # for each unique slice, load unique patches from the storage,
-            # then get the pixel features within loaded patch.
-            for slice_index in np_progress(uniq_slices, desc="reading slices"):
-                slice_coords = class_label_coords[
-                    class_label_coords[:, 0] == slice_index
-                ][:, 1:]  # omit the slice dim
-                patch_indices = get_patch_indices(
-                    slice_coords, img_height, img_width, self.patch_size, self.overlap
-                )
-                grp_key = str(slice_index)
-                slice_dataset = self.storage[grp_key]["features"]
-                for p_i in np.unique(patch_indices):
-                    patch_coords = slice_coords[patch_indices == p_i]
-                    patch_features = slice_dataset[p_i]
-                    train_data[count : count + len(patch_coords)] = patch_features[
-                        patch_coords[:, 0] % self.stride, patch_coords[:, 1] % self.stride
-                    ]
-                    labels[count : count + len(patch_coords)] = (
-                        class_index - 1
-                    )  # to have bg class as zero
-                    count += len(patch_coords)
+            # slice labels
+            s_labels = label_coords[:, label_dim]
+            # slice labeled coords
+            s_coords = label_coords[:, [ydim, xdim]]
+            patch_indices = get_patch_indices(
+                s_coords, img_height, img_width, self.patch_size, self.overlap
+            )
+            grp_key = str(s_idx)
+            slice_dataset: h5py.Dataset = self.storage[grp_key]["features"]
+            # loop through slice patches
+            for p_i in np.unique(patch_indices).tolist():
+                patch_features = slice_dataset[p_i]
+                patch_coords = s_coords[patch_indices == p_i]
+                train_data[count : count + len(patch_coords)] = patch_features[
+                    patch_coords[:, 0] % self.stride, patch_coords[:, 1] % self.stride
+                ]
+                # -1: to have bg class as zero
+                labels[count : count + len(patch_coords)] = s_labels - 1
+                count += len(patch_coords)
 
         assert (labels > -1).all()
 
@@ -706,7 +718,7 @@ class SegmentationWidget(QWidget):
             min_samples_split=15,
             min_samples_leaf=3,
             max_features=25,
-            n_jobs=2 if os.cpu_count() < 5 else os.cpu_count() - 3,
+            n_jobs=os.cpu_count() - 1,
             verbose=1,
         )
         rf_classifier.fit(train_data, labels)
