@@ -10,7 +10,7 @@ qtpy
 magicgui
 napari[all]
 tifffile
-zarr>=2,<3
+h5py
 pims
 pooch
 tqdm>=4.66.1
