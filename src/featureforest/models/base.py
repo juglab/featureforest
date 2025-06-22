@@ -5,18 +5,15 @@ from torchvision.transforms import v2 as tv_transforms2
 
 from ..utils.data import (
     get_nonoverlapped_patches,
+    get_patch_size,
 )
 
 
 class BaseModelAdapter:
-    """Base class for adapting any models in featureforest.
-    """
+    """Base class for adapting any models in featureforest."""
+
     def __init__(
-        self,
-        model: nn.Module,
-        img_height: float,
-        img_width: float,
-        device: torch.device
+        self, model: nn.Module, img_height: int, img_width: int, device: torch.device
     ) -> None:
         """Initialization function
 
@@ -34,33 +31,52 @@ class BaseModelAdapter:
         self.device = device
         # set patch size and overlap
         self.patch_size = 512
-        self.overlap = self.patch_size // 2
+        self.overlap = self.patch_size // 4
+        self._no_patching = False
         # input image transforms
-        self.input_transforms = tv_transforms2.Compose([
-            tv_transforms2.Resize(
-                (1024, 1024),
-                interpolation=tv_transforms2.InterpolationMode.BICUBIC,
-                antialias=True
-            ),
-        ])
+        self.input_transforms = tv_transforms2.Compose(
+            [
+                tv_transforms2.Resize(
+                    (1024, 1024),
+                    interpolation=tv_transforms2.InterpolationMode.BICUBIC,
+                    antialias=True,
+                ),
+            ]
+        )
         # to transform feature patches back to the original patch size
-        self.embedding_transform = tv_transforms2.Compose([
-            tv_transforms2.Resize(
-                (self.patch_size, self.patch_size),
-                interpolation=tv_transforms2.InterpolationMode.BICUBIC,
-                antialias=True
-            ),
-        ])
+        self.embedding_transform = tv_transforms2.Compose(
+            [
+                tv_transforms2.Resize(
+                    (self.patch_size, self.patch_size),
+                    interpolation=tv_transforms2.InterpolationMode.BICUBIC,
+                    antialias=True,
+                ),
+            ]
+        )
+
+    @property
+    def no_patching(self) -> bool:
+        return self._no_patching
+
+    @no_patching.setter
+    def no_patching(self, value: bool):
+        self._no_patching = value
+        self._set_patch_size()
 
     def _set_patch_size(self) -> None:
         """Sets the proper patch size and patch overlap
         with respect to the model & image resolution.
         """
-        raise NotImplementedError
+        if self._no_patching:
+            self.patch_size = self.img_height
+            self.overlap = 0
+        else:
+            self.patch_size = get_patch_size(self.img_height, self.img_width)
+            self.overlap = self.patch_size // 4
+        # update embedding transform
+        self.embedding_transform.transforms[0].size = [self.patch_size, self.patch_size]
 
-    def get_features_patches(
-        self, in_patches: Tensor
-    ) -> Tensor:
+    def get_features_patches(self, in_patches: Tensor) -> Tensor:
         """Returns model's extracted features.
         This is an abstract function, and should be overridden.
 
@@ -77,8 +93,7 @@ class BaseModelAdapter:
 
         # get non-overlapped feature patches
         feature_patches = get_nonoverlapped_patches(
-            self.embedding_transform(output_features.cpu()),
-            self.patch_size, self.overlap
+            self.embedding_transform(output_features.cpu()), self.patch_size, self.overlap
         )
 
         return feature_patches

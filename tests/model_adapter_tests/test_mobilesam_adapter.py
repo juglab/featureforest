@@ -2,10 +2,10 @@ import numpy as np
 import pytest
 import torch
 import torch.nn as nn
+from embedding_extraction import check_embedding_extraction
 
 from featureforest.models.MobileSAM import MobileSAMAdapter, get_model
 from featureforest.utils.data import get_stack_dims
-from embedding_extraction import check_embedding_extraction
 
 
 class MockMobileSAMEncoder(nn.Module):
@@ -32,7 +32,7 @@ class MockMobileSAMEncoder(nn.Module):
         return output, embed_output, None
 
 
-def get_mock_model(img_height: float, img_width: float) -> MobileSAMAdapter:
+def get_mock_model(img_height: int, img_width: int) -> MobileSAMAdapter:
     model = MockMobileSAMEncoder()
     device = torch.device("cpu")
     sam_model_adapter = MobileSAMAdapter(model, img_height, img_width, device)
@@ -47,7 +47,7 @@ def get_mock_model(img_height: float, img_width: float) -> MobileSAMAdapter:
         torch.ones((3, 3, 128, 128)),
         torch.ones((8, 3, 128, 128)),
         torch.ones((8, 3, 256, 256)),
-        torch.ones((8, 3, 512, 512))
+        torch.ones((8, 3, 512, 512)),
     ],
 )
 def test_mock_adapter(test_patch: np.ndarray):
@@ -68,10 +68,10 @@ def test_mock_adapter(test_patch: np.ndarray):
 @pytest.mark.parametrize(
     "test_image, expected_output_shape, expected_slices",
     [
-        (np.ones((256, 256)), (9, 128, 128, 320), 1),  # 2D
-        (np.ones((256, 256, 3)), (9, 128, 128, 320), 1),  # 2D RGB
-        (np.ones((2, 256, 256)), (9, 128, 128, 320), 2),  # 3D
-        (np.ones((2, 256, 256, 3)), (9, 128, 128, 320), 2)  # 3D RGB
+        (np.ones((256, 256)), (4, 192, 192, 320), 1),  # 2D
+        (np.ones((256, 256, 3)), (4, 192, 192, 320), 1),  # 2D RGB
+        (np.ones((2, 256, 256)), (4, 192, 192, 320), 2),  # 3D
+        (np.ones((2, 256, 256, 3)), (4, 192, 192, 320), 2),  # 3D RGB
     ],
 )
 def test_mobilesam_embedding_extraction(

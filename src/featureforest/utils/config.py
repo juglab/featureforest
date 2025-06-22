@@ -1,5 +1,5 @@
 import napari
-
+import napari.layers
 
 BG_CLASS_NAME = "background"
 NAPARI_BG_CLASS = 0

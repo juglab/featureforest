@@ -2,10 +2,10 @@ import numpy as np
 import pytest
 import torch
 import torch.nn as nn
+from embedding_extraction import check_embedding_extraction
 
 from featureforest.models.DinoV2 import DinoV2Adapter, get_model
 from featureforest.utils.data import get_stack_dims
-from embedding_extraction import check_embedding_extraction
 
 
 class MockDinoEncoder(nn.Module):
@@ -22,7 +22,7 @@ class MockDinoEncoder(nn.Module):
         return output, None
 
 
-def get_mock_model(img_height: float, img_width: float) -> DinoV2Adapter:
+def get_mock_model(img_height: int, img_width: int) -> DinoV2Adapter:
     model = MockDinoEncoder()
     device = torch.device("cpu")
     dino_model_adapter = DinoV2Adapter(model, img_height, img_width, device)
@@ -49,10 +49,10 @@ def test_mock_adapter(test_patch: np.ndarray):
 
     result_real = real_adapter.model.get_intermediate_layers(
         transformed_input_patch_real, 1, return_class_token=False, reshape=True
-    )[0]
+    )[0]  # type: ignore
     mock_result = mock_adapter.model.get_intermediate_layers(
         transformed_input_patch_mock
-    )[0]
+    )[0]  # type: ignore
 
     assert len(result_real) == len(mock_result)
     assert result_real[0].shape == mock_result[0].shape

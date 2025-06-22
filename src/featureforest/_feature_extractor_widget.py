@@ -1,6 +1,7 @@
 import csv
 import time
 from pathlib import Path
+from typing import Optional
 
 import napari
 import napari.utils.notifications as notif
@@ -9,6 +10,7 @@ from napari.qt.threading import create_worker
 from napari.utils.events import Event
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QFileDialog,
     QGroupBox,
@@ -23,9 +25,7 @@ from qtpy.QtWidgets import (
 
 from .models import get_available_models, get_model
 from .utils import config
-from .utils.data import (
-    get_stack_dims,
-)
+from .utils.data import get_stack_dims
 from .utils.extract import extract_embeddings_to_file
 from .widgets import (
     ScrollWidgetWrapper,
@@ -39,7 +39,7 @@ class FeatureExtractorWidget(QWidget):
         self.viewer = napari_viewer
         self.extract_worker = None
         self.model_adapter = None
-        self.timing = {"start": 0, "avg_per_slice": 0}
+        self.timing = {"start": 0.0, "avg_per_slice": 0.0}
         self.prepare_widget()
 
     def prepare_widget(self):
@@ -54,12 +54,19 @@ class FeatureExtractorWidget(QWidget):
         # input layer
         input_label = QLabel("Image Layer:")
         self.image_combo = QComboBox()
+        self.image_combo.currentIndexChanged.connect(self.image_changed)
         # model selection
         model_label = QLabel("Encoder Model:")
         self.model_combo = QComboBox()
         self.model_combo.setEditable(False)
         self.model_combo.addItems(get_available_models())
         self.model_combo.setCurrentIndex(0)
+        # no-patching checkbox
+        self.no_patching_checkbox = QCheckBox("No &Patching")
+        self.no_patching_checkbox.setToolTip(
+            "Whether divide an image into patches or not; "
+            "\nOnly works for square images (height=width)"
+        )
         # storage
         storage_label = QLabel("Features Storage File:")
         self.storage_textbox = QLineEdit()
@@ -94,6 +101,7 @@ class FeatureExtractorWidget(QWidget):
         vbox.addWidget(self.image_combo)
         vbox.addWidget(model_label)
         vbox.addWidget(self.model_combo)
+        vbox.addWidget(self.no_patching_checkbox)
         layout.addLayout(vbox)
 
         vbox = QVBoxLayout()
@@ -124,7 +132,7 @@ class FeatureExtractorWidget(QWidget):
         self.base_layout.addWidget(gbox)
         self.base_layout.addStretch(1)
 
-    def check_input_layers(self, event: Event = None):
+    def check_input_layers(self, event: Optional[Event] = None):
         curr_text = self.image_combo.currentText()
         self.image_combo.clear()
         for layer in self.viewer.layers:
@@ -136,18 +144,34 @@ class FeatureExtractorWidget(QWidget):
             if index > -1:
                 self.image_combo.setCurrentIndex(index)
 
+    def image_changed(self, event: Optional[Event] = None) -> None:
+        # check if image is square so we can do no_patching
+        image_layer = get_layer(
+            self.viewer, self.image_combo.currentText(), config.NAPARI_IMAGE_LAYER
+        )
+        if image_layer is not None:
+            _, img_height, img_width = get_stack_dims(image_layer.data)
+            if img_height != img_width:
+                self.no_patching_checkbox.setChecked(False)
+                self.no_patching_checkbox.setEnabled(False)
+            else:
+                self.no_patching_checkbox.setEnabled(True)
+
     def save_storage(self):
         # default storage name
         image_layer_name = self.image_combo.currentText()
         model_name = self.model_combo.currentText()
-        storage_name = f"{image_layer_name}_{model_name}.hdf5"
+        storage_name = f"{image_layer_name}_{model_name}"
+        if self.no_patching_checkbox.isChecked():
+            storage_name += "_no_patching"
+        storage_name += ".hdf5"
         # open the save dialog
         selected_file, _filter = QFileDialog.getSaveFileName(
-            self, "FeatureForest", storage_name, "Embeddings Storage(*.hdf5)"
+            self, "FeatureForest", storage_name, "Feature Storage(*.hdf)"
         )
         if selected_file is not None and len(selected_file) > 0:
-            if not selected_file.endswith(".hdf5"):
-                selected_file += ".hdf5"
+            if not selected_file.endswith(".hdf"):
+                selected_file += ".hdf"
             self.storage_textbox.setText(selected_file)
             self.extract_button.setEnabled(True)
 
@@ -164,10 +188,12 @@ class FeatureExtractorWidget(QWidget):
         if storage_path is None or len(storage_path) < 6:
             notif.show_error("No storage path was set.")
             return
+
         # initialize the selected model
         _, img_height, img_width = get_stack_dims(image_layer.data)
         model_name = self.model_combo.currentText()
         self.model_adapter = get_model(model_name, img_height, img_width)
+        self.model_adapter.no_patching = self.no_patching_checkbox.isChecked()
 
         self.extract_button.setEnabled(False)
         self.stop_button.setEnabled(True)
@@ -175,7 +201,7 @@ class FeatureExtractorWidget(QWidget):
         self.extract_worker = create_worker(
             extract_embeddings_to_file,
             image=image_layer.data,
-            storage_file_path=storage_path,
+            storage_path=storage_path,
             model_adapter=self.model_adapter,
         )
         self.extract_worker.yielded.connect(self.update_extract_progress)
