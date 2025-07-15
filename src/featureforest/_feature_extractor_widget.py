@@ -167,11 +167,11 @@ class FeatureExtractorWidget(QWidget):
         storage_name += ".hdf5"
         # open the save dialog
         selected_file, _filter = QFileDialog.getSaveFileName(
-            self, "FeatureForest", storage_name, "Feature Storage(*.hdf)"
+            self, "FeatureForest", storage_name, "Feature Storage(*.hdf5)"
         )
         if selected_file is not None and len(selected_file) > 0:
-            if not selected_file.endswith(".hdf"):
-                selected_file += ".hdf"
+            if not selected_file.endswith(".hdf5"):
+                selected_file += ".hdf5"
             self.storage_textbox.setText(selected_file)
             self.extract_button.setEnabled(True)
 
