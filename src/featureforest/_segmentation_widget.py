@@ -674,13 +674,14 @@ class SegmentationWidget(QWidget):
             slice_dataset: h5py.Dataset = self.storage[grp_key]["features"]
             # loop through slice patches
             for p_i in np.unique(patch_indices).tolist():
+                selected_patch = patch_indices == p_i
                 patch_features = slice_dataset[p_i]
-                patch_coords = s_coords[patch_indices == p_i]
+                patch_coords = s_coords[selected_patch]
                 train_data[count : count + len(patch_coords)] = patch_features[
                     patch_coords[:, 0] % self.stride, patch_coords[:, 1] % self.stride
                 ]
                 # -1: to have bg class as zero
-                labels[count : count + len(patch_coords)] = s_labels - 1
+                labels[count : count + len(patch_coords)] = s_labels[selected_patch] - 1
                 count += len(patch_coords)
 
         assert (labels > -1).all()
