@@ -9,13 +9,13 @@ title: Welcome
 ### Overview
 FF plugin includes two widgets: **Feature Extractor** and **Segmentation** widgets.
 
-![Feature Extractor](assets/extractor_1.png){width="300"}
+![Feature Extractor](assets/extractor_widget/extractor_1.png){width="300"}
 /// caption
 Feature Extractor Widget
 ///
 
-![Segmentation](assets/segmentation_1.png){width="300" align=left}
-![Segmentation](assets/segmentation_2.png){width="300" align=right}
+![Segmentation](assets/segmentation_widget/segmentation_1.png){width="300" align=left}
+![Segmentation](assets/segmentation_widget/segmentation_2.png){width="300" align=right}
 /// caption
 Segmentation Widget
 ///

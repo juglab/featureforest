@@ -46,6 +46,7 @@ nav:
   - Segmentation Widget: segmentation.md
   - Labeling Tutorial: tutorial.md
   - Adapting New Models: model_adapter.md
+  - Run Pipeline: run_pipeline.md
 
 extra:
   version:

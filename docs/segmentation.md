@@ -51,7 +51,7 @@ The Segmentation widget is a long widget with several panels, but don't worry we
 ###### Buttons
 4. **Predict Slice** button: To generate the segmentation mask for the *current* slice
 5. **Predict Whole Stack** button: to start the prediction process for the whole loaded stack
-6. **Stop** button: Just for your safety!😉 this will stop the prediction process.
+6. **Stop** button: Just for your safety!😉 this will stop the prediction process over the whole stack.
 
 <div class="clear"></div>
 
