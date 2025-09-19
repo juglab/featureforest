@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url>
+         <loc>https://juglab.github.io/featureforest/</loc>
+         <lastmod>2025-09-19</lastmod>
+    </url>
+    <url>
+         <loc>https://juglab.github.io/featureforest/feature_extractor/</loc>
+         <lastmod>2025-09-19</lastmod>
+    </url>
+    <url>
+         <loc>https://juglab.github.io/featureforest/howto/</loc>
+         <lastmod>2025-09-19</lastmod>
+    </url>
+    <url>
+         <loc>https://juglab.github.io/featureforest/install/</loc>
+         <lastmod>2025-09-19</lastmod>
+    </url>
+    <url>
+         <loc>https://juglab.github.io/featureforest/model_adapter/</loc>
+         <lastmod>2025-09-19</lastmod>
+    </url>
+    <url>
+         <loc>https://juglab.github.io/featureforest/run_pipeline/</loc>
+         <lastmod>2025-09-19</lastmod>
+    </url>
+    <url>
+         <loc>https://juglab.github.io/featureforest/segmentation/</loc>
+         <lastmod>2025-09-19</lastmod>
+    </url>
+    <url>
+         <loc>https://juglab.github.io/featureforest/tutorial/</loc>
+         <lastmod>2025-09-19</lastmod>
+    </url>
+</urlset>

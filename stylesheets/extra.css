@@ -1,0 +1,26 @@
+.md-typeset {
+    font-weight: 500;
+}
+
+.md-typeset p, ol, ul{
+    text-align: justify;
+}
+
+.md-typeset code {
+    font-size: 94%;
+    font-weight: 600;
+}
+
+/* Maximum space for text block */
+.md-grid {
+    max-width: 71rem;
+}
+
+.admonition>:last-child, html .md-typeset details>:last-child {
+    font-size: 0.72rem;
+}
+
+
+.clear {
+    clear: both;
+}
