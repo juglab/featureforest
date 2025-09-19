@@ -48,7 +48,7 @@ For more detailed installation guide, check out [here](https://juglab.github.io/
 
 ## Cite us
 
-Seifi, Mehdi, Damian Dalle Nogare, Juan Battagliotti, Vera Galinova, Ananya Kediga Rao, AI4Life Horizon Europe Programme Consortium, Johan Decelle, Florian Jug, and Joran Deschamps. "FeatureForest: the power of foundation models, the usability of random forests." bioRxiv (2024): 2024-12. [DOI: 10.1038/s44303-025-00089-9](https://doi.org/10.1038/s44303-025-00089-9)
+Seifi, Mehdi, Damian Dalle Nogare, Juan Battagliotti, Vera Galinova, Ananya Kediga Rao, Pierre-Henri Jouneau, Anwai Archit, AI4Life Horizon Europe Programme Consortium, Constantin Pape, Johan Decelle, Florian Jug, and Joran Deschamps. FeatureForest: the power of foundation models, the usability of random forests. npj Imaging 3, 32 (2025). [DOI: 10.1038/s44303-025-00089-9](https://doi.org/10.1038/s44303-025-00089-9)
 
 
 ## License
