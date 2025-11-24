@@ -81,7 +81,7 @@ def run_prediction_pipeline(
         patch_size=patch_size,
         overlap=overlap,
     )
-    img_height, img_width = stack_dataset.image_shape
+    img_height, img_width, *_ = stack_dataset.image_shape
 
     prev_idx = 0
     slice_features = []
